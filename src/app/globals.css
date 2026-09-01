@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --focus-ring: 0 0 0 2px theme("colors.burgundy.500");
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-cream text-charcoal antialiased;
+}
+
+* {
+  scrollbar-color: theme("colors.burgundy.100") transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-charcoal/10 bg-white shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-burgundy-500 text-white hover:bg-burgundy-600;
+  }
+
+  .btn-secondary {
+    @apply btn border border-charcoal/15 bg-white text-charcoal hover:bg-sand-100;
+  }
+
+  .btn-ghost {
+    @apply btn text-charcoal hover:bg-sand-100;
+  }
+
+  .btn-danger {
+    @apply btn bg-status-action text-white hover:opacity-90;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-charcoal/40 focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-charcoal/50;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+}
