@@ -113,7 +113,7 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
     return { success: false, error: `Upload failed: ${uploadError.message}` };
   }
 
-  const title = `Emergency Drill — ${EMERGENCY_DRILL_TYPE_LABEL[drill.drill_type]} — ${drill.drill_date}`;
+  const title = `Emergency Drill — ${EMERGENCY_DRILL_TYPE_LABEL[drill.drill_type as EmergencyDrillType]} — ${drill.drill_date}`;
 
   const { data: evidenceRow, error: insertError } = await supabase
     .from("evidence")

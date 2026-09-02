@@ -4,6 +4,7 @@ import { SECTION_META, STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
 import { percentage, daysUntil } from "@/lib/utils";
 import { getNextDrillDue } from "@/lib/data/emergency-drills";
 import type { DashboardStats } from "@/lib/types";
+import type { StaffDocumentCategory } from "@/lib/supabase/database.types";
 
 /** A criterion counts as fully ready when both its compliance position and
  * its supporting evidence are resolved — being compliant with an empty
@@ -195,7 +196,7 @@ export async function getNeedsAttention(limit = 8): Promise<NeedsAttentionItem[]
     if (days !== null && days <= 30) {
       items.push({
         kind: "staff_document_due",
-        title: `${staffMember.full_name} — ${STAFF_DOCUMENT_CATEGORY_LABEL[d.category]}`,
+        title: `${staffMember.full_name} — ${STAFF_DOCUMENT_CATEGORY_LABEL[d.category as StaffDocumentCategory]}`,
         detail: days < 0 ? `Expired ${Math.abs(days)} day(s) ago` : `Due in ${days} day(s)`,
         href: `/staff/${staffMember.id}`,
       });
