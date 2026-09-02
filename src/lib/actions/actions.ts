@@ -30,7 +30,7 @@ export async function createAction(criterionId: string, criterionCode: string, i
     due_date: input.due_date,
     priority: input.priority,
     created_by: userId,
-  });
+  } as any);
 
   await supabase.from("activity_log").insert({
     criterion_id: criterionId,
@@ -38,7 +38,7 @@ export async function createAction(criterionId: string, criterionCode: string, i
     event_type: "action_created",
     description: `Action created: "${input.description}"`,
     performed_by: userId,
-  });
+  } as any);
 
   revalidatePath(`/checklist/${criterionCode}`);
   revalidatePath("/actions");
@@ -51,7 +51,7 @@ export async function updateAction(
   fields: Partial<ActionInput> & { status?: ActionStatusValue }
 ) {
   const supabase = createClient();
-  await supabase.from("actions").update(fields).eq("id", actionId);
+  await supabase.from("actions").update(fields as any).eq("id", actionId);
   revalidatePath(`/checklist/${criterionCode}`);
   revalidatePath("/actions");
   revalidatePath("/dashboard");
@@ -64,7 +64,7 @@ export async function completeAction(actionId: string, criterionId: string, crit
 
   await supabase
     .from("actions")
-    .update({ status: "completed", completion_date: today })
+    .update({ status: "completed", completion_date: today } as any)
     .eq("id", actionId);
 
   await supabase.from("activity_log").insert({
@@ -74,7 +74,7 @@ export async function completeAction(actionId: string, criterionId: string, crit
     event_type: "action_completed",
     description: "Action marked complete",
     performed_by: userId,
-  });
+  } as any);
 
   revalidatePath(`/checklist/${criterionCode}`);
   revalidatePath("/actions");

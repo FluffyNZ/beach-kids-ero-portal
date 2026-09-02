@@ -49,7 +49,7 @@ export async function createStaffMember(formData: FormData): Promise<CreateStaff
       start_date: startDate,
       contract_type: contractType,
       created_by: userId,
-    })
+    } as any)
     .select("id")
     .single();
 
@@ -75,7 +75,7 @@ export async function updateStaffDetails(
   }
 ) {
   const supabase = createClient();
-  const { error } = await supabase.from("staff").update(fields).eq("id", staffId);
+  const { error } = await supabase.from("staff").update(fields as any).eq("id", staffId);
   if (error) {
     throw new Error(
       `Could not save: ${error.message}. If this mentions a missing column, migration 0014_staff_employment_terms.sql hasn't been run in Supabase yet.`
@@ -130,7 +130,7 @@ export async function deleteStaffMember(staffId: string): Promise<DeleteStaffRes
 
 export async function setStaffStatus(staffId: string, status: StaffStatus) {
   const supabase = createClient();
-  await supabase.from("staff").update({ status }).eq("id", staffId);
+  await supabase.from("staff").update({ status } as any).eq("id", staffId);
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
 }
@@ -177,7 +177,7 @@ export async function uploadStaffDocument(
     expiry_date: expiryDate,
     notes,
     uploaded_by: userId,
-  });
+  } as any);
 
   if (insertError) {
     await supabase.storage.from(BUCKET).remove([storagePath]);
@@ -208,7 +208,7 @@ export async function updateStaffQualification(
 
   await supabase
     .from("staff_qualifications")
-    .upsert({ staff_id: staffId, ...fields, updated_by: userId }, { onConflict: "staff_id" });
+    .upsert({ staff_id: staffId, ...fields, updated_by: userId } as any, { onConflict: "staff_id" });
 
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
@@ -269,7 +269,7 @@ export async function uploadChecklistEvidence(
       expiry_date: expiryDate,
       notes,
       uploaded_by: userId,
-    })
+    } as any)
     .select("id")
     .single();
 
@@ -286,7 +286,7 @@ export async function uploadChecklistEvidence(
       checked_at: new Date().toISOString(),
       checked_by: userId,
       document_id: documentRow.id,
-    },
+    } as any,
     { onConflict: "staff_id,item_id" }
   );
 
@@ -314,7 +314,7 @@ export async function updateStaffChecklistItem(
             checked_by: fields.is_checked ? userId : null,
           }
         : {}),
-    },
+    } as any,
     { onConflict: "staff_id,item_id" }
   );
 

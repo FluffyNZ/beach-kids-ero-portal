@@ -25,7 +25,7 @@ async function ensureAssessmentRow(criterionId: string) {
     await supabase.from("criterion_assessments").insert({
       criterion_id: criterionId,
       updated_by: userId,
-    });
+    } as any);
   }
   return userId;
 }
@@ -40,7 +40,7 @@ async function logActivity(criterionId: string, eventType: string, description: 
     event_type: eventType,
     description,
     performed_by: userId,
-  });
+  } as any);
 }
 
 export async function updateComplianceStatus(
@@ -58,7 +58,7 @@ export async function updateComplianceStatus(
       compliance_status: status,
       ...(status === "na" ? { evidence_status: "not_required" as const } : {}),
       updated_by: userId,
-    })
+    } as any)
     .eq("criterion_id", criterionId);
 
   await logActivity(criterionId, "compliance_status_changed", `Compliance status set to "${status}"`);
@@ -77,7 +77,7 @@ export async function updateEvidenceStatus(
   const supabase = createClient();
   await supabase
     .from("criterion_assessments")
-    .update({ evidence_status: status, updated_by: userId })
+    .update({ evidence_status: status, updated_by: userId } as any)
     .eq("criterion_id", criterionId);
 
   await logActivity(criterionId, "evidence_status_changed", `Evidence status set to "${status}"`);
@@ -92,7 +92,7 @@ export async function updateManagementNotes(criterionId: string, criterionCode: 
   const supabase = createClient();
   await supabase
     .from("criterion_assessments")
-    .update({ management_notes: notes, updated_by: userId })
+    .update({ management_notes: notes, updated_by: userId } as any)
     .eq("criterion_id", criterionId);
 
   revalidatePath(`/checklist/${criterionCode}`);
@@ -107,7 +107,7 @@ export async function updateFlag(
   const supabase = createClient();
   const { error } = await supabase
     .from("criterion_assessments")
-    .update({ is_flagged: fields.is_flagged, flag_notes: fields.flag_notes, updated_by: userId })
+    .update({ is_flagged: fields.is_flagged, flag_notes: fields.flag_notes, updated_by: userId } as any)
     .eq("criterion_id", criterionId);
 
   if (error) {
@@ -140,7 +140,7 @@ export async function updateReviewInfo(
       next_review_date: fields.next_review_date,
       reviewed_by: userId,
       updated_by: userId,
-    })
+    } as any)
     .eq("criterion_id", criterionId);
 
   await logActivity(criterionId, "reviewed", "Review information updated");

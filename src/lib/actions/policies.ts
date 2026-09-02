@@ -53,7 +53,7 @@ export async function createPolicy(formData: FormData): Promise<CreatePolicyResu
       review_cycle: reviewCycle,
       next_review_date: nextReviewDate,
       created_by: userId,
-    })
+    } as any)
     .select("id")
     .single();
 
@@ -82,7 +82,7 @@ export async function createPolicy(formData: FormData): Promise<CreatePolicyResu
     file_size_bytes: file.size,
     status: "draft",
     created_by: userId,
-  });
+  } as any);
 
   if (versionError) {
     await supabase.storage.from(BUCKET).remove([storagePath]);
@@ -138,7 +138,7 @@ export async function addPolicyVersion(policyId: string, formData: FormData): Pr
     change_summary: changeSummary,
     status: "draft",
     created_by: userId,
-  });
+  } as any);
 
   if (versionError) {
     await supabase.storage.from(BUCKET).remove([storagePath]);
@@ -156,10 +156,10 @@ export async function approvePolicyVersion(policyId: string, versionId: string) 
 
   await supabase
     .from("policy_versions")
-    .update({ status: "approved", approved_by: userId, approved_at: new Date().toISOString() })
+    .update({ status: "approved", approved_by: userId, approved_at: new Date().toISOString() } as any)
     .eq("id", versionId);
 
-  await supabase.from("policies").update({ current_version_id: versionId }).eq("id", policyId);
+  await supabase.from("policies").update({ current_version_id: versionId } as any).eq("id", policyId);
 
   revalidatePath(`/policies/${policyId}`);
   revalidatePath("/policies");
@@ -177,14 +177,14 @@ export async function updatePolicyDetails(
   }
 ) {
   const supabase = createClient();
-  await supabase.from("policies").update(fields).eq("id", policyId);
+  await supabase.from("policies").update(fields as any).eq("id", policyId);
   revalidatePath(`/policies/${policyId}`);
   revalidatePath("/policies");
 }
 
 export async function setPolicyStatus(policyId: string, status: "active" | "archived") {
   const supabase = createClient();
-  await supabase.from("policies").update({ status }).eq("id", policyId);
+  await supabase.from("policies").update({ status } as any).eq("id", policyId);
   revalidatePath(`/policies/${policyId}`);
   revalidatePath("/policies");
 }

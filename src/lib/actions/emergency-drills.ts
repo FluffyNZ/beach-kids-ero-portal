@@ -63,7 +63,7 @@ export async function createEmergencyDrill(formData: FormData): Promise<CreateDr
       evaluation_notes: String(formData.get("evaluation_notes") ?? "").trim() || null,
       next_due_date: addMonths(drillDate, DRILL_INTERVAL_MONTHS),
       recorded_by: userId,
-    })
+    } as any)
     .select("id")
     .single();
 
@@ -126,7 +126,7 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
       category: "Emergency Drills",
       document_date: drill.drill_date,
       uploaded_by: userId,
-    })
+    } as any)
     .select("id")
     .single();
 
@@ -146,7 +146,7 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
       evidence_id: evidenceRow.id,
       criterion_id: criterion.id,
       linked_by: userId,
-    });
+    } as any);
 
     // Real evidence now exists for HS8 — only the factual evidence status
     // is set automatically. Whether HS8 is actually compliant stays a
@@ -160,12 +160,12 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
     if (existingAssessment) {
       await supabase
         .from("criterion_assessments")
-        .update({ evidence_status: "ready", updated_by: userId })
+        .update({ evidence_status: "ready", updated_by: userId } as any)
         .eq("criterion_id", criterion.id);
     } else {
       await supabase
         .from("criterion_assessments")
-        .insert({ criterion_id: criterion.id, evidence_status: "ready", updated_by: userId });
+        .insert({ criterion_id: criterion.id, evidence_status: "ready", updated_by: userId } as any);
     }
 
     await supabase.from("activity_log").insert({
@@ -175,10 +175,10 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
       event_type: "evidence_uploaded",
       description: `Filed emergency drill record "${title}" as evidence`,
       performed_by: userId,
-    });
+    } as any);
   }
 
-  await supabase.from("emergency_drills").update({ evidence_id: evidenceRow.id }).eq("id", drillId);
+  await supabase.from("emergency_drills").update({ evidence_id: evidenceRow.id } as any).eq("id", drillId);
 
   revalidatePath(`/emergency-drills/${drillId}`);
   revalidatePath("/emergency-drills");

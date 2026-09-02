@@ -24,7 +24,7 @@ export async function addChecklistItem(criterionId: string, criterionCode: strin
     criterion_id: criterionId,
     description: description.trim(),
     sort_order: count ?? 0,
-  });
+  } as any);
 
   revalidatePath(`/checklist/${criterionCode}`);
 }
@@ -39,7 +39,7 @@ export async function toggleChecklistItem(itemId: string, criterionCode: string,
       is_checked: isChecked,
       checked_at: isChecked ? new Date().toISOString() : null,
       checked_by: isChecked ? userId : null,
-    })
+    } as any)
     .eq("id", itemId);
 
   revalidatePath(`/checklist/${criterionCode}`);

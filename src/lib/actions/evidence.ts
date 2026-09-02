@@ -67,7 +67,7 @@ export async function uploadEvidence(formData: FormData): Promise<UploadEvidence
       expiry_date: expiryDate,
       uploaded_by: userId,
       notes,
-    })
+    } as any)
     .select("id")
     .single();
 
@@ -82,7 +82,7 @@ export async function uploadEvidence(formData: FormData): Promise<UploadEvidence
       evidence_id: evidenceRow.id,
       criterion_id: linkCriterionId,
       linked_by: userId,
-    });
+    } as any);
     await supabase.from("activity_log").insert({
       criterion_id: linkCriterionId,
       entity_type: "evidence",
@@ -90,7 +90,7 @@ export async function uploadEvidence(formData: FormData): Promise<UploadEvidence
       event_type: "evidence_uploaded",
       description: `Uploaded and linked evidence "${title}"`,
       performed_by: userId,
-    });
+    } as any);
   }
 
   revalidatePath("/evidence");
@@ -107,7 +107,7 @@ export async function linkEvidenceToCriterion(evidenceId: string, criterionId: s
   await supabase
     .from("evidence_criteria_links")
     .upsert(
-      { evidence_id: evidenceId, criterion_id: criterionId, linked_by: userId },
+      { evidence_id: evidenceId, criterion_id: criterionId, linked_by: userId } as any,
       { onConflict: "evidence_id,criterion_id" }
     );
 
@@ -137,7 +137,7 @@ export async function updateEvidenceDetails(
   }
 ) {
   const supabase = createClient();
-  await supabase.from("evidence").update(fields).eq("id", evidenceId);
+  await supabase.from("evidence").update(fields as any).eq("id", evidenceId);
   revalidatePath("/evidence");
 }
 
