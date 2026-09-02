@@ -447,8 +447,8 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
     Enums: {
       compliance_status: ComplianceStatus;
       evidence_status: EvidenceStatusValue;
@@ -464,6 +464,6 @@ export interface Database {
       emergency_drill_type: EmergencyDrillType;
       staff_qualification_status: StaffQualificationStatus;
     };
-    CompositeTypes: Record<string, never>;
+    CompositeTypes: { [_ in never]: never };
   };
 }
