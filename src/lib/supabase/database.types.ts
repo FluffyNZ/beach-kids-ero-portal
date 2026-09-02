@@ -54,6 +54,7 @@ export interface Database {
           email: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
+        Relationships: [];
       };
       ero_sections: {
         Row: {
@@ -68,6 +69,7 @@ export interface Database {
           name: string;
         };
         Update: Partial<Database["public"]["Tables"]["ero_sections"]["Row"]>;
+        Relationships: [];
       };
       ero_criteria: {
         Row: {
@@ -87,6 +89,7 @@ export interface Database {
           official_requirement: string;
         };
         Update: Partial<Database["public"]["Tables"]["ero_criteria"]["Row"]>;
+        Relationships: [];
       };
       beachkids_checklist_items: {
         Row: {
@@ -105,6 +108,7 @@ export interface Database {
           description: string;
         };
         Update: Partial<Database["public"]["Tables"]["beachkids_checklist_items"]["Row"]>;
+        Relationships: [];
       };
       criterion_assessments: {
         Row: {
@@ -125,6 +129,7 @@ export interface Database {
           criterion_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["criterion_assessments"]["Row"]>;
+        Relationships: [];
       };
       evidence: {
         Row: {
@@ -150,6 +155,7 @@ export interface Database {
           storage_path: string;
         };
         Update: Partial<Database["public"]["Tables"]["evidence"]["Row"]>;
+        Relationships: [];
       };
       evidence_criteria_links: {
         Row: {
@@ -164,6 +170,7 @@ export interface Database {
           criterion_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["evidence_criteria_links"]["Row"]>;
+        Relationships: [];
       };
       actions: {
         Row: {
@@ -185,6 +192,7 @@ export interface Database {
           responsible_person: string;
         };
         Update: Partial<Database["public"]["Tables"]["actions"]["Row"]>;
+        Relationships: [];
       };
       policies: {
         Row: {
@@ -204,6 +212,7 @@ export interface Database {
           title: string;
         };
         Update: Partial<Database["public"]["Tables"]["policies"]["Row"]>;
+        Relationships: [];
       };
       policy_versions: {
         Row: {
@@ -228,6 +237,7 @@ export interface Database {
           original_filename: string;
         };
         Update: Partial<Database["public"]["Tables"]["policy_versions"]["Row"]>;
+        Relationships: [];
       };
       staff: {
         Row: {
@@ -249,6 +259,7 @@ export interface Database {
           full_name: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff"]["Row"]>;
+        Relationships: [];
       };
       staff_documents: {
         Row: {
@@ -271,6 +282,7 @@ export interface Database {
           original_filename: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff_documents"]["Row"]>;
+        Relationships: [];
       };
       staff_qualifications: {
         Row: {
@@ -292,6 +304,7 @@ export interface Database {
           staff_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff_qualifications"]["Row"]>;
+        Relationships: [];
       };
       staff_checklist_areas: {
         Row: {
@@ -305,6 +318,7 @@ export interface Database {
           name: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff_checklist_areas"]["Row"]>;
+        Relationships: [];
       };
       staff_checklist_items: {
         Row: {
@@ -321,6 +335,7 @@ export interface Database {
           description: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff_checklist_items"]["Row"]>;
+        Relationships: [];
       };
       staff_checklist_status: {
         Row: {
@@ -338,6 +353,7 @@ export interface Database {
           item_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["staff_checklist_status"]["Row"]>;
+        Relationships: [];
       };
       activity_log: {
         Row: {
@@ -356,6 +372,7 @@ export interface Database {
           description: string;
         };
         Update: Partial<Database["public"]["Tables"]["activity_log"]["Row"]>;
+        Relationships: [];
       };
       emergency_drills: {
         Row: {
@@ -383,6 +400,7 @@ export interface Database {
           drill_date: string;
         };
         Update: Partial<Database["public"]["Tables"]["emergency_drills"]["Row"]>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
