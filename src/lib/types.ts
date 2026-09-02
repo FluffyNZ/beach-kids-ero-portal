@@ -148,6 +148,18 @@ export type StaffDocument = {
   uploaded_at: string;
 };
 
+export type ChecklistItem = {
+  id: string;
+  criterion_id: string;
+  description: string;
+  sort_order: number;
+  is_checked: boolean;
+  checked_at: string | null;
+  checked_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type StaffChecklistItem = {
   id: string;
   area_id: string;
