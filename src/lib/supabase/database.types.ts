@@ -277,6 +277,12 @@ type EmergencyDrillsRow = {
 };
 
 export interface Database {
+  // Newer @supabase/postgrest-js releases look for this marker to resolve
+  // the default schema; older hand-written Database types (like this one)
+  // never had it. Harmless to include either way — purely additive.
+  __InternalSupabase: {
+    PostgrestVersion: string;
+  };
   public: {
     Tables: {
       profiles: {
