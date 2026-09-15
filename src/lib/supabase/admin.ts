@@ -1,6 +1,5 @@
 import "server-only";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
 
 // Service-role client. NEVER import this into a Client Component and never
 // send its key to the browser — the `server-only` import above makes any
@@ -10,8 +9,10 @@ import type { Database } from "./database.types";
 // provisioning additional management logins from Settings in a future
 // version. Ordinary reads/writes should go through lib/supabase/server.ts
 // so RLS stays the actual access control, not an app-layer convention.
+//
+// Deliberately untyped — see the matching comment in lib/supabase/server.ts.
 export function createAdminClient() {
-  return createSupabaseClient<Database>(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
