@@ -69,7 +69,9 @@ export function MediaManager({
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
     onChange(next);
-    startTransition(() => reorderStoryMedia(storyId, next.map((m) => m.id)));
+    startTransition(async () => {
+      await reorderStoryMedia(storyId, next.map((m) => m.id));
+    });
   }
 
   function updateCaption(mediaId: string, caption: string) {
@@ -77,12 +79,16 @@ export function MediaManager({
   }
 
   function saveCaption(mediaId: string, caption: string) {
-    startTransition(() => updateMediaCaption(mediaId, storyId, caption));
+    startTransition(async () => {
+      await updateMediaCaption(mediaId, storyId, caption);
+    });
   }
 
   function remove(mediaId: string) {
     onChange(media.filter((m) => m.id !== mediaId));
-    startTransition(() => removeStoryMedia(mediaId, storyId));
+    startTransition(async () => {
+      await removeStoryMedia(mediaId, storyId);
+    });
   }
 
   return (
