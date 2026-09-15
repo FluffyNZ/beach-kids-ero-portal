@@ -13,6 +13,7 @@ const KIND_LABEL: Record<NeedsAttentionItem["kind"], { label: string; tone: Stat
   staff_document_due: { label: "Staff document due", tone: "attention" },
   staff_review_due: { label: "Qualification review due", tone: "attention" },
   emergency_drill_due: { label: "Drill due", tone: "attention" },
+  hazard_open: { label: "Open hazard", tone: "action" },
 };
 
 const TONE_ICON_CHIP: Record<StatusTone, string> = {

@@ -8,9 +8,11 @@ import { StatusSelect } from "@/components/checklist/status-select";
 import { NotesField } from "@/components/checklist/notes-field";
 import { FlagPanel } from "@/components/checklist/flag-panel";
 import { EvidencePanel } from "@/components/checklist/evidence-panel";
+import { EvidenceGuidancePanel } from "@/components/checklist/evidence-guidance-panel";
 import { ActionsPanel } from "@/components/checklist/actions-panel";
 import { ReviewInfoPanel } from "@/components/checklist/review-info-panel";
 import { ChevronRightIcon, FlagIcon } from "@/components/icons";
+import { CURRICULUM_EVIDENCE_GUIDANCE } from "@/lib/evidence-guidance";
 import {
   COMPLIANCE_LABEL,
   EVIDENCE_STATUS_LABEL,
@@ -34,6 +36,7 @@ export default async function CriterionDetailPage({ params }: { params: { code: 
   if (!result) notFound();
 
   const { criterion, section } = result;
+  const evidenceGuidance = CURRICULUM_EVIDENCE_GUIDANCE[criterion.code];
 
   const [linkedEvidence, libraryEvidence, actions] = await Promise.all([
     getEvidenceForCriterion(criterion.id),
@@ -90,6 +93,8 @@ export default async function CriterionDetailPage({ params }: { params: { code: 
           <p className="mt-2 text-xs text-ocean-400">Source: {criterion.source_reference}</p>
         )}
       </section>
+
+      {evidenceGuidance && <EvidenceGuidancePanel guidance={evidenceGuidance} />}
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="card p-5">

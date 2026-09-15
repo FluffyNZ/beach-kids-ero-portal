@@ -43,6 +43,20 @@ export type StaffDocumentCategory =
   | "secondary_identification";
 export type EmergencyDrillType = "fire_evacuation" | "earthquake" | "tsunami" | "lockdown" | "other";
 export type StaffQualificationStatus = "not_qualified" | "qualified" | "studying";
+export type ChildStatus = "active" | "left";
+
+export type StockSupplier = "gilmours" | "qizzle" | "clean_boss";
+export type StockOrderItemStatus = "pending" | "ordered";
+
+export type FinancePaymentStatus = "unpaid" | "paid";
+export type FinanceIncomeStatus = "pending" | "received";
+export type FinanceIncomeSource = "moe_funding" | "parent_invoice" | "other";
+
+export type LearningStoryStatus = "draft" | "awaiting_approval" | "returned_for_editing" | "published" | "archived";
+
+export type HazardCheckCategory = "indoor" | "outdoor" | "allergy";
+export type HazardRiskLevel = "low" | "medium" | "high";
+export type LearningStoryMediaKind = "image" | "video" | "pdf";
 
 type ProfilesRow = {
   id: string;
@@ -180,6 +194,7 @@ type StaffRow = {
   pay_rate: number | null;
   min_hours: number | null;
   notes: string | null;
+  can_publish_learning_stories: boolean;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -272,6 +287,343 @@ type EmergencyDrillsRow = {
   next_due_date: string | null;
   evidence_id: string | null;
   recorded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type RosterRoomsRow = {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+};
+
+type RosterWeeksRow = {
+  id: string;
+  week_start_date: string;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+type RosterShiftsRow = {
+  id: string;
+  week_id: string;
+  staff_id: string;
+  room_id: string | null;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type BillPayersRow = {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type ChildrenRow = {
+  id: string;
+  full_name: string;
+  gender: string | null;
+  age_years: number | null;
+  age_months: number | null;
+  age_as_of: string | null;
+  residential_address: string | null;
+  primary_contact_email: string | null;
+  room_id: string | null;
+  room_notes: string | null;
+  bill_payer_id: string | null;
+  bill_payer_unlisted_note: string | null;
+  status: ChildStatus;
+  photo_storage_path: string | null;
+  hourly_rate: number | null;
+  twenty_hours_ece: boolean;
+  special_weekly_override: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type FeeSettingsRow = {
+  id: boolean;
+  standard_hourly_rate: number;
+  sibling_discount_percent: number;
+  ece_daily_max_hours: number;
+  ece_weekly_max_hours: number;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+type FeeWeeksRow = {
+  id: string;
+  week_start_date: string;
+  notes: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+type ChildWeeklyHoursRow = {
+  id: string;
+  week_id: string;
+  child_id: string;
+  mon_hours: number;
+  tue_hours: number;
+  wed_hours: number;
+  thu_hours: number;
+  fri_hours: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type ChildWinzSubsidiesRow = {
+  id: string;
+  child_id: string;
+  caregiver_name: string | null;
+  weekly_cca_hours: number | null;
+  weekly_payment: number | null;
+  renewal_date: string | null;
+  notes: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+type ChildEnrolledScheduleRow = {
+  id: string;
+  child_id: string;
+  mon_start: string | null;
+  mon_end: string | null;
+  tue_start: string | null;
+  tue_end: string | null;
+  wed_start: string | null;
+  wed_end: string | null;
+  thu_start: string | null;
+  thu_end: string | null;
+  fri_start: string | null;
+  fri_end: string | null;
+  notes: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+type StockOrderItemRow = {
+  id: string;
+  supplier: StockSupplier;
+  item_name: string;
+  quantity: number;
+  unit: string | null;
+  notes: string | null;
+  status: StockOrderItemStatus;
+  ordered_at: string | null;
+  ordered_by: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type StockOrderSettingsRow = {
+  id: boolean;
+  clean_boss_email: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+type FinanceOutgoingRow = {
+  id: string;
+  expense_date: string;
+  supplier: string | null;
+  category: string | null;
+  description: string | null;
+  amount: number;
+  gst_amount: number | null;
+  status: FinancePaymentStatus;
+  due_date: string | null;
+  paid_date: string | null;
+  notes: string | null;
+  external_id: string | null;
+  subcategory: string | null;
+  xero_account: string | null;
+  needs_more_detail: boolean;
+  raw_description: string | null;
+  source_detail: string | null;
+  source_reference: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type FinanceIncomeRow = {
+  id: string;
+  income_date: string;
+  source: FinanceIncomeSource;
+  payer_name: string | null;
+  description: string | null;
+  invoice_number: string | null;
+  amount: number;
+  gst_amount: number | null;
+  status: FinanceIncomeStatus;
+  due_date: string | null;
+  received_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type LearningTagSetsRow = {
+  id: string;
+  key: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+type LearningTagsRow = {
+  id: string;
+  set_id: string;
+  parent_tag_id: string | null;
+  name: string;
+  maori_name: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+type LearningStoriesRow = {
+  id: string;
+  story_number: string;
+  title: string;
+  story_date: string;
+  author_staff_id: string | null;
+  status: LearningStoryStatus;
+  content_blocks: unknown;
+  requires_approval: boolean;
+  review_comments: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+  submitted_by: string | null;
+  submitted_at: string | null;
+  reviewed_by: string | null;
+  approved_at: string | null;
+  published_at: string | null;
+  last_autosaved_at: string | null;
+};
+
+type LearningStoryChildrenRow = {
+  story_id: string;
+  child_id: string;
+};
+
+type LearningStoryTagsRow = {
+  story_id: string;
+  tag_id: string;
+};
+
+type LearningStoryMediaRow = {
+  id: string;
+  story_id: string;
+  storage_path: string;
+  original_filename: string;
+  mime_type: string | null;
+  file_size_bytes: number | null;
+  kind: LearningStoryMediaKind;
+  caption: string | null;
+  sort_order: number;
+  uploaded_by: string | null;
+  uploaded_at: string;
+};
+
+type LearningStoryStatusHistoryRow = {
+  id: string;
+  story_id: string;
+  from_status: LearningStoryStatus | null;
+  to_status: LearningStoryStatus;
+  comment: string | null;
+  changed_by: string | null;
+  changed_at: string;
+};
+
+type AccidentIllnessRecordsRow = {
+  id: string;
+  child_id: string;
+  incident_date: string;
+  incident_time: string | null;
+  time_parent_contacted: string | null;
+  description: string | null;
+  equipment_involved: boolean | null;
+  another_child_involved: boolean | null;
+  first_aid_provided: string | null;
+  further_first_aid_required: boolean | null;
+  first_aid_supplies_used: string | null;
+  staff_id: string | null;
+  parent_signed: boolean;
+  evidence_id: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type HazardChecklistTemplatesRow = {
+  id: string;
+  room_id: string;
+  category: HazardCheckCategory;
+  item_text: string;
+  sort_order: number;
+  created_at: string;
+};
+
+type HazardChecksRow = {
+  id: string;
+  room_id: string;
+  week_start_date: string;
+  notes: string | null;
+  evidence_id: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type HazardCheckDailySignoffsRow = {
+  id: string;
+  check_id: string;
+  check_date: string;
+  staff_id: string | null;
+  completed_time: string | null;
+  signed_off: boolean;
+  signed_off_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type HazardCheckItemsRow = {
+  id: string;
+  check_id: string;
+  category: HazardCheckCategory;
+  item_text: string;
+  is_checked: boolean;
+  sort_order: number;
+};
+
+type HazardLogEntriesRow = {
+  id: string;
+  check_id: string;
+  hazard_description: string;
+  risk_level: HazardRiskLevel;
+  resolved: boolean;
+  resolved_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -452,6 +804,237 @@ export interface Database {
         Update: Partial<EmergencyDrillsRow>;
         Relationships: [];
       };
+      roster_rooms: {
+        Row: RosterRoomsRow;
+        Insert: Partial<RosterRoomsRow> & {
+          name: string;
+          color: string;
+        };
+        Update: Partial<RosterRoomsRow>;
+        Relationships: [];
+      };
+      roster_weeks: {
+        Row: RosterWeeksRow;
+        Insert: Partial<RosterWeeksRow> & {
+          week_start_date: string;
+        };
+        Update: Partial<RosterWeeksRow>;
+        Relationships: [];
+      };
+      roster_shifts: {
+        Row: RosterShiftsRow;
+        Insert: Partial<RosterShiftsRow> & {
+          week_id: string;
+          staff_id: string;
+          shift_date: string;
+          start_time: string;
+          end_time: string;
+        };
+        Update: Partial<RosterShiftsRow>;
+        Relationships: [];
+      };
+      bill_payers: {
+        Row: BillPayersRow;
+        Insert: Partial<BillPayersRow> & {
+          full_name: string;
+        };
+        Update: Partial<BillPayersRow>;
+        Relationships: [];
+      };
+      children: {
+        Row: ChildrenRow;
+        Insert: Partial<ChildrenRow> & {
+          full_name: string;
+        };
+        Update: Partial<ChildrenRow>;
+        Relationships: [];
+      };
+      child_winz_subsidies: {
+        Row: ChildWinzSubsidiesRow;
+        Insert: Partial<ChildWinzSubsidiesRow> & {
+          child_id: string;
+        };
+        Update: Partial<ChildWinzSubsidiesRow>;
+        Relationships: [];
+      };
+      fee_settings: {
+        Row: FeeSettingsRow;
+        Insert: Partial<FeeSettingsRow>;
+        Update: Partial<FeeSettingsRow>;
+        Relationships: [];
+      };
+      fee_weeks: {
+        Row: FeeWeeksRow;
+        Insert: Partial<FeeWeeksRow> & {
+          week_start_date: string;
+        };
+        Update: Partial<FeeWeeksRow>;
+        Relationships: [];
+      };
+      child_weekly_hours: {
+        Row: ChildWeeklyHoursRow;
+        Insert: Partial<ChildWeeklyHoursRow> & {
+          week_id: string;
+          child_id: string;
+        };
+        Update: Partial<ChildWeeklyHoursRow>;
+        Relationships: [];
+      };
+      child_enrolled_schedule: {
+        Row: ChildEnrolledScheduleRow;
+        Insert: Partial<ChildEnrolledScheduleRow> & {
+          child_id: string;
+        };
+        Update: Partial<ChildEnrolledScheduleRow>;
+        Relationships: [];
+      };
+      stock_order_items: {
+        Row: StockOrderItemRow;
+        Insert: Partial<StockOrderItemRow> & {
+          supplier: StockSupplier;
+          item_name: string;
+        };
+        Update: Partial<StockOrderItemRow>;
+        Relationships: [];
+      };
+      stock_order_settings: {
+        Row: StockOrderSettingsRow;
+        Insert: Partial<StockOrderSettingsRow>;
+        Update: Partial<StockOrderSettingsRow>;
+        Relationships: [];
+      };
+      finance_outgoings: {
+        Row: FinanceOutgoingRow;
+        Insert: Partial<FinanceOutgoingRow> & {
+          expense_date: string;
+          amount: number;
+        };
+        Update: Partial<FinanceOutgoingRow>;
+        Relationships: [];
+      };
+      finance_income: {
+        Row: FinanceIncomeRow;
+        Insert: Partial<FinanceIncomeRow> & {
+          income_date: string;
+          amount: number;
+        };
+        Update: Partial<FinanceIncomeRow>;
+        Relationships: [];
+      };
+      learning_tag_sets: {
+        Row: LearningTagSetsRow;
+        Insert: Partial<LearningTagSetsRow> & {
+          key: string;
+          name: string;
+        };
+        Update: Partial<LearningTagSetsRow>;
+        Relationships: [];
+      };
+      learning_tags: {
+        Row: LearningTagsRow;
+        Insert: Partial<LearningTagsRow> & {
+          set_id: string;
+          name: string;
+        };
+        Update: Partial<LearningTagsRow>;
+        Relationships: [];
+      };
+      learning_stories: {
+        Row: LearningStoriesRow;
+        Insert: Partial<LearningStoriesRow> & {
+          story_number: string;
+        };
+        Update: Partial<LearningStoriesRow>;
+        Relationships: [];
+      };
+      learning_story_children: {
+        Row: LearningStoryChildrenRow;
+        Insert: LearningStoryChildrenRow;
+        Update: Partial<LearningStoryChildrenRow>;
+        Relationships: [];
+      };
+      learning_story_tags: {
+        Row: LearningStoryTagsRow;
+        Insert: LearningStoryTagsRow;
+        Update: Partial<LearningStoryTagsRow>;
+        Relationships: [];
+      };
+      learning_story_media: {
+        Row: LearningStoryMediaRow;
+        Insert: Partial<LearningStoryMediaRow> & {
+          story_id: string;
+          storage_path: string;
+          original_filename: string;
+          kind: LearningStoryMediaKind;
+        };
+        Update: Partial<LearningStoryMediaRow>;
+        Relationships: [];
+      };
+      learning_story_status_history: {
+        Row: LearningStoryStatusHistoryRow;
+        Insert: Partial<LearningStoryStatusHistoryRow> & {
+          story_id: string;
+          to_status: LearningStoryStatus;
+        };
+        Update: Partial<LearningStoryStatusHistoryRow>;
+        Relationships: [];
+      };
+      accident_illness_records: {
+        Row: AccidentIllnessRecordsRow;
+        Insert: Partial<AccidentIllnessRecordsRow> & {
+          child_id: string;
+          incident_date: string;
+        };
+        Update: Partial<AccidentIllnessRecordsRow>;
+        Relationships: [];
+      };
+      hazard_checklist_templates: {
+        Row: HazardChecklistTemplatesRow;
+        Insert: Partial<HazardChecklistTemplatesRow> & {
+          room_id: string;
+          category: HazardCheckCategory;
+          item_text: string;
+        };
+        Update: Partial<HazardChecklistTemplatesRow>;
+        Relationships: [];
+      };
+      hazard_checks: {
+        Row: HazardChecksRow;
+        Insert: Partial<HazardChecksRow> & {
+          room_id: string;
+          week_start_date: string;
+        };
+        Update: Partial<HazardChecksRow>;
+        Relationships: [];
+      };
+      hazard_check_daily_signoffs: {
+        Row: HazardCheckDailySignoffsRow;
+        Insert: Partial<HazardCheckDailySignoffsRow> & {
+          check_id: string;
+          check_date: string;
+        };
+        Update: Partial<HazardCheckDailySignoffsRow>;
+        Relationships: [];
+      };
+      hazard_check_items: {
+        Row: HazardCheckItemsRow;
+        Insert: Partial<HazardCheckItemsRow> & {
+          check_id: string;
+          category: HazardCheckCategory;
+          item_text: string;
+        };
+        Update: Partial<HazardCheckItemsRow>;
+        Relationships: [];
+      };
+      hazard_log_entries: {
+        Row: HazardLogEntriesRow;
+        Insert: Partial<HazardLogEntriesRow> & {
+          check_id: string;
+          hazard_description: string;
+        };
+        Update: Partial<HazardLogEntriesRow>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -469,6 +1052,16 @@ export interface Database {
       staff_contract_type: StaffContractType;
       emergency_drill_type: EmergencyDrillType;
       staff_qualification_status: StaffQualificationStatus;
+      child_status: ChildStatus;
+      stock_supplier: StockSupplier;
+      stock_order_item_status: StockOrderItemStatus;
+      finance_payment_status: FinancePaymentStatus;
+      finance_income_status: FinanceIncomeStatus;
+      finance_income_source: FinanceIncomeSource;
+      learning_story_status: LearningStoryStatus;
+      learning_story_media_kind: LearningStoryMediaKind;
+      hazard_check_category: HazardCheckCategory;
+      hazard_risk_level: HazardRiskLevel;
     };
     CompositeTypes: { [_ in never]: never };
   };

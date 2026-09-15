@@ -61,6 +61,53 @@ export async function createStaffMember(formData: FormData): Promise<CreateStaff
   return { success: true, staffId: staffRow.id };
 }
 
+export type CreateMinimalStaffResult = { success: true; staffId: string } | { success: false; error: string };
+
+/** A lightweight profile for a staff member named on an old paper form (e.g.
+ * via Accident & Illness photo import) who turns out not to be in the system
+ * at all. Status defaults to "former" — a form only just being digitised
+ * usually means they've already left — and `notes` records how the profile
+ * came to exist, so it never looks like a normal employment record. Finds an
+ * existing exact-name match first, the same way createMinimalChildProfile
+ * does, so calling this twice for the same name never creates two profiles. */
+export async function createMinimalStaffProfile(fullName: string): Promise<CreateMinimalStaffResult> {
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return { success: false, error: "Enter the staff member's name." };
+  }
+
+  const supabase = createClient();
+  const userId = await currentUserId();
+
+  const { data: existing } = await supabase
+    .from("staff")
+    .select("id")
+    .ilike("full_name", trimmed)
+    .maybeSingle();
+  if (existing) {
+    return { success: true, staffId: existing.id };
+  }
+
+  const { data: staffRow, error } = await supabase
+    .from("staff")
+    .insert({
+      full_name: trimmed,
+      status: "former",
+      notes: "Profile created automatically from an Accident & Illness photo import — no other details were supplied.",
+      created_by: userId,
+    } as any)
+    .select("id")
+    .single();
+
+  if (error || !staffRow) {
+    return { success: false, error: `Could not create a profile: ${error?.message ?? "unknown error"}` };
+  }
+
+  revalidatePath("/staff");
+  revalidatePath("/records/accidents-illness");
+  return { success: true, staffId: staffRow.id };
+}
+
 export async function updateStaffDetails(
   staffId: string,
   fields: {
@@ -126,6 +173,17 @@ export async function deleteStaffMember(staffId: string): Promise<DeleteStaffRes
       error: err instanceof Error ? `Could not delete staff member: ${err.message}` : "Could not delete staff member.",
     };
   }
+}
+
+/** Whether this educator's learning stories publish immediately or need a
+ * reviewer first. This is a workflow setting, not real access control —
+ * Beach Kids currently runs on a single shared login, so it can't be
+ * enforced as a per-account permission yet. */
+export async function updateStaffPublishPermission(staffId: string, canPublishDirectly: boolean) {
+  const supabase = createClient();
+  await supabase.from("staff").update({ can_publish_learning_stories: canPublishDirectly } as any).eq("id", staffId);
+  revalidatePath(`/staff/${staffId}`);
+  revalidatePath("/staff");
 }
 
 export async function setStaffStatus(staffId: string, status: StaffStatus) {

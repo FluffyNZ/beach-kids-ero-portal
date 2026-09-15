@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SECTION_META, STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
 import { percentage, daysUntil } from "@/lib/utils";
 import { getNextDrillDue } from "@/lib/data/emergency-drills";
+import { getOpenHazardsForDashboard } from "@/lib/data/hazard-checks";
+import { HAZARD_RISK_LABEL } from "@/lib/constants";
 import type { DashboardStats } from "@/lib/types";
 import type { StaffDocumentCategory } from "@/lib/supabase/database.types";
 
@@ -95,7 +97,8 @@ export type NeedsAttentionItem = {
     | "document_expiring"
     | "staff_document_due"
     | "staff_review_due"
-    | "emergency_drill_due";
+    | "emergency_drill_due"
+    | "hazard_open";
   title: string;
   detail: string;
   href: string;
@@ -113,6 +116,7 @@ export async function getNeedsAttention(limit = 8): Promise<NeedsAttentionItem[]
     { data: staffDocs },
     { data: staffQuals },
     nextDrillDue,
+    openHazards,
   ] = await Promise.all([
     supabase.from("ero_criteria").select("id, code, title"),
     supabase.from("criterion_assessments").select("*"),
@@ -125,6 +129,7 @@ export async function getNeedsAttention(limit = 8): Promise<NeedsAttentionItem[]
       .select("staff_id, next_review_date")
       .not("next_review_date", "is", null),
     getNextDrillDue(),
+    getOpenHazardsForDashboard(),
   ]);
 
   const activeStaffById = new Map((activeStaff ?? []).map((s) => [s.id, s]));
@@ -232,8 +237,21 @@ export async function getNeedsAttention(limit = 8): Promise<NeedsAttentionItem[]
     });
   }
 
+  // Only an unresolved hazard log entry becomes a job here — a routine
+  // tick-box left unchecked on a Daily Hazard Checklist usually just means
+  // "not checked yet today", not a real flagged hazard.
+  openHazards.forEach((h) => {
+    items.push({
+      kind: "hazard_open",
+      title: `${h.room_name} — ${h.hazard_description}`,
+      detail: `${HAZARD_RISK_LABEL[h.risk_level]} risk, logged ${h.check_date}`,
+      href: `/records/hazards/${h.check_id}`,
+    });
+  });
+
   const priority: Record<NeedsAttentionItem["kind"], number> = {
     action_overdue: 0,
+    hazard_open: 0,
     document_expiring: 1,
     staff_document_due: 1,
     staff_review_due: 2,

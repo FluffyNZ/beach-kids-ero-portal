@@ -6,6 +6,7 @@ import { StaffDetailsForm } from "@/components/staff/staff-details-form";
 import { StaffProfileForm } from "@/components/staff/staff-profile-form";
 import { RequiredDocumentsPanel } from "@/components/staff/required-documents-panel";
 import { StaffQualificationForm } from "@/components/staff/staff-qualification-form";
+import { LearningStoryPermissionToggle } from "@/components/staff/learning-story-permission-toggle";
 import { DeleteStaffButton } from "@/components/staff/delete-staff-button";
 import { StatusBadge } from "@/components/status-badge";
 import { ChevronRightIcon } from "@/components/icons";
@@ -114,6 +115,14 @@ export default async function StaffDetailPage({ params }: { params: { id: string
           slots={requiredDocumentSlots}
           otherDocuments={otherDocuments}
           onUpload={uploadStaffDocument.bind(null, staffMember.id)}
+        />
+      </section>
+
+      <section className="card p-5">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Learning Stories</h2>
+        <LearningStoryPermissionToggle
+          staffId={staffMember.id}
+          canPublishDirectly={staffMember.can_publish_learning_stories}
         />
       </section>
 

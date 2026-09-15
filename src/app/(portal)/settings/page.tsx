@@ -1,11 +1,13 @@
 import { getCurrentProfile } from "@/lib/data/profiles";
+import { getFeeSettings } from "@/lib/data/fees";
 import { ChangePasswordForm } from "@/components/settings/change-password-form";
+import { FeeSettingsForm } from "@/components/settings/fee-settings-form";
 import { initials } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const profile = await getCurrentProfile();
+  const [profile, feeSettings] = await Promise.all([getCurrentProfile(), getFeeSettings()]);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8">
@@ -30,6 +32,15 @@ export default async function SettingsPage() {
       <section className="card p-5">
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-ocean-500">Change password</h2>
         <ChangePasswordForm />
+      </section>
+
+      <section className="card p-5">
+        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-ocean-500">Fee settings</h2>
+        <p className="mb-4 text-sm text-ocean-700">
+          The centre-wide numbers every child&apos;s weekly fee is calculated from — a child with their own hourly
+          rate or a special weekly amount set on their profile overrides the standard rate here.
+        </p>
+        <FeeSettingsForm settings={feeSettings} />
       </section>
 
       <section className="card p-5">

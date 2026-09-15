@@ -69,6 +69,27 @@ export function StaffIcon({ className = base }: IconProps) {
   );
 }
 
+export function ChildrenIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="9.5" cy="6.5" r="2.8" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M4 19c0-3 2.5-5.3 5.5-5.3S15 16 15 19" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="17.5" cy="16.5" r="3.7" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M17.5 14.6v3.8M16.3 15.6h2.1a.75.75 0 0 1 0 1.5h-1.8a.75.75 0 0 0 0 1.5h2.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function RosterIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3 9.5h18M8 3v3M16 3v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M7 13.5h3M7 17h3M14 13.5h3M14 17h3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function SettingsIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -179,6 +200,52 @@ export function FlagIcon({ className = base }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
       <path d="M5 3v18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
       <path d="M5 4h11l-2.5 3.5L16 11H5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function StockIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M3.5 7.5 12 12m0 0 8.5-4.5M12 12v9" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function FinancesIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 7v10M9.5 9.2c0-1.2 1.1-2.2 2.5-2.2s2.5.9 2.5 2c0 3-5 1.7-5 4.6 0 1.1 1.1 2.1 2.5 2.1s2.5-.9 2.5-2.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ShieldCheckIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3l7 3v5.5c0 4.9-3 8.6-7 9.5-4-.9-7-4.6-7-9.5V6l7-3Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M9 12l2 2 4-4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function BookOpenIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 6.5c-1.5-1.3-3.6-2-6.5-2A1.5 1.5 0 0 0 4 6v11.5c0 .55.45 1 1 1 .12 0 .23-.02.35-.06C7.1 17.9 9.4 18 12 19.5c2.6-1.5 4.9-1.6 6.65-1.06.12.04.23.06.35.06.55 0 1-.45 1-1V6a1.5 1.5 0 0 0-1.5-1.5c-2.9 0-5 .7-6.5 2Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M12 6.5v13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
