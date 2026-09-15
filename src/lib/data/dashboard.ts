@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { SECTION_META, STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
-import { percentage, daysUntil } from "@/lib/utils";
+import { percentage, daysUntil, formatShortDate } from "@/lib/utils";
 import { getNextDrillDue } from "@/lib/data/emergency-drills";
 import { getOpenHazardsForDashboard } from "@/lib/data/hazard-checks";
 import { HAZARD_RISK_LABEL } from "@/lib/constants";
@@ -244,7 +244,7 @@ export async function getNeedsAttention(limit = 8): Promise<NeedsAttentionItem[]
     items.push({
       kind: "hazard_open",
       title: `${h.room_name} — ${h.hazard_description}`,
-      detail: `${HAZARD_RISK_LABEL[h.risk_level]} risk, logged ${h.check_date}`,
+      detail: `${HAZARD_RISK_LABEL[h.risk_level]} risk, logged week of ${formatShortDate(h.week_start_date)}`,
       href: `/records/hazards/${h.check_id}`,
     });
   });
