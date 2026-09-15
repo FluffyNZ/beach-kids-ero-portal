@@ -122,7 +122,7 @@ export async function updateStaffDetails(
   }
 ) {
   const supabase = createClient();
-  const { error } = await supabase.from("staff").update(fields as any).eq("id", staffId);
+  const { error } = await (supabase.from("staff") as any).update(fields as any).eq("id", staffId);
   if (error) {
     throw new Error(
       `Could not save: ${error.message}. If this mentions a missing column, migration 0014_staff_employment_terms.sql hasn't been run in Supabase yet.`
@@ -181,14 +181,14 @@ export async function deleteStaffMember(staffId: string): Promise<DeleteStaffRes
  * enforced as a per-account permission yet. */
 export async function updateStaffPublishPermission(staffId: string, canPublishDirectly: boolean) {
   const supabase = createClient();
-  await supabase.from("staff").update({ can_publish_learning_stories: canPublishDirectly } as any).eq("id", staffId);
+  await (supabase.from("staff") as any).update({ can_publish_learning_stories: canPublishDirectly } as any).eq("id", staffId);
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
 }
 
 export async function setStaffStatus(staffId: string, status: StaffStatus) {
   const supabase = createClient();
-  await supabase.from("staff").update({ status } as any).eq("id", staffId);
+  await (supabase.from("staff") as any).update({ status } as any).eq("id", staffId);
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
 }
@@ -264,8 +264,8 @@ export async function updateStaffQualification(
   const supabase = createClient();
   const userId = await currentUserId();
 
-  await supabase
-    .from("staff_qualifications")
+  await (supabase
+    .from("staff_qualifications") as any)
     .upsert({ staff_id: staffId, ...fields, updated_by: userId } as any, { onConflict: "staff_id" });
 
   revalidatePath(`/staff/${staffId}`);
@@ -336,7 +336,7 @@ export async function uploadChecklistEvidence(
     return { success: false, error: `Could not save the document: ${insertError?.message}` };
   }
 
-  await supabase.from("staff_checklist_status").upsert(
+  await (supabase.from("staff_checklist_status") as any).upsert(
     {
       staff_id: staffId,
       item_id: itemId,
@@ -361,7 +361,7 @@ export async function updateStaffChecklistItem(
   const supabase = createClient();
   const userId = await currentUserId();
 
-  await supabase.from("staff_checklist_status").upsert(
+  await (supabase.from("staff_checklist_status") as any).upsert(
     {
       staff_id: staffId,
       item_id: itemId,

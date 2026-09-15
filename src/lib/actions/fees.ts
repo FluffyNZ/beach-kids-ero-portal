@@ -64,8 +64,8 @@ export async function saveWeeklyHours(input: SaveWeeklyHoursInput) {
     fri_hours: entry.hours.fri_hours,
   }));
 
-  const { error } = await supabase
-    .from("child_weekly_hours")
+  const { error } = await (supabase
+    .from("child_weekly_hours") as any)
     .upsert(rows as any, { onConflict: "week_id,child_id" });
 
   if (error) {
@@ -90,8 +90,8 @@ export async function updateFeeSettings(input: UpdateFeeSettingsInput) {
   const supabase = createClient();
   const userId = await currentUserId();
 
-  const { error } = await supabase
-    .from("fee_settings")
+  const { error } = await (supabase
+    .from("fee_settings") as any)
     .update({
       standard_hourly_rate: input.standard_hourly_rate,
       sibling_discount_percent: input.sibling_discount_percent,

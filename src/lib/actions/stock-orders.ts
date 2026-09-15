@@ -53,8 +53,8 @@ export async function markSupplierOrdered(supplier: StockSupplier) {
   const userId = await currentUserId();
   const orderedAt = new Date().toISOString();
 
-  const { error } = await supabase
-    .from("stock_order_items")
+  const { error } = await (supabase
+    .from("stock_order_items") as any)
     .update({ status: "ordered", ordered_at: orderedAt, ordered_by: userId } as any)
     .eq("supplier", supplier)
     .eq("status", "pending");
@@ -67,8 +67,8 @@ export async function updateStockOrderSettings(fields: { clean_boss_email?: stri
   const supabase = createClient();
   const userId = await currentUserId();
 
-  const { error } = await supabase
-    .from("stock_order_settings")
+  const { error } = await (supabase
+    .from("stock_order_settings") as any)
     .update({ ...fields, updated_by: userId } as any)
     .eq("id", true);
 

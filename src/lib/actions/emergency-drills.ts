@@ -158,8 +158,8 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
       .maybeSingle();
 
     if (existingAssessment) {
-      await supabase
-        .from("criterion_assessments")
+      await (supabase
+        .from("criterion_assessments") as any)
         .update({ evidence_status: "ready", updated_by: userId } as any)
         .eq("criterion_id", criterion.id);
     } else {
@@ -178,7 +178,7 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
     } as any);
   }
 
-  await supabase.from("emergency_drills").update({ evidence_id: evidenceRow.id } as any).eq("id", drillId);
+  await (supabase.from("emergency_drills") as any).update({ evidence_id: evidenceRow.id } as any).eq("id", drillId);
 
   revalidatePath(`/emergency-drills/${drillId}`);
   revalidatePath("/emergency-drills");

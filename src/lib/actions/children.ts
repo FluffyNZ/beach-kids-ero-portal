@@ -192,7 +192,7 @@ export async function updateChildDetails(
     updates.twenty_hours_ece = isEceEligible(fields.age_years);
   }
 
-  const { error } = await supabase.from("children").update(updates as any).eq("id", childId);
+  const { error } = await (supabase.from("children") as any).update(updates as any).eq("id", childId);
   if (error) {
     throw new Error(`Could not save: ${error.message}`);
   }
@@ -208,7 +208,7 @@ export async function updateChildFeeSettings(
   }
 ) {
   const supabase = createClient();
-  const { error } = await supabase.from("children").update(fields as any).eq("id", childId);
+  const { error } = await (supabase.from("children") as any).update(fields as any).eq("id", childId);
   if (error) {
     throw new Error(`Could not save fee settings: ${error.message}`);
   }
@@ -241,8 +241,8 @@ export async function updateChildWinzSubsidy(
     // all-blank subsidy record around.
     await supabase.from("child_winz_subsidies").delete().eq("child_id", childId);
   } else {
-    await supabase
-      .from("child_winz_subsidies")
+    await (supabase
+      .from("child_winz_subsidies") as any)
       .upsert({ child_id: childId, ...fields, updated_by: userId } as any, { onConflict: "child_id" });
   }
 
@@ -268,8 +268,8 @@ export async function updateChildEnrolledSchedule(
   const supabase = createClient();
   const userId = await currentUserId();
 
-  const { error } = await supabase
-    .from("child_enrolled_schedule")
+  const { error } = await (supabase
+    .from("child_enrolled_schedule") as any)
     .upsert({ child_id: childId, ...fields, updated_by: userId } as any, { onConflict: "child_id" });
 
   if (error) {
@@ -283,7 +283,7 @@ export async function updateChildEnrolledSchedule(
 
 export async function setChildStatus(childId: string, status: ChildStatus) {
   const supabase = createClient();
-  await supabase.from("children").update({ status } as any).eq("id", childId);
+  await (supabase.from("children") as any).update({ status } as any).eq("id", childId);
   revalidatePath(`/children/${childId}`);
   revalidatePath("/children");
 }
@@ -321,8 +321,8 @@ export async function uploadChildPhoto(childId: string, formData: FormData): Pro
     return { success: false, error: `Upload failed: ${uploadError.message}` };
   }
 
-  const { error: updateError } = await supabase
-    .from("children")
+  const { error: updateError } = await (supabase
+    .from("children") as any)
     .update({ photo_storage_path: storagePath } as any)
     .eq("id", childId);
 
@@ -349,7 +349,7 @@ export async function removeChildPhoto(childId: string): Promise<UploadChildPhot
     .eq("id", childId)
     .maybeSingle();
 
-  await supabase.from("children").update({ photo_storage_path: null } as any).eq("id", childId);
+  await (supabase.from("children") as any).update({ photo_storage_path: null } as any).eq("id", childId);
 
   if (existing?.photo_storage_path) {
     await supabase.storage.from(PHOTO_BUCKET).remove([existing.photo_storage_path]);

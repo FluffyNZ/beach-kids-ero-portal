@@ -115,14 +115,14 @@ export async function updateHazardCheck(checkId: string, formData: FormData): Pr
     is_checked: formData.get(`item_checked_${itemId}`) === "on",
   }));
 
-  const { error } = await supabase.from("hazard_checks").update({ notes } as any).eq("id", checkId);
+  const { error } = await (supabase.from("hazard_checks") as any).update({ notes } as any).eq("id", checkId);
 
   if (error) {
     return { success: false, error: `Could not save this check: ${error.message}` };
   }
 
   await Promise.all(
-    itemUpdates.map((u) => supabase.from("hazard_check_items").update({ is_checked: u.is_checked } as any).eq("id", u.id))
+    itemUpdates.map((u) => (supabase.from("hazard_check_items") as any).update({ is_checked: u.is_checked } as any).eq("id", u.id))
   );
 
   revalidatePath(`/records/hazards/${checkId}`);
@@ -150,8 +150,8 @@ export async function updateHazardCheckDailySignoff(signoffId: string, formData:
     return { success: false, error: "That day's sign-off row no longer exists." };
   }
 
-  const { error } = await supabase
-    .from("hazard_check_daily_signoffs")
+  const { error } = await (supabase
+    .from("hazard_check_daily_signoffs") as any)
     .update({
       staff_id: staffId,
       completed_time: completedTime,
@@ -199,8 +199,8 @@ export async function addHazardLogEntry(checkId: string, formData: FormData): Pr
 
 export async function setHazardLogEntryResolved(id: string, resolved: boolean, checkId?: string) {
   const supabase = createClient();
-  await supabase
-    .from("hazard_log_entries")
+  await (supabase
+    .from("hazard_log_entries") as any)
     .update({ resolved, resolved_at: resolved ? new Date().toISOString() : null } as any)
     .eq("id", id);
 
@@ -286,7 +286,7 @@ export async function attachHazardCheckEvidence(
 
   const previousEvidenceId = check.evidence_id as string | null;
 
-  await supabase.from("hazard_checks").update({ evidence_id: evidenceRow.id } as any).eq("id", checkId);
+  await (supabase.from("hazard_checks") as any).update({ evidence_id: evidenceRow.id } as any).eq("id", checkId);
 
   // Clean up the previous photo (if this is a replacement) so old and new
   // don't both linger in the evidence library.
@@ -617,7 +617,7 @@ export async function createHazardCheckFromImport(input: {
     const toTick = (existingItems ?? []).filter((i) => !i.is_checked && checkedSet.has(i.item_text));
     if (toTick.length > 0) {
       await Promise.all(
-        toTick.map((i) => supabase.from("hazard_check_items").update({ is_checked: true } as any).eq("id", i.id))
+        toTick.map((i) => (supabase.from("hazard_check_items") as any).update({ is_checked: true } as any).eq("id", i.id))
       );
     }
 
@@ -628,7 +628,7 @@ export async function createHazardCheckFromImport(input: {
         .eq("id", checkId)
         .maybeSingle();
       const combinedNotes = existingCheckRow?.notes ? `${existingCheckRow.notes}\n${input.notes}` : input.notes;
-      await supabase.from("hazard_checks").update({ notes: combinedNotes } as any).eq("id", checkId);
+      await (supabase.from("hazard_checks") as any).update({ notes: combinedNotes } as any).eq("id", checkId);
     }
   }
 
@@ -646,8 +646,8 @@ export async function createHazardCheckFromImport(input: {
   };
 
   if (existingSignoff) {
-    const { error: signoffError } = await supabase
-      .from("hazard_check_daily_signoffs")
+    const { error: signoffError } = await (supabase
+      .from("hazard_check_daily_signoffs") as any)
       .update({
         ...signoffFields,
         signed_off_at: input.signedOff && !existingSignoff.signed_off ? new Date().toISOString() : input.signedOff ? undefined : null,

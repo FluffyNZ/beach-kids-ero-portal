@@ -89,8 +89,8 @@ export async function updateAccidentIllnessRecord(
     return { success: false, error: "That record no longer exists." };
   }
 
-  const { error } = await supabase
-    .from("accident_illness_records")
+  const { error } = await (supabase
+    .from("accident_illness_records") as any)
     .update({
       incident_date: incidentDate,
       incident_time: (formData.get("incident_time") as string) || null,
@@ -187,7 +187,7 @@ export async function attachAccidentIllnessEvidence(
 
   const previousEvidenceId = record.evidence_id as string | null;
 
-  await supabase.from("accident_illness_records").update({ evidence_id: evidenceRow.id } as any).eq("id", recordId);
+  await (supabase.from("accident_illness_records") as any).update({ evidence_id: evidenceRow.id } as any).eq("id", recordId);
 
   // Clean up the previous photo (if this is a replacement) so old and new
   // don't both linger in the evidence library.

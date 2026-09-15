@@ -53,7 +53,7 @@ export async function saveRosterShift(input: SaveShiftInput) {
   const { weekId } = await ensureRosterWeek(input.weekStartDate);
 
   const supabase = createClient();
-  const { error } = await supabase.from("roster_shifts").upsert(
+  const { error } = await (supabase.from("roster_shifts") as any).upsert(
     {
       week_id: weekId,
       staff_id: input.staffId,
@@ -119,7 +119,7 @@ export async function duplicateRosterWeek(
       .toISOString()
       .slice(0, 10);
 
-    await supabase.from("roster_shifts").upsert(
+    await (supabase.from("roster_shifts") as any).upsert(
       {
         week_id: targetWeekId,
         staff_id: shift.staff_id,

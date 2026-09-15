@@ -33,8 +33,8 @@ export async function toggleChecklistItem(itemId: string, criterionCode: string,
   const supabase = createClient();
   const userId = await currentUserId();
 
-  await supabase
-    .from("beachkids_checklist_items")
+  await (supabase
+    .from("beachkids_checklist_items") as any)
     .update({
       is_checked: isChecked,
       checked_at: isChecked ? new Date().toISOString() : null,

@@ -50,8 +50,8 @@ export async function addOutgoing(input: OutgoingInput) {
 
 export async function setOutgoingPaid(id: string, paid: boolean) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from("finance_outgoings")
+  const { error } = await (supabase
+    .from("finance_outgoings") as any)
     .update({
       status: paid ? "paid" : "unpaid",
       paid_date: paid ? new Date().toISOString().slice(0, 10) : null,
@@ -199,8 +199,8 @@ export async function addIncome(input: IncomeInput) {
 
 export async function setIncomeReceived(id: string, received: boolean) {
   const supabase = createClient();
-  const { error } = await supabase
-    .from("finance_income")
+  const { error } = await (supabase
+    .from("finance_income") as any)
     .update({
       status: received ? "received" : "pending",
       received_date: received ? new Date().toISOString().slice(0, 10) : null,

@@ -50,8 +50,8 @@ export async function updateComplianceStatus(
 ) {
   const userId = await ensureAssessmentRow(criterionId);
   const supabase = createClient();
-  await supabase
-    .from("criterion_assessments")
+  await (supabase
+    .from("criterion_assessments") as any)
     // Marking something N/A means it doesn't apply to this service at all —
     // so evidence isn't required for it either, without an extra click.
     .update({
@@ -75,8 +75,8 @@ export async function updateEvidenceStatus(
 ) {
   const userId = await ensureAssessmentRow(criterionId);
   const supabase = createClient();
-  await supabase
-    .from("criterion_assessments")
+  await (supabase
+    .from("criterion_assessments") as any)
     .update({ evidence_status: status, updated_by: userId } as any)
     .eq("criterion_id", criterionId);
 
@@ -90,8 +90,8 @@ export async function updateEvidenceStatus(
 export async function updateManagementNotes(criterionId: string, criterionCode: string, notes: string) {
   const userId = await ensureAssessmentRow(criterionId);
   const supabase = createClient();
-  await supabase
-    .from("criterion_assessments")
+  await (supabase
+    .from("criterion_assessments") as any)
     .update({ management_notes: notes, updated_by: userId } as any)
     .eq("criterion_id", criterionId);
 
@@ -105,8 +105,8 @@ export async function updateFlag(
 ) {
   const userId = await ensureAssessmentRow(criterionId);
   const supabase = createClient();
-  const { error } = await supabase
-    .from("criterion_assessments")
+  const { error } = await (supabase
+    .from("criterion_assessments") as any)
     .update({ is_flagged: fields.is_flagged, flag_notes: fields.flag_notes, updated_by: userId } as any)
     .eq("criterion_id", criterionId);
 
@@ -133,8 +133,8 @@ export async function updateReviewInfo(
 ) {
   const userId = await ensureAssessmentRow(criterionId);
   const supabase = createClient();
-  await supabase
-    .from("criterion_assessments")
+  await (supabase
+    .from("criterion_assessments") as any)
     .update({
       last_reviewed_at: fields.last_reviewed_at,
       next_review_date: fields.next_review_date,

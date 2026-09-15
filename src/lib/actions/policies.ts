@@ -154,12 +154,12 @@ export async function approvePolicyVersion(policyId: string, versionId: string) 
   const supabase = createClient();
   const userId = await currentUserId();
 
-  await supabase
-    .from("policy_versions")
+  await (supabase
+    .from("policy_versions") as any)
     .update({ status: "approved", approved_by: userId, approved_at: new Date().toISOString() } as any)
     .eq("id", versionId);
 
-  await supabase.from("policies").update({ current_version_id: versionId } as any).eq("id", policyId);
+  await (supabase.from("policies") as any).update({ current_version_id: versionId } as any).eq("id", policyId);
 
   revalidatePath(`/policies/${policyId}`);
   revalidatePath("/policies");
@@ -177,14 +177,14 @@ export async function updatePolicyDetails(
   }
 ) {
   const supabase = createClient();
-  await supabase.from("policies").update(fields as any).eq("id", policyId);
+  await (supabase.from("policies") as any).update(fields as any).eq("id", policyId);
   revalidatePath(`/policies/${policyId}`);
   revalidatePath("/policies");
 }
 
 export async function setPolicyStatus(policyId: string, status: "active" | "archived") {
   const supabase = createClient();
-  await supabase.from("policies").update({ status } as any).eq("id", policyId);
+  await (supabase.from("policies") as any).update({ status } as any).eq("id", policyId);
   revalidatePath(`/policies/${policyId}`);
   revalidatePath("/policies");
 }

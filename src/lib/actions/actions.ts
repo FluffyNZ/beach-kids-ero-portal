@@ -51,7 +51,7 @@ export async function updateAction(
   fields: Partial<ActionInput> & { status?: ActionStatusValue }
 ) {
   const supabase = createClient();
-  await supabase.from("actions").update(fields as any).eq("id", actionId);
+  await (supabase.from("actions") as any).update(fields as any).eq("id", actionId);
   revalidatePath(`/checklist/${criterionCode}`);
   revalidatePath("/actions");
   revalidatePath("/dashboard");
@@ -62,8 +62,8 @@ export async function completeAction(actionId: string, criterionId: string, crit
   const userId = await currentUserId();
   const today = new Date().toISOString().slice(0, 10);
 
-  await supabase
-    .from("actions")
+  await (supabase
+    .from("actions") as any)
     .update({ status: "completed", completion_date: today } as any)
     .eq("id", actionId);
 

@@ -104,8 +104,8 @@ export async function linkEvidenceToCriterion(evidenceId: string, criterionId: s
   const supabase = createClient();
   const userId = await currentUserId();
 
-  await supabase
-    .from("evidence_criteria_links")
+  await (supabase
+    .from("evidence_criteria_links") as any)
     .upsert(
       { evidence_id: evidenceId, criterion_id: criterionId, linked_by: userId } as any,
       { onConflict: "evidence_id,criterion_id" }
@@ -137,7 +137,7 @@ export async function updateEvidenceDetails(
   }
 ) {
   const supabase = createClient();
-  await supabase.from("evidence").update(fields as any).eq("id", evidenceId);
+  await (supabase.from("evidence") as any).update(fields as any).eq("id", evidenceId);
   revalidatePath("/evidence");
 }
 

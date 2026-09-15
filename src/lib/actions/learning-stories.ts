@@ -127,8 +127,8 @@ export async function updateStoryMeta(
 ) {
   const supabase = createClient();
   const userId = await currentUserId();
-  await supabase
-    .from("learning_stories")
+  await (supabase
+    .from("learning_stories") as any)
     .update({ ...fields, updated_by: userId, last_autosaved_at: new Date().toISOString() } as any)
     .eq("id", storyId);
   revalidateStory(storyId);
@@ -143,7 +143,7 @@ export async function setStoryChildren(storyId: string, childIds: string[]) {
       .insert(childIds.map((child_id) => ({ story_id: storyId, child_id })) as any);
   }
   const userId = await currentUserId();
-  await supabase.from("learning_stories").update({ updated_by: userId } as any).eq("id", storyId);
+  await (supabase.from("learning_stories") as any).update({ updated_by: userId } as any).eq("id", storyId);
   revalidateStory(storyId);
 }
 
@@ -166,8 +166,8 @@ export async function autosaveStoryContent(storyId: string, blocks: LearningStor
   const userId = await currentUserId();
   const savedAt = new Date().toISOString();
 
-  const { error } = await supabase
-    .from("learning_stories")
+  const { error } = await (supabase
+    .from("learning_stories") as any)
     .update({ content_blocks: blocks as any, updated_by: userId, last_autosaved_at: savedAt } as any)
     .eq("id", storyId);
 
@@ -190,8 +190,8 @@ export async function autosaveStory(
   const userId = await currentUserId();
   const savedAt = new Date().toISOString();
 
-  const { error } = await supabase
-    .from("learning_stories")
+  const { error } = await (supabase
+    .from("learning_stories") as any)
     .update({
       title: fields.title,
       story_date: fields.story_date,
@@ -277,8 +277,8 @@ export async function uploadStoryMedia(storyId: string, formData: FormData): Pro
 
 export async function updateMediaCaption(mediaId: string, storyId: string, caption: string) {
   const supabase = createClient();
-  await supabase
-    .from("learning_story_media")
+  await (supabase
+    .from("learning_story_media") as any)
     .update({ caption: caption || null } as any)
     .eq("id", mediaId);
   revalidateStory(storyId);
@@ -288,8 +288,8 @@ export async function reorderStoryMedia(storyId: string, orderedMediaIds: string
   const supabase = createClient();
   await Promise.all(
     orderedMediaIds.map((id, index) =>
-      supabase
-        .from("learning_story_media")
+      (supabase
+        .from("learning_story_media") as any)
         .update({ sort_order: index } as any)
         .eq("id", id)
     )
@@ -328,7 +328,7 @@ export async function removeStoryMedia(mediaId: string, storyId: string): Promis
       }
       return b;
     });
-    await supabase.from("learning_stories").update({ content_blocks: blocks as any } as any).eq("id", storyId);
+    await (supabase.from("learning_stories") as any).update({ content_blocks: blocks as any } as any).eq("id", storyId);
   }
 
   revalidateStory(storyId);
@@ -370,8 +370,8 @@ export async function submitStory(storyId: string): Promise<StatusActionResult> 
   const fromStatus = story.status as LearningStoryStatus;
 
   if (canPublishDirectly) {
-    await supabase
-      .from("learning_stories")
+    await (supabase
+      .from("learning_stories") as any)
       .update({
         status: "published",
         requires_approval: false,
@@ -385,8 +385,8 @@ export async function submitStory(storyId: string): Promise<StatusActionResult> 
     return { success: true, published: true };
   }
 
-  await supabase
-    .from("learning_stories")
+  await (supabase
+    .from("learning_stories") as any)
     .update({
       status: "awaiting_approval",
       requires_approval: true,
@@ -408,8 +408,8 @@ export async function approveAndPublishStory(storyId: string): Promise<StatusAct
   const { data: story } = await supabase.from("learning_stories").select("status").eq("id", storyId).maybeSingle();
   if (!story) return { success: false, error: "Story not found." };
 
-  await supabase
-    .from("learning_stories")
+  await (supabase
+    .from("learning_stories") as any)
     .update({
       status: "published",
       reviewed_by: userId,
@@ -434,8 +434,8 @@ export async function returnStoryForChanges(storyId: string, comment: string): P
   const { data: story } = await supabase.from("learning_stories").select("status").eq("id", storyId).maybeSingle();
   if (!story) return { success: false, error: "Story not found." };
 
-  await supabase
-    .from("learning_stories")
+  await (supabase
+    .from("learning_stories") as any)
     .update({
       status: "returned_for_editing",
       reviewed_by: userId,
@@ -455,7 +455,7 @@ export async function archiveStory(storyId: string) {
   const { data: story } = await supabase.from("learning_stories").select("status").eq("id", storyId).maybeSingle();
   if (!story) return;
 
-  await supabase.from("learning_stories").update({ status: "archived", updated_by: userId } as any).eq("id", storyId);
+  await (supabase.from("learning_stories") as any).update({ status: "archived", updated_by: userId } as any).eq("id", storyId);
   await logStatusChange(storyId, story.status as LearningStoryStatus, "archived", null, userId);
   revalidateStory(storyId);
 }
