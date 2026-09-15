@@ -69,7 +69,7 @@ export async function uploadEvidence(formData: FormData): Promise<UploadEvidence
       notes,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (insertError || !evidenceRow) {
     // Best-effort cleanup of the orphaned storage object.

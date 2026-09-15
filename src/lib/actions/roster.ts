@@ -29,7 +29,7 @@ export async function ensureRosterWeek(weekStartDate: string): Promise<{ weekId:
     .from("roster_weeks")
     .insert({ week_start_date: weekStartDate, created_by: userId } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !created) {
     throw new Error(`Could not create the roster week: ${error?.message ?? "unknown error"}`);

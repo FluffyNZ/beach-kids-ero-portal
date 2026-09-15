@@ -56,7 +56,7 @@ export async function createAccidentIllnessRecord(formData: FormData): Promise<S
       recorded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !row) {
     return { success: false, error: `Could not save this record: ${error?.message ?? "unknown error"}` };
@@ -178,7 +178,7 @@ export async function attachAccidentIllnessEvidence(
       uploaded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (insertError || !evidenceRow) {
     await supabase.storage.from(EVIDENCE_BUCKET).remove([storagePath]);

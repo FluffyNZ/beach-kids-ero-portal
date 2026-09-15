@@ -51,7 +51,7 @@ export async function createStaffMember(formData: FormData): Promise<CreateStaff
       created_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !staffRow) {
     return { success: false, error: `Could not add staff member: ${error?.message}` };
@@ -97,7 +97,7 @@ export async function createMinimalStaffProfile(fullName: string): Promise<Creat
       created_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !staffRow) {
     return { success: false, error: `Could not create a profile: ${error?.message ?? "unknown error"}` };
@@ -329,7 +329,7 @@ export async function uploadChecklistEvidence(
       uploaded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (insertError || !documentRow) {
     await supabase.storage.from(BUCKET).remove([storagePath]);

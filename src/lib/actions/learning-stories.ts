@@ -77,7 +77,7 @@ export async function createDraftStory(): Promise<CreateDraftResult> {
       updated_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !data) {
     return { success: false, error: `Could not create a new story: ${error?.message}` };
@@ -262,7 +262,7 @@ export async function uploadStoryMedia(storyId: string, formData: FormData): Pro
       uploaded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (insertError || !mediaRow) {
     await supabase.storage.from(BUCKET).remove([storagePath]);

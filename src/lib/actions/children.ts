@@ -44,7 +44,7 @@ async function findOrCreateBillPayer(name: string | null | undefined): Promise<s
     .from("bill_payers")
     .insert({ full_name: trimmed, created_by: userId } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !created) {
     throw new Error(`Could not save the bill payer: ${error?.message ?? "unknown error"}`);
@@ -91,7 +91,7 @@ export async function createChild(formData: FormData): Promise<CreateChildResult
         created_by: userId,
       } as any)
       .select("id")
-      .single();
+      .single<{ id: string }>();
 
     if (error || !childRow) {
       return { success: false, error: `Could not add child: ${error?.message ?? "unknown error"}` };
@@ -144,7 +144,7 @@ export async function createMinimalChildProfile(fullName: string): Promise<Creat
       created_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !childRow) {
     return { success: false, error: `Could not create a profile: ${error?.message ?? "unknown error"}` };

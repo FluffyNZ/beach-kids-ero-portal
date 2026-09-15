@@ -59,7 +59,7 @@ export async function createHazardCheck(roomId: string, weekStartDate: string): 
     .from("hazard_checks")
     .insert({ room_id: roomId, week_start_date: weekStartDate, created_by: userId } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !checkRow) {
     // A unique-constraint violation here means someone else's click won the
@@ -277,7 +277,7 @@ export async function attachHazardCheckEvidence(
       uploaded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (insertError || !evidenceRow) {
     await supabase.storage.from(EVIDENCE_BUCKET).remove([storagePath]);
@@ -567,7 +567,7 @@ export async function createHazardCheckFromImport(input: {
       .from("hazard_checks")
       .insert({ room_id: input.roomId, week_start_date: weekStartDate, notes: input.notes, created_by: userId } as any)
       .select("id")
-      .single();
+      .single<{ id: string }>();
 
     if (error || !checkRow) {
       // A unique-constraint violation here means someone else's click (or an

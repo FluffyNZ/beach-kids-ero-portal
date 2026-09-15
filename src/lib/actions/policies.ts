@@ -55,7 +55,7 @@ export async function createPolicy(formData: FormData): Promise<CreatePolicyResu
       created_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (policyError || !policyRow) {
     return { success: false, error: `Could not create policy: ${policyError?.message}` };

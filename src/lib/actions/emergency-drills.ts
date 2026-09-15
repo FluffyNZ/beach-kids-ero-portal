@@ -65,7 +65,7 @@ export async function createEmergencyDrill(formData: FormData): Promise<CreateDr
       recorded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !row) {
     return { success: false, error: `Could not save the drill record: ${error?.message ?? "unknown error"}` };
@@ -128,7 +128,7 @@ export async function attachDrillEvidence(drillId: string, formData: FormData): 
       uploaded_by: userId,
     } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (insertError || !evidenceRow) {
     await supabase.storage.from(EVIDENCE_BUCKET).remove([storagePath]);

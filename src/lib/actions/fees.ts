@@ -30,7 +30,7 @@ export async function ensureFeeWeek(weekStartDate: string): Promise<{ weekId: st
     .from("fee_weeks")
     .insert({ week_start_date: weekStartDate, created_by: userId } as any)
     .select("id")
-    .single();
+    .single<{ id: string }>();
 
   if (error || !created) {
     throw new Error(`Could not create the fee week: ${error?.message ?? "unknown error"}`);
