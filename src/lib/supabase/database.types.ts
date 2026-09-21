@@ -195,6 +195,7 @@ type StaffRow = {
   pay_rate: number | null;
   min_hours: number | null;
   date_of_birth: string | null;
+  photo_storage_path: string | null;
   notes: string | null;
   can_publish_learning_stories: boolean;
   created_at: string;

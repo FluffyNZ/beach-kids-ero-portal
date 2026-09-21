@@ -171,6 +171,8 @@ export function RecordForm({
       start_date: null,
       end_date: null,
       date_of_birth: null,
+      photo_storage_path: null,
+      photo_url: null,
       status: "former",
       contract_type: null,
       pay_rate: null,

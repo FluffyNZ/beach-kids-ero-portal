@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
+import { StaffAvatar } from "./staff-avatar";
 import { ChevronRightIcon } from "@/components/icons";
 import { getDeadlineAlert } from "@/lib/evidence-deadline";
 import {
@@ -33,6 +34,8 @@ export function StaffTable({ staff }: { staff: StaffMember[] }) {
             href={`/staff/${s.id}`}
             className="group flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-cream/60"
           >
+            <StaffAvatar fullName={s.full_name} photoUrl={s.photo_url} />
+
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-sm font-medium text-charcoal">{s.full_name}</p>

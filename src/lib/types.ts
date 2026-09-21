@@ -235,6 +235,8 @@ export type StaffMember = {
   pay_rate: number | null;
   min_hours: number | null;
   date_of_birth: string | null;
+  photo_storage_path: string | null;
+  photo_url: string | null;
   notes: string | null;
   can_publish_learning_stories: boolean;
   created_at: string;
@@ -877,8 +879,8 @@ export type StaffLeave = {
 export type CalendarEvent =
   | { kind: "public_holiday"; date: string; name: string }
   | { kind: "staff_leave"; date: string; leave: StaffLeave }
-  | { kind: "staff_birthday"; date: string; staffId: string; name: string }
-  | { kind: "child_birthday"; date: string; childId: string; name: string };
+  | { kind: "staff_birthday"; date: string; staffId: string; name: string; photoUrl: string | null }
+  | { kind: "child_birthday"; date: string; childId: string; name: string; photoUrl: string | null };
 
 export type CalendarDay = {
   date: string;

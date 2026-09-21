@@ -9,6 +9,12 @@ import type { StaffQualificationStatus } from "@/lib/supabase/database.types";
 const BUCKET = process.env.NEXT_PUBLIC_STAFF_DOCUMENTS_BUCKET || "staff-documents";
 const SIGNED_URL_TTL_SECONDS = 60 * 5; // 5 minutes — short-lived, minted on demand
 
+const PHOTO_BUCKET = process.env.NEXT_PUBLIC_STAFF_PHOTOS_BUCKET || "staff-photos";
+// Longer-lived than the document download links — profile photos render
+// inline on pages (and the calendar) that tend to stay open a while, same
+// reasoning as child photos.
+const PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
+
 function mapQualification(row: {
   qualification_status: StaffQualificationStatus;
   qualification_level: string | null;
@@ -118,10 +124,27 @@ export async function getStaffList(options?: {
 
   const qualByStaff = new Map((quals ?? []).map((q) => [q.staff_id, q]));
 
+  // One batched signing call for every staff member with a photo, same
+  // approach as the children list — matters once there are dozens of
+  // staff on a single list page.
+  const photoPaths = rows
+    .map((r) => (r as { photo_storage_path: string | null }).photo_storage_path)
+    .filter((p): p is string => Boolean(p));
+  const photoUrlByPath = new Map<string, string>();
+  if (photoPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from(PHOTO_BUCKET)
+      .createSignedUrls(photoPaths, PHOTO_SIGNED_URL_TTL_SECONDS);
+    (signed ?? []).forEach((s) => {
+      if (s.signedUrl && !s.error) photoUrlByPath.set(s.path ?? "", s.signedUrl);
+    });
+  }
+
   return rows.map((r) => {
     const qualification = mapQualification(qualByStaff.get(r.id));
     const required = getRequiredStaffDocumentCategories(qualification.qualification_status);
     const present = categoriesByStaff.get(r.id) ?? new Set<string>();
+    const photoStoragePath = (r as { photo_storage_path: string | null }).photo_storage_path;
     return {
       id: r.id,
       full_name: r.full_name,
@@ -129,6 +152,8 @@ export async function getStaffList(options?: {
       start_date: r.start_date,
       end_date: r.end_date,
       date_of_birth: r.date_of_birth,
+      photo_storage_path: photoStoragePath,
+      photo_url: photoStoragePath ? photoUrlByPath.get(photoStoragePath) ?? null : null,
       status: r.status,
       contract_type: r.contract_type,
       pay_rate: r.pay_rate,
@@ -172,6 +197,15 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
   const required = getRequiredStaffDocumentCategories(qualification.qualification_status);
   const present = new Set(documents.map((d) => d.category));
 
+  const photoStoragePath = (row as { photo_storage_path: string | null }).photo_storage_path;
+  let photoUrl: string | null = null;
+  if (photoStoragePath) {
+    const { data: signed } = await supabase.storage
+      .from(PHOTO_BUCKET)
+      .createSignedUrl(photoStoragePath, PHOTO_SIGNED_URL_TTL_SECONDS);
+    photoUrl = signed?.signedUrl ?? null;
+  }
+
   return {
     id: row.id,
     full_name: row.full_name,
@@ -179,6 +213,8 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
     start_date: row.start_date,
     end_date: row.end_date,
     date_of_birth: row.date_of_birth,
+    photo_storage_path: photoStoragePath,
+    photo_url: photoUrl,
     status: row.status,
     contract_type: row.contract_type,
     pay_rate: row.pay_rate,

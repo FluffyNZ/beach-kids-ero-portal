@@ -10,6 +10,10 @@ export type CalendarWeek = {
   days: CalendarDay[];
 };
 
+const STAFF_PHOTO_BUCKET = process.env.NEXT_PUBLIC_STAFF_PHOTOS_BUCKET || "staff-photos";
+const CHILD_PHOTO_BUCKET = process.env.NEXT_PUBLIC_CHILD_PHOTOS_BUCKET || "child-photos";
+const PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour — matches the profile pages' own photo links
+
 type StaffLeaveRow = {
   id: string;
   staff_id: string;
@@ -56,11 +60,60 @@ export async function getCalendarMonth(monthKey: string): Promise<CalendarWeek[]
       .select("*")
       .lt("start_date", gridEnd)
       .gte("end_date", gridStart),
-    supabase.from("staff").select("id, full_name, date_of_birth"),
-    supabase.from("children").select("id, full_name, date_of_birth").eq("status", "active"),
+    supabase.from("staff").select("id, full_name, date_of_birth, photo_storage_path"),
+    supabase
+      .from("children")
+      .select("id, full_name, date_of_birth, photo_storage_path")
+      .eq("status", "active"),
   ]);
 
   const staffNameById = new Map((staffRows ?? []).map((s) => [s.id as string, s.full_name as string]));
+
+  // Only sign photos for people whose birthday actually falls somewhere in
+  // this grid — there's no reason to mint a signed URL for every staff
+  // member and child on every single month view.
+  const staffWithBirthdayInGrid = (staffRows ?? []).filter(
+    (s) => s.date_of_birth && weekStarts.some((ws) => Array.from({ length: 7 }, (_, i) => isBirthdayOn(s.date_of_birth as string, addDays(ws, i))).some(Boolean))
+  );
+  const childrenWithBirthdayInGrid = (childRows ?? []).filter(
+    (c) => c.date_of_birth && weekStarts.some((ws) => Array.from({ length: 7 }, (_, i) => isBirthdayOn(c.date_of_birth as string, addDays(ws, i))).some(Boolean))
+  );
+
+  const staffPhotoUrlById = new Map<string, string>();
+  const staffPhotoPaths = staffWithBirthdayInGrid
+    .map((s) => s.photo_storage_path as string | null)
+    .filter((p): p is string => Boolean(p));
+  if (staffPhotoPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from(STAFF_PHOTO_BUCKET)
+      .createSignedUrls(staffPhotoPaths, PHOTO_SIGNED_URL_TTL_SECONDS);
+    const urlByPath = new Map<string, string>();
+    (signed ?? []).forEach((s) => {
+      if (s.signedUrl && !s.error) urlByPath.set(s.path ?? "", s.signedUrl);
+    });
+    staffWithBirthdayInGrid.forEach((s) => {
+      const path = s.photo_storage_path as string | null;
+      if (path && urlByPath.has(path)) staffPhotoUrlById.set(s.id as string, urlByPath.get(path)!);
+    });
+  }
+
+  const childPhotoUrlById = new Map<string, string>();
+  const childPhotoPaths = childrenWithBirthdayInGrid
+    .map((c) => c.photo_storage_path as string | null)
+    .filter((p): p is string => Boolean(p));
+  if (childPhotoPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from(CHILD_PHOTO_BUCKET)
+      .createSignedUrls(childPhotoPaths, PHOTO_SIGNED_URL_TTL_SECONDS);
+    const urlByPath = new Map<string, string>();
+    (signed ?? []).forEach((s) => {
+      if (s.signedUrl && !s.error) urlByPath.set(s.path ?? "", s.signedUrl);
+    });
+    childrenWithBirthdayInGrid.forEach((c) => {
+      const path = c.photo_storage_path as string | null;
+      if (path && urlByPath.has(path)) childPhotoUrlById.set(c.id as string, urlByPath.get(path)!);
+    });
+  }
 
   const holidays = getNzPublicHolidaysInRange(gridStart, gridEnd);
   const holidaysByDate = new Map<string, CalendarEvent[]>();
@@ -96,13 +149,25 @@ export async function getCalendarMonth(monthKey: string): Promise<CalendarWeek[]
 
       (staffRows ?? []).forEach((s) => {
         if (s.date_of_birth && isBirthdayOn(s.date_of_birth as string, date)) {
-          events.push({ kind: "staff_birthday", date, staffId: s.id as string, name: s.full_name as string });
+          events.push({
+            kind: "staff_birthday",
+            date,
+            staffId: s.id as string,
+            name: s.full_name as string,
+            photoUrl: staffPhotoUrlById.get(s.id as string) ?? null,
+          });
         }
       });
 
       (childRows ?? []).forEach((c) => {
         if (c.date_of_birth && isBirthdayOn(c.date_of_birth as string, date)) {
-          events.push({ kind: "child_birthday", date, childId: c.id as string, name: c.full_name as string });
+          events.push({
+            kind: "child_birthday",
+            date,
+            childId: c.id as string,
+            name: c.full_name as string,
+            photoUrl: childPhotoUrlById.get(c.id as string) ?? null,
+          });
         }
       });
 

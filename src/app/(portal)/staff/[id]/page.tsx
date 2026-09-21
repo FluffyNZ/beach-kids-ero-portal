@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getStaffById } from "@/lib/data/staff";
 import { updateStaffDetails, setStaffStatus, uploadStaffDocument, updateStaffQualification } from "@/lib/actions/staff";
 import { StaffDetailsForm } from "@/components/staff/staff-details-form";
+import { StaffPhotoUpload } from "@/components/staff/staff-photo-upload";
 import { StaffProfileForm } from "@/components/staff/staff-profile-form";
 import { RequiredDocumentsPanel } from "@/components/staff/required-documents-panel";
 import { StaffQualificationForm } from "@/components/staff/staff-qualification-form";
@@ -74,6 +75,11 @@ export default async function StaffDetailPage({ params }: { params: { id: string
           </button>
         </form>
       </div>
+
+      <section className="card p-5">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Photo</h2>
+        <StaffPhotoUpload staffId={staffMember.id} fullName={staffMember.full_name} photoUrl={staffMember.photo_url} />
+      </section>
 
       <section className="card p-5">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Staff details</h2>

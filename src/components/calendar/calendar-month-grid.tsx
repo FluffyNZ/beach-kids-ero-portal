@@ -2,14 +2,14 @@ import Link from "next/link";
 import type { CalendarWeek } from "@/lib/data/calendar";
 import type { CalendarEvent } from "@/lib/types";
 import { STAFF_LEAVE_TYPE_LABEL } from "@/lib/constants";
+import { ChildAvatar } from "@/components/children/child-avatar";
+import { StaffAvatar } from "@/components/staff/staff-avatar";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const EVENT_DOT_CLASS: Record<CalendarEvent["kind"], string> = {
+const EVENT_DOT_CLASS: Record<"public_holiday" | "staff_leave", string> = {
   public_holiday: "bg-burgundy-500",
   staff_leave: "bg-orange-500",
-  staff_birthday: "bg-blue-500",
-  child_birthday: "bg-pink-500",
 };
 
 function dayNumber(dateStr: string): number {
@@ -27,6 +27,35 @@ function eventLabel(event: CalendarEvent): string {
     case "child_birthday":
       return `${event.name} — birthday`;
   }
+}
+
+/** One event's marker inside a day cell: a birthday shows the person's
+ * actual profile photo (or an initials circle if they don't have one on
+ * file yet) right on the date it falls on, ringed in their birthday
+ * colour so it still reads at a glance; a holiday or leave day keeps the
+ * plain colour dot, since there's no photo to show for either. */
+function EventMarker({ event, size = "xs" }: { event: CalendarEvent; size?: "xs" | "sm" }) {
+  if (event.kind === "staff_birthday") {
+    return (
+      <span className="rounded-full ring-2 ring-blue-400" title={eventLabel(event)}>
+        <StaffAvatar fullName={event.name} photoUrl={event.photoUrl} size={size} />
+      </span>
+    );
+  }
+  if (event.kind === "child_birthday") {
+    return (
+      <span className="rounded-full ring-2 ring-pink-400" title={eventLabel(event)}>
+        <ChildAvatar fullName={event.name} photoUrl={event.photoUrl} size={size} />
+      </span>
+    );
+  }
+  return (
+    <span
+      title={eventLabel(event)}
+      className={`h-1.5 w-1.5 shrink-0 rounded-full ${EVENT_DOT_CLASS[event.kind]}`}
+      aria-hidden="true"
+    />
+  );
 }
 
 function CalendarDayCell({
@@ -51,10 +80,11 @@ function CalendarDayCell({
     >
       <span className="text-xs font-medium text-charcoal/70">{dayNumber(date)}</span>
       {events.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-0.5">
-          {events.slice(0, 4).map((e, i) => (
-            <span key={i} className={`h-1.5 w-1.5 shrink-0 rounded-full ${EVENT_DOT_CLASS[e.kind]}`} aria-hidden="true" />
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          {events.slice(0, 3).map((e, i) => (
+            <EventMarker key={i} event={e} size="xs" />
           ))}
+          {events.length > 3 && <span className="text-[0.6rem] text-charcoal/40">+{events.length - 3}</span>}
         </div>
       )}
     </div>
@@ -136,7 +166,7 @@ export function CalendarEventList({ weeks }: { weeks: CalendarWeek[] }) {
     <div className="card flex flex-col divide-y divide-charcoal/10 p-0">
       {events.map(({ date, event }, i) => (
         <div key={i} className="flex items-center gap-3 px-4 py-3">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${EVENT_DOT_CLASS[event.kind]}`} aria-hidden="true" />
+          <EventMarker event={event} size="sm" />
           <span className="w-14 shrink-0 text-xs text-charcoal/50">
             {new Date(`${date}T00:00:00Z`).toLocaleDateString("en-NZ", { day: "numeric", month: "short", timeZone: "UTC" })}
           </span>

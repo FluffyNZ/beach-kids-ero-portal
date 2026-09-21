@@ -12,6 +12,8 @@ import type {
 } from "@/lib/supabase/database.types";
 
 const BUCKET = process.env.NEXT_PUBLIC_STAFF_DOCUMENTS_BUCKET || "staff-documents";
+const PHOTO_BUCKET = process.env.NEXT_PUBLIC_STAFF_PHOTOS_BUCKET || "staff-photos";
+const ALLOWED_PHOTO_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 
 async function currentUserId(): Promise<string | null> {
   const supabase = createClient();
@@ -24,6 +26,11 @@ async function currentUserId(): Promise<string | null> {
 function safeStoragePath(file: File) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   return `${new Date().getFullYear()}/${randomUUID()}-${safeName}`;
+}
+
+function safePhotoPath(staffId: string, file: File) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${staffId}/${randomUUID()}-${safeName}`;
 }
 
 export type CreateStaffResult = { success: true; staffId: string } | { success: false; error: string };
@@ -379,6 +386,80 @@ export async function updateStaffChecklistItem(
 
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
+}
+
+export type UploadStaffPhotoResult = { success: true } | { success: false; error: string };
+
+/** Replaces this staff member's profile photo. The old file (if any) is
+ * removed from storage after the new one uploads successfully, so a
+ * failed upload never leaves them without a photo. This is also what the
+ * Centre Calendar shows on their birthday, so it's worth keeping current. */
+export async function uploadStaffPhoto(staffId: string, formData: FormData): Promise<UploadStaffPhotoResult> {
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) {
+    return { success: false, error: "Choose a photo to upload." };
+  }
+  if (!ALLOWED_PHOTO_TYPES.has(file.type)) {
+    return { success: false, error: "Photos must be a JPG, PNG or WEBP file." };
+  }
+
+  const supabase = createClient();
+
+  const { data: existing } = await supabase
+    .from("staff")
+    .select("photo_storage_path")
+    .eq("id", staffId)
+    .maybeSingle();
+
+  const storagePath = safePhotoPath(staffId, file);
+  const arrayBuffer = await file.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(storagePath, arrayBuffer, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (uploadError) {
+    return { success: false, error: `Upload failed: ${uploadError.message}` };
+  }
+
+  const { error: updateError } = await (supabase.from("staff") as any)
+    .update({ photo_storage_path: storagePath } as any)
+    .eq("id", staffId);
+
+  if (updateError) {
+    await supabase.storage.from(PHOTO_BUCKET).remove([storagePath]);
+    return { success: false, error: `Could not save the photo: ${updateError.message}` };
+  }
+
+  if (existing?.photo_storage_path) {
+    await supabase.storage.from(PHOTO_BUCKET).remove([existing.photo_storage_path]);
+  }
+
+  revalidatePath(`/staff/${staffId}`);
+  revalidatePath("/staff");
+  revalidatePath("/calendar");
+  return { success: true };
+}
+
+export async function removeStaffPhoto(staffId: string): Promise<UploadStaffPhotoResult> {
+  const supabase = createClient();
+
+  const { data: existing } = await supabase
+    .from("staff")
+    .select("photo_storage_path")
+    .eq("id", staffId)
+    .maybeSingle();
+
+  await (supabase.from("staff") as any).update({ photo_storage_path: null } as any).eq("id", staffId);
+
+  if (existing?.photo_storage_path) {
+    await supabase.storage.from(PHOTO_BUCKET).remove([existing.photo_storage_path]);
+  }
+
+  revalidatePath(`/staff/${staffId}`);
+  revalidatePath("/staff");
+  revalidatePath("/calendar");
+  return { success: true };
 }
 
 export async function getSignedUrlForStaffDocument(storagePath: string, download?: boolean): Promise<string | null> {
