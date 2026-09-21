@@ -4,6 +4,7 @@ import { currentMonthKey, monthLabel } from "@/lib/data/learning-stories";
 import { addMonths } from "@/lib/utils";
 import { MonthNav } from "@/components/learning-stories/month-nav";
 import { CalendarMonthGrid, CalendarLegend, CalendarEventList } from "@/components/calendar/calendar-month-grid";
+import { CalendarSwipeNav } from "@/components/calendar/calendar-swipe-nav";
 import { StaffLeaveManager } from "@/components/calendar/staff-leave-manager";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,9 @@ export default async function CalendarPage({
 
       <CalendarLegend />
 
-      <CalendarMonthGrid weeks={weeks} today={today} />
+      <CalendarSwipeNav monthKey={monthKey} basePath="/calendar">
+        <CalendarMonthGrid weeks={weeks} today={today} />
+      </CalendarSwipeNav>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-sm font-semibold text-charcoal">This month</h2>
