@@ -138,6 +138,7 @@ export function HazardCheckImportForm({
       role: null,
       start_date: null,
       end_date: null,
+      date_of_birth: null,
       status: "former",
       contract_type: null,
       pay_rate: null,
