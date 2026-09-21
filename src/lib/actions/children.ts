@@ -162,6 +162,7 @@ export async function updateChildDetails(
     gender?: string | null;
     age_years?: number | null;
     age_months?: number | null;
+    date_of_birth?: string | null;
     residential_address?: string | null;
     primary_contact_email?: string | null;
     room_id?: string | null;

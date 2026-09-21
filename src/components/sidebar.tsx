@@ -20,6 +20,7 @@ import {
   WaveIcon,
   ShieldCheckIcon,
   BookOpenIcon,
+  CalendarIcon,
 } from "@/components/icons";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -32,6 +33,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   staff: StaffIcon,
   roster: RosterIcon,
   children: ChildrenIcon,
+  calendar: CalendarIcon,
   stock: StockIcon,
   finances: FinancesIcon,
   actions: ActionsIcon,

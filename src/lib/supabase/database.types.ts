@@ -57,6 +57,7 @@ export type LearningStoryStatus = "draft" | "awaiting_approval" | "returned_for_
 export type HazardCheckCategory = "indoor" | "outdoor" | "allergy";
 export type HazardRiskLevel = "low" | "medium" | "high";
 export type LearningStoryMediaKind = "image" | "video" | "pdf";
+export type StaffLeaveType = "annual" | "sick" | "unpaid" | "other";
 
 type ProfilesRow = {
   id: string;
@@ -193,6 +194,7 @@ type StaffRow = {
   contract_type: StaffContractType | null;
   pay_rate: number | null;
   min_hours: number | null;
+  date_of_birth: string | null;
   notes: string | null;
   can_publish_learning_stories: boolean;
   created_at: string;
@@ -338,6 +340,7 @@ type ChildrenRow = {
   age_years: number | null;
   age_months: number | null;
   age_as_of: string | null;
+  date_of_birth: string | null;
   residential_address: string | null;
   primary_contact_email: string | null;
   room_id: string | null;
@@ -626,6 +629,18 @@ type HazardLogEntriesRow = {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type StaffLeaveRow = {
+  id: string;
+  staff_id: string;
+  leave_type: StaffLeaveType;
+  start_date: string;
+  end_date: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
 };
 
 export interface Database {
@@ -1035,6 +1050,16 @@ export interface Database {
         Update: Partial<HazardLogEntriesRow>;
         Relationships: [];
       };
+      staff_leave: {
+        Row: StaffLeaveRow;
+        Insert: Partial<StaffLeaveRow> & {
+          staff_id: string;
+          start_date: string;
+          end_date: string;
+        };
+        Update: Partial<StaffLeaveRow>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -1062,6 +1087,7 @@ export interface Database {
       learning_story_media_kind: LearningStoryMediaKind;
       hazard_check_category: HazardCheckCategory;
       hazard_risk_level: HazardRiskLevel;
+      staff_leave_type: StaffLeaveType;
     };
     CompositeTypes: { [_ in never]: never };
   };

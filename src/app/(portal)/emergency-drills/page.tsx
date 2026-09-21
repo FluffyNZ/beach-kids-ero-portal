@@ -14,7 +14,7 @@ export default async function EmergencyDrillsPage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <nav className="flex items-center gap-1.5 text-sm text-ocean-500">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-ocean-500">
         <Link href="/checklist/HS8" className="hover:text-ocean-700">
           HS8 — Emergency Drills
         </Link>

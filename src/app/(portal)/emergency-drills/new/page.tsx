@@ -5,7 +5,7 @@ import { ChevronRightIcon } from "@/components/icons";
 export default function NewEmergencyDrillPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <nav className="flex items-center gap-1.5 text-sm text-ocean-500">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-ocean-500">
         <Link href="/emergency-drills" className="hover:text-ocean-700">
           Emergency Drill Register
         </Link>

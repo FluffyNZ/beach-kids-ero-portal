@@ -8,6 +8,7 @@ export function ChildDetailsForm({
   gender: initialGender,
   ageYears: initialAgeYears,
   ageMonths: initialAgeMonths,
+  dateOfBirth: initialDateOfBirth,
   residentialAddress: initialResidentialAddress,
   primaryContactEmail: initialPrimaryContactEmail,
   roomId: initialRoomId,
@@ -23,6 +24,7 @@ export function ChildDetailsForm({
   gender: string | null;
   ageYears: number | null;
   ageMonths: number | null;
+  dateOfBirth: string | null;
   residentialAddress: string | null;
   primaryContactEmail: string | null;
   roomId: string | null;
@@ -37,6 +39,7 @@ export function ChildDetailsForm({
     gender?: string | null;
     age_years?: number | null;
     age_months?: number | null;
+    date_of_birth?: string | null;
     residential_address?: string | null;
     primary_contact_email?: string | null;
     room_id?: string | null;
@@ -54,6 +57,7 @@ export function ChildDetailsForm({
   const [gender, setGender] = useState(initialGender ?? "");
   const [ageYears, setAgeYears] = useState(initialAgeYears !== null ? String(initialAgeYears) : "");
   const [ageMonths, setAgeMonths] = useState(initialAgeMonths !== null ? String(initialAgeMonths) : "");
+  const [dateOfBirth, setDateOfBirth] = useState(initialDateOfBirth ?? "");
   const [residentialAddress, setResidentialAddress] = useState(initialResidentialAddress ?? "");
   const [primaryContactEmail, setPrimaryContactEmail] = useState(initialPrimaryContactEmail ?? "");
   const [roomId, setRoomId] = useState(initialRoomId ?? "");
@@ -124,6 +128,20 @@ export function ChildDetailsForm({
             }}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="label">Date of birth</label>
+        <input
+          type="date"
+          className="input"
+          value={dateOfBirth}
+          onChange={(e) => {
+            setDateOfBirth(e.target.value);
+            markDirty();
+          }}
+        />
+        <p className="mt-1 text-xs text-charcoal/40">Used to show birthdays on the centre calendar.</p>
       </div>
 
       <div>
@@ -247,6 +265,7 @@ export function ChildDetailsForm({
                   gender: gender || null,
                   age_years: ageYears !== "" ? Number(ageYears) : null,
                   age_months: ageMonths !== "" ? Number(ageMonths) : null,
+                  date_of_birth: dateOfBirth || null,
                   residential_address: residentialAddress || null,
                   primary_contact_email: primaryContactEmail || null,
                   room_id: roomId || null,

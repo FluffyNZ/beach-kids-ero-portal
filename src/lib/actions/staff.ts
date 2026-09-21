@@ -115,6 +115,7 @@ export async function updateStaffDetails(
     role?: string | null;
     start_date?: string | null;
     end_date?: string | null;
+    date_of_birth?: string | null;
     contract_type?: StaffContractType | null;
     pay_rate?: number | null;
     min_hours?: number | null;

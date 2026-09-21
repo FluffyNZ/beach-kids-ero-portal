@@ -44,7 +44,7 @@ export default async function DashboardPage() {
           className="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full bg-yellow-50"
         />
         <div className="relative flex flex-col items-center gap-8 md:flex-row md:items-center md:justify-between">
-          <div className="flex max-w-md flex-col items-center gap-3 text-center md:items-start md:text-left">
+          <div className="flex w-full max-w-md flex-col items-center gap-3 text-center md:w-auto md:items-start md:text-left">
             <p className="text-xs font-semibold uppercase tracking-wide text-burgundy-500">
               Overall ERO Readiness
             </p>

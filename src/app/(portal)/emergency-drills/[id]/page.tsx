@@ -25,7 +25,7 @@ export default async function EmergencyDrillDetailPage({ params }: { params: { i
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 print:max-w-none">
-      <nav className="flex items-center gap-1.5 text-sm text-ocean-500 print:hidden">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-ocean-500 print:hidden">
         <Link href="/emergency-drills" className="hover:text-ocean-700">
           Emergency Drill Register
         </Link>

@@ -8,10 +8,12 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   @apply bg-cream text-charcoal antialiased;
+  overflow-x: hidden;
 }
 
 * {

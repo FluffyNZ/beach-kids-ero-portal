@@ -35,7 +35,7 @@ export default async function StaffDetailPage({ params }: { params: { id: string
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <nav className="flex items-center gap-1.5 text-sm text-charcoal/50">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/50">
         <Link href="/staff" className="hover:text-charcoal">
           Staff
         </Link>
@@ -82,6 +82,7 @@ export default async function StaffDetailPage({ params }: { params: { id: string
           role={staffMember.role}
           startDate={staffMember.start_date}
           endDate={staffMember.end_date}
+          dateOfBirth={staffMember.date_of_birth}
           contractType={staffMember.contract_type}
           payRate={staffMember.pay_rate}
           minHours={staffMember.min_hours}

@@ -9,6 +9,7 @@ export function StaffDetailsForm({
   role: initialRole,
   startDate: initialStartDate,
   endDate: initialEndDate,
+  dateOfBirth: initialDateOfBirth,
   contractType: initialContractType,
   payRate: initialPayRate,
   minHours: initialMinHours,
@@ -18,6 +19,7 @@ export function StaffDetailsForm({
   role: string | null;
   startDate: string | null;
   endDate: string | null;
+  dateOfBirth: string | null;
   contractType: StaffContractType | null;
   payRate: number | null;
   minHours: number | null;
@@ -26,6 +28,7 @@ export function StaffDetailsForm({
     role?: string | null;
     start_date?: string | null;
     end_date?: string | null;
+    date_of_birth?: string | null;
     contract_type?: StaffContractType | null;
     pay_rate?: number | null;
     min_hours?: number | null;
@@ -39,6 +42,7 @@ export function StaffDetailsForm({
   const [role, setRole] = useState(initialRole ?? "");
   const [startDate, setStartDate] = useState(initialStartDate ?? "");
   const [endDate, setEndDate] = useState(initialEndDate ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(initialDateOfBirth ?? "");
   const [contractType, setContractType] = useState<StaffContractType | "">(initialContractType ?? "");
   const [payRate, setPayRate] = useState(initialPayRate !== null ? String(initialPayRate) : "");
   const [minHours, setMinHours] = useState(initialMinHours !== null ? String(initialMinHours) : "");
@@ -98,6 +102,20 @@ export function StaffDetailsForm({
             }}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="label">Date of birth</label>
+        <input
+          type="date"
+          className="input"
+          value={dateOfBirth}
+          onChange={(e) => {
+            setDateOfBirth(e.target.value);
+            markDirty();
+          }}
+        />
+        <p className="mt-1 text-xs text-charcoal/40">Used to show birthdays on the centre calendar.</p>
       </div>
 
       <div>
@@ -168,6 +186,7 @@ export function StaffDetailsForm({
                   role: role || null,
                   start_date: startDate || null,
                   end_date: endDate || null,
+                  date_of_birth: dateOfBirth || null,
                   contract_type: contractType || null,
                   pay_rate: payRate !== "" ? Number(payRate) : null,
                   min_hours: minHours !== "" ? Number(minHours) : null,

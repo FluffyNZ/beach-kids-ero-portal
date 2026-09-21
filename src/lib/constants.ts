@@ -17,6 +17,7 @@ import type {
   LearningStoryStatus,
   HazardCheckCategory,
   HazardRiskLevel,
+  StaffLeaveType,
 } from "@/lib/supabase/database.types";
 
 export const NAV_ITEMS = [
@@ -29,12 +30,22 @@ export const NAV_ITEMS = [
   { href: "/staff", label: "Staff", icon: "staff" },
   { href: "/roster", label: "Roster", icon: "roster" },
   { href: "/children", label: "Children & Fees", icon: "children" },
+  { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/stock-orders", label: "Stock Orders", icon: "stock" },
   { href: "/finances", label: "Finances", icon: "finances" },
   { href: "/actions", label: "Actions", icon: "actions" },
   { href: "/audit-pack", label: "Audit Pack", icon: "pack" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ] as const;
+
+export const STAFF_LEAVE_TYPES: StaffLeaveType[] = ["annual", "sick", "unpaid", "other"];
+
+export const STAFF_LEAVE_TYPE_LABEL: Record<StaffLeaveType, string> = {
+  annual: "Annual",
+  sick: "Sick",
+  unpaid: "Unpaid",
+  other: "Other",
+};
 
 export const STOCK_SUPPLIERS: StockSupplier[] = ["gilmours", "qizzle", "clean_boss"];
 

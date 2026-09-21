@@ -15,6 +15,7 @@ type ChildRow = {
   age_years: number | null;
   age_months: number | null;
   age_as_of: string | null;
+  date_of_birth: string | null;
   residential_address: string | null;
   primary_contact_email: string | null;
   room_id: string | null;
@@ -151,6 +152,7 @@ export async function getChildrenList(options?: {
       age_years: r.age_years,
       age_months: r.age_months,
       age_as_of: r.age_as_of,
+      date_of_birth: r.date_of_birth,
       residential_address: r.residential_address,
       primary_contact_email: r.primary_contact_email,
       room_id: r.room_id,
@@ -226,6 +228,7 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
     age_years: childRow.age_years,
     age_months: childRow.age_months,
     age_as_of: childRow.age_as_of,
+    date_of_birth: childRow.date_of_birth,
     residential_address: childRow.residential_address,
     primary_contact_email: childRow.primary_contact_email,
     room_id: childRow.room_id,

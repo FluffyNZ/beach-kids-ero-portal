@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default function ImportOutgoingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <nav className="flex items-center gap-1.5 text-sm text-charcoal/50">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/50">
         <Link href="/finances" className="hover:text-charcoal">
           Finances
         </Link>

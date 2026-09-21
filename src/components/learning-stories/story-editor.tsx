@@ -90,7 +90,7 @@ export function StoryEditor({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <nav className="flex items-center gap-1.5 text-sm text-charcoal/50">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/50">
         <Link href="/learning/stories" className="hover:text-charcoal">
           Learning Stories
         </Link>

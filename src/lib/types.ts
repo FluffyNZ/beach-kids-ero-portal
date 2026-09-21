@@ -21,12 +21,13 @@ import type {
   LearningStoryMediaKind,
   HazardCheckCategory,
   HazardRiskLevel,
+  StaffLeaveType,
 } from "@/lib/supabase/database.types";
 
 // Re-exported so other modules can `import type { HazardCheckCategory }
 // from "@/lib/types"` alongside the rest of this file's types, rather than
 // reaching into "@/lib/supabase/database.types" directly for just these two.
-export type { HazardCheckCategory, HazardRiskLevel };
+export type { HazardCheckCategory, HazardRiskLevel, StaffLeaveType };
 
 export type Section = {
   id: string;
@@ -233,6 +234,7 @@ export type StaffMember = {
   contract_type: StaffContractType | null;
   pay_rate: number | null;
   min_hours: number | null;
+  date_of_birth: string | null;
   notes: string | null;
   can_publish_learning_stories: boolean;
   created_at: string;
@@ -332,6 +334,7 @@ export type ChildMember = {
   age_years: number | null;
   age_months: number | null;
   age_as_of: string | null;
+  date_of_birth: string | null;
   residential_address: string | null;
   // The report's "PC 1" contact — the family's primary contact, which is
   // sometimes a different person from whoever the bill payer is.
@@ -851,4 +854,34 @@ export type DashboardStats = {
   openActions: number;
   overdueActions: number;
   documentsApproachingReview: number;
+};
+
+// ---------------------------------------------------------------------------
+// Centre Calendar — NZ public holidays (computed, never stored), staff
+// leave, and staff/child birthdays (only ever shown once a real date of
+// birth has been entered on that person's own profile).
+// ---------------------------------------------------------------------------
+
+export type StaffLeave = {
+  id: string;
+  staff_id: string;
+  staff_name: string;
+  leave_type: StaffLeaveType;
+  start_date: string;
+  end_date: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CalendarEvent =
+  | { kind: "public_holiday"; date: string; name: string }
+  | { kind: "staff_leave"; date: string; leave: StaffLeave }
+  | { kind: "staff_birthday"; date: string; staffId: string; name: string }
+  | { kind: "child_birthday"; date: string; childId: string; name: string };
+
+export type CalendarDay = {
+  date: string;
+  inMonth: boolean;
+  events: CalendarEvent[];
 };

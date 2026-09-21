@@ -39,7 +39,7 @@ export default async function ChildDetailPage({ params }: { params: { id: string
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <nav className="flex items-center gap-1.5 text-sm text-charcoal/50">
+      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/50">
         <Link href="/children" className="hover:text-charcoal">
           Children &amp; Fees
         </Link>
@@ -92,6 +92,7 @@ export default async function ChildDetailPage({ params }: { params: { id: string
           gender={child.gender}
           ageYears={child.age_years}
           ageMonths={child.age_months}
+          dateOfBirth={child.date_of_birth}
           residentialAddress={child.residential_address}
           primaryContactEmail={child.primary_contact_email}
           roomId={child.room_id}
