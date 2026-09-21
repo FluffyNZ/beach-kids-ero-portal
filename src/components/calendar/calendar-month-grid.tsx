@@ -31,20 +31,19 @@ function eventLabel(event: CalendarEvent): string {
 
 /** One event's marker inside a day cell: a birthday shows the person's
  * actual profile photo (or an initials circle if they don't have one on
- * file yet) right on the date it falls on, ringed in their birthday
- * colour so it still reads at a glance; a holiday or leave day keeps the
- * plain colour dot, since there's no photo to show for either. */
+ * file yet) right on the date it falls on; a holiday or leave day keeps
+ * the plain colour dot, since there's no photo to show for either. */
 function EventMarker({ event, size = "xs" }: { event: CalendarEvent; size?: "xs" | "sm" }) {
   if (event.kind === "staff_birthday") {
     return (
-      <span className="rounded-full ring-2 ring-blue-400" title={eventLabel(event)}>
+      <span title={eventLabel(event)}>
         <StaffAvatar fullName={event.name} photoUrl={event.photoUrl} size={size} />
       </span>
     );
   }
   if (event.kind === "child_birthday") {
     return (
-      <span className="rounded-full ring-2 ring-pink-400" title={eventLabel(event)}>
+      <span title={eventLabel(event)}>
         <ChildAvatar fullName={event.name} photoUrl={event.photoUrl} size={size} />
       </span>
     );
