@@ -164,6 +164,17 @@ export type StaffDocument = {
   uploaded_at: string;
 };
 
+/** What the AI photo reader guesses about a staff document photo before
+ * upload — a draft to pre-fill the upload form with, never something saved
+ * directly. Same "null when unclear, never invented" rule as the Accident &
+ * Illness photo import. */
+export type StaffDocumentExtractDraft = {
+  category_guess: StaffDocumentCategory | null;
+  document_date_guess: string | null;
+  expiry_date_guess: string | null;
+  low_confidence_fields: string[];
+};
+
 export type ChecklistItem = {
   id: string;
   criterion_id: string;

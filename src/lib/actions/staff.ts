@@ -10,6 +10,7 @@ import type {
   StaffStatus,
   StaffQualificationStatus,
 } from "@/lib/supabase/database.types";
+import type { StaffDocumentExtractDraft } from "@/lib/types";
 
 const BUCKET = process.env.NEXT_PUBLIC_STAFF_DOCUMENTS_BUCKET || "staff-documents";
 const PHOTO_BUCKET = process.env.NEXT_PUBLIC_STAFF_PHOTOS_BUCKET || "staff-photos";
@@ -253,6 +254,175 @@ export async function uploadStaffDocument(
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// AI photo import — reads a photo of a staff document (police vet letter,
+// first aid card, contract, ID, qualification certificate, etc.) and
+// returns a draft to pre-fill the upload form with. It never uploads or
+// saves anything itself.
+//
+// Requires the same ANTHROPIC_API_KEY as Learning Stories' "Help Me Write"
+// and the Accident & Illness photo import. Until that key is added this
+// returns a clear "not connected" result rather than a fake response. Even
+// once connected: the model only ever reads what's legibly on the page —
+// told to say "unclear" (null) rather than guess — and nothing here saves
+// anything; the person still reviews the pre-filled upload form and clicks
+// Upload.
+// ---------------------------------------------------------------------------
+
+const ALL_STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "contract",
+  "identification",
+  "secondary_identification",
+  "police_vet",
+  "first_aid",
+  "qualification",
+  "visa_work_entitlement",
+  "professional_growth_cycle",
+  "staff_profile_form",
+  "cv_work_history",
+  "job_description",
+  "interview_recruitment",
+  "induction",
+  "child_protection",
+  "tax_kiwisaver",
+  "cv_interview",
+  "pay_parity_agreement",
+  "other",
+];
+
+export type ExtractStaffDocumentResult =
+  | { success: true; draft: StaffDocumentExtractDraft }
+  | { success: false; error: string; notConfigured?: boolean };
+
+const EXTRACT_DOCUMENT_SYSTEM_PROMPT = `You are reading a photo of one document from a New Zealand early childhood education staff file — it could be a contract, a police vetting result, a first aid certificate, an ID, a qualification certificate, or similar — so a manager can review it before it's filed against a staff member's profile.
+
+Strict rules:
+- Only report what is actually legible on the page. Never guess, infer, or fill in a plausible-sounding value for anything you can't clearly read.
+- category_guess must be exactly one of the allowed category values listed below, or null if you're not confident which one applies — never invent a category name.
+- document_date_guess is the date the document was issued/completed/signed (YYYY-MM-DD), or null if there's no such date or it isn't clearly legible.
+- expiry_date_guess is a renewal/expiry/"next due" date explicitly printed or written on the document (YYYY-MM-DD), or null if the document doesn't show one or it isn't clearly legible. Never calculate or estimate one yourself (e.g. from a standard validity period) — only report a date that's actually written on the page.
+- List the keys of any field you're genuinely unsure about in low_confidence_fields.
+- Respond with ONLY a single JSON object matching the schema you're given — no other text, no markdown code fences.
+
+Allowed category values: ${ALL_STAFF_DOCUMENT_CATEGORIES.join(", ")}`;
+
+function buildStaffDocumentSchemaInstruction(): string {
+  return `Return exactly this JSON shape (all keys required):
+{
+  "category_guess": string | null,
+  "document_date_guess": string | null,
+  "expiry_date_guess": string | null,
+  "low_confidence_fields": string[]
+}`;
+}
+
+function parseStaffDocumentExtractedJson(raw: string): StaffDocumentExtractDraft | null {
+  let text = raw.trim();
+  // Strip a markdown code fence if the model added one despite instructions.
+  const fenceMatch = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fenceMatch) text = fenceMatch[1];
+
+  try {
+    const parsed = JSON.parse(text);
+    const strOrNull = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const categoryGuess = strOrNull(parsed.category_guess);
+    return {
+      category_guess:
+        categoryGuess && (ALL_STAFF_DOCUMENT_CATEGORIES as string[]).includes(categoryGuess)
+          ? (categoryGuess as StaffDocumentCategory)
+          : null,
+      document_date_guess: strOrNull(parsed.document_date_guess),
+      expiry_date_guess: strOrNull(parsed.expiry_date_guess),
+      low_confidence_fields: Array.isArray(parsed.low_confidence_fields)
+        ? parsed.low_confidence_fields.filter((f: unknown): f is string => typeof f === "string")
+        : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+const SUPPORTED_DOCUMENT_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+export async function extractStaffDocumentFromPhoto(formData: FormData): Promise<ExtractStaffDocumentResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return {
+      success: false,
+      notConfigured: true,
+      error:
+        "AI photo reading isn't connected yet. Add an ANTHROPIC_API_KEY to this app's environment to turn it on — you can still fill this in by hand.",
+    };
+  }
+
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) {
+    return { success: false, error: "Choose a photo of the document first." };
+  }
+  if (!SUPPORTED_DOCUMENT_IMAGE_TYPES.has(file.type)) {
+    return {
+      success: false,
+      error:
+        "That file type isn't supported for photo reading — use a JPG, PNG or WEBP photo. (iPhones set to \"High Efficiency\" save HEIC photos; switch to \"Most Compatible\" in Settings → Camera → Formats, or export as JPG first.) PDFs can still be uploaded normally, just without auto-fill.",
+    };
+  }
+
+  const model = process.env.ANTHROPIC_LEARNING_STORY_MODEL || "claude-sonnet-5";
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 512,
+        system: EXTRACT_DOCUMENT_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
+              { type: "text", text: buildStaffDocumentSchemaInstruction() },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      return { success: false, error: `AI photo reading request failed (${response.status}). ${detail.slice(0, 200)}` };
+    }
+
+    const data = await response.json();
+    const text = Array.isArray(data?.content)
+      ? data.content.map((block: any) => (block?.type === "text" ? block.text : "")).join("\n").trim()
+      : "";
+
+    const draft = text ? parseStaffDocumentExtractedJson(text) : null;
+    if (!draft) {
+      return {
+        success: false,
+        error: "Couldn't read a usable result from the photo — try a clearer, well-lit photo, or fill it in by hand.",
+      };
+    }
+
+    return { success: true, draft };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? `AI photo reading failed: ${err.message}` : "AI photo reading failed.",
+    };
+  }
 }
 
 export async function updateStaffQualification(
