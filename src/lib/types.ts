@@ -263,6 +263,26 @@ export type StaffWithDetails = StaffMember & {
   documents: StaffDocument[];
 };
 
+// ---------------------------------------------------------------------------
+// Digital Staff Induction — see src/lib/staff-induction-checklist.ts for the
+// actual checklist content (sections/items); this is just the per-staff
+// progress and sign-off state stored against it.
+// ---------------------------------------------------------------------------
+
+export type StaffInduction = {
+  staff_id: string;
+  /** Which item keys (from staff-induction-checklist.ts) are ticked. */
+  checkedItemKeys: Set<string>;
+  staff_signature_name: string | null;
+  staff_signature_url: string | null;
+  staff_signed_at: string | null;
+  manager_signature_name: string | null;
+  manager_signature_url: string | null;
+  manager_signed_at: string | null;
+  completed_at: string | null;
+  updated_at: string | null;
+};
+
 export type EmergencyDrill = {
   id: string;
   drill_type: EmergencyDrillType;

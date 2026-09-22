@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStaffById } from "@/lib/data/staff";
+import { getStaffInduction } from "@/lib/data/induction";
+import { getStaffInductionTotalItemCount } from "@/lib/staff-induction-checklist";
 import {
   updateStaffDetails,
   setStaffStatus,
@@ -39,6 +41,10 @@ export default async function StaffDetailPage({ params }: { params: { id: string
     staffMember.documents
   );
   const otherDocuments = getOtherDocuments(staffMember.qualification.qualification_status, staffMember.documents);
+  const induction = await getStaffInduction(staffMember.id);
+  const inductionTotal = getStaffInductionTotalItemCount();
+  const inductionChecked = induction.checkedItemKeys.size;
+  const inductionPercent = inductionTotal > 0 ? Math.round((inductionChecked / inductionTotal) * 100) : 0;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -130,6 +136,34 @@ export default async function StaffDetailPage({ params }: { params: { id: string
           onUpload={recordStaffDocumentUpload.bind(null, staffMember.id)}
           onDelete={deleteStaffDocument.bind(null, staffMember.id)}
         />
+      </section>
+
+      <section className="card p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">Induction</h2>
+          {induction.completed_at ? (
+            <StatusBadge tone="ready">Complete</StatusBadge>
+          ) : inductionChecked > 0 ? (
+            <StatusBadge tone="attention">In progress</StatusBadge>
+          ) : (
+            <StatusBadge tone="action">Not started</StatusBadge>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-charcoal/60">
+              {inductionChecked} of {inductionTotal} items ticked ({inductionPercent}%)
+              {induction.staff_signed_at && ` · signed ${formatDate(induction.staff_signed_at)}`}
+            </p>
+            <p className="mt-0.5 text-xs text-charcoal/40">
+              The digital Induction Pack for Kaiako — policies, forms and health &amp; safety, with a signature at
+              the end.
+            </p>
+          </div>
+          <Link href={`/staff/${staffMember.id}/induction`} className="btn-secondary">
+            {inductionChecked > 0 ? "Continue induction" : "Start induction"}
+          </Link>
+        </div>
       </section>
 
       <section className="card p-5">
