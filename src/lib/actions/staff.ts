@@ -204,6 +204,14 @@ export async function setStaffStatus(staffId: string, status: StaffStatus) {
 
 export type UploadStaffDocumentResult = { success: true } | { success: false; error: string };
 
+/** Kept for reference/other callers, but the main Staff Document upload UI
+ * no longer uses this — see recordStaffDocumentUpload below for why. It
+ * routes the actual file bytes through this Server Action, which is capped
+ * at Vercel's hard request-body limit on serverless functions — around
+ * 4.5MB — regardless of the higher `bodySizeLimit` set in next.config.js.
+ * That's silent and shows up to the person only as a generic "client-side
+ * exception" page, which is what made a ~6MB scanned document or a big
+ * phone photo fail while small files worked fine. */
 export async function uploadStaffDocument(
   staffId: string,
   formData: FormData
@@ -248,6 +256,55 @@ export async function uploadStaffDocument(
 
   if (insertError) {
     await supabase.storage.from(BUCKET).remove([storagePath]);
+    return { success: false, error: `Could not save the document: ${insertError.message}` };
+  }
+
+  revalidatePath(`/staff/${staffId}`);
+  revalidatePath("/staff");
+  return { success: true };
+}
+
+export type RecordStaffDocumentFields = {
+  category: StaffDocumentCategory;
+  storage_path: string;
+  original_filename: string;
+  mime_type: string | null;
+  file_size_bytes: number;
+  document_date: string | null;
+  expiry_date: string | null;
+  notes: string | null;
+};
+
+export type RecordStaffDocumentResult = { success: true } | { success: false; error: string };
+
+/** Records a staff document the browser has ALREADY uploaded straight to
+ * Supabase Storage (see AddStaffDocumentModal) — this action only ever
+ * receives a handful of small text fields, never the file itself, so a
+ * large scanned PDF or photo can't hit Vercel's request-body limit here the
+ * way it could with the old formData-with-a-file-in-it approach above. If
+ * the insert fails, the caller is responsible for removing the
+ * now-orphaned storage object it already uploaded. */
+export async function recordStaffDocumentUpload(
+  staffId: string,
+  fields: RecordStaffDocumentFields
+): Promise<RecordStaffDocumentResult> {
+  const supabase = createClient();
+  const userId = await currentUserId();
+
+  const { error: insertError } = await supabase.from("staff_documents").insert({
+    staff_id: staffId,
+    category: fields.category,
+    storage_path: fields.storage_path,
+    original_filename: fields.original_filename,
+    mime_type: fields.mime_type,
+    file_size_bytes: fields.file_size_bytes,
+    document_date: fields.document_date,
+    expiry_date: fields.expiry_date,
+    notes: fields.notes,
+    uploaded_by: userId,
+  } as any);
+
+  if (insertError) {
     return { success: false, error: `Could not save the document: ${insertError.message}` };
   }
 

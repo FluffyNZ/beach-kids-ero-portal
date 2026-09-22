@@ -4,7 +4,7 @@ import { getStaffById } from "@/lib/data/staff";
 import {
   updateStaffDetails,
   setStaffStatus,
-  uploadStaffDocument,
+  recordStaffDocumentUpload,
   deleteStaffDocument,
   updateStaffQualification,
 } from "@/lib/actions/staff";
@@ -127,7 +127,7 @@ export default async function StaffDetailPage({ params }: { params: { id: string
         <RequiredDocumentsPanel
           slots={requiredDocumentSlots}
           otherDocuments={otherDocuments}
-          onUpload={uploadStaffDocument.bind(null, staffMember.id)}
+          onUpload={recordStaffDocumentUpload.bind(null, staffMember.id)}
           onDelete={deleteStaffDocument.bind(null, staffMember.id)}
         />
       </section>

@@ -11,7 +11,7 @@ import { getDeadlineAlert } from "@/lib/evidence-deadline";
 import { formatDate, formatFileSize, percentage } from "@/lib/utils";
 import type { RequiredDocumentSlot } from "@/lib/staff-required-documents";
 import type { StaffDocument } from "@/lib/types";
-import type { UploadStaffDocumentResult, DeleteStaffDocumentResult } from "@/lib/actions/staff";
+import type { RecordStaffDocumentFields, RecordStaffDocumentResult, DeleteStaffDocumentResult } from "@/lib/actions/staff";
 import type { StaffDocumentCategory } from "@/lib/supabase/database.types";
 
 /** One uploaded file, wherever it's listed — a required slot (which can now
@@ -85,7 +85,7 @@ export function RequiredDocumentsPanel({
 }: {
   slots: RequiredDocumentSlot[];
   otherDocuments: StaffDocument[];
-  onUpload: (formData: FormData) => Promise<UploadStaffDocumentResult>;
+  onUpload: (fields: RecordStaffDocumentFields) => Promise<RecordStaffDocumentResult>;
   onDelete: (documentId: string) => Promise<DeleteStaffDocumentResult>;
 }) {
   const [uploadCategory, setUploadCategory] = useState<StaffDocumentCategory | null>(null);

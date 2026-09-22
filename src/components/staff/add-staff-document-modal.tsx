@@ -2,14 +2,18 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Modal } from "@/components/ui/modal";
+import { createClient } from "@/lib/supabase/client";
 import { STAFF_DOCUMENT_CATEGORIES, STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
 import { extractStaffDocumentFromPhoto } from "@/lib/actions/staff";
-import type { UploadStaffDocumentResult } from "@/lib/actions/staff";
+import type { RecordStaffDocumentFields, RecordStaffDocumentResult } from "@/lib/actions/staff";
 import type { StaffDocumentCategory } from "@/lib/supabase/database.types";
 
 // Only photo formats the AI reader can look at — matches the server action.
 // PDFs and Word docs can still be uploaded as normal, just without auto-fill.
 const EXTRACTABLE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
+
+// Matches supabase/migrations/0005_staff.sql's bucket setup.
+const STAFF_DOCUMENTS_BUCKET = process.env.NEXT_PUBLIC_STAFF_DOCUMENTS_BUCKET || "staff-documents";
 
 const LOW_CONFIDENCE_LABELS: Record<string, string> = {
   category_guess: "Document type",
@@ -26,7 +30,7 @@ export function AddStaffDocumentModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onUpload: (formData: FormData) => Promise<UploadStaffDocumentResult>;
+  onUpload: (fields: RecordStaffDocumentFields) => Promise<RecordStaffDocumentResult>;
   /** When set, the category is fixed (used for uploading/replacing one of
    * the required-document slots) and no dropdown is shown. */
   fixedCategory?: StaffDocumentCategory;
@@ -102,15 +106,64 @@ export function AddStaffDocumentModal({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
     const formData = new FormData(e.currentTarget);
+    const file = formData.get("file") as File | null;
+    if (!file || file.size === 0) {
+      setError("Choose a file to upload.");
+      return;
+    }
+    const categoryValue = (String(formData.get("category") ?? "").trim() || "other") as StaffDocumentCategory;
+    const documentDateValue = (formData.get("document_date") as string) || null;
+    const expiryDateValue = (formData.get("expiry_date") as string) || null;
+    const notesValue = String(formData.get("notes") ?? "").trim() || null;
+
     startTransition(async () => {
-      const result = await onUpload(formData);
-      if (!result.success) {
-        setError(result.error);
-        return;
+      try {
+        // Uploads go straight from this browser to Supabase Storage rather
+        // than through a Server Action, so a large scanned document or
+        // phone photo never has to fit inside Vercel's ~4.5MB serverless
+        // request-body limit — only the small metadata call below does.
+        const supabase = createClient();
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = `${new Date().getFullYear()}/${crypto.randomUUID()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(STAFF_DOCUMENTS_BUCKET)
+          .upload(storagePath, file, {
+            contentType: file.type || "application/octet-stream",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          setError(`Upload failed: ${uploadError.message}`);
+          return;
+        }
+
+        const result = await onUpload({
+          category: categoryValue,
+          storage_path: storagePath,
+          original_filename: file.name,
+          mime_type: file.type || null,
+          file_size_bytes: file.size,
+          document_date: documentDateValue,
+          expiry_date: expiryDateValue,
+          notes: notesValue,
+        });
+
+        if (!result.success) {
+          // The file made it to storage but the database row didn't —
+          // clean up rather than leaving an orphaned file behind.
+          await supabase.storage.from(STAFF_DOCUMENTS_BUCKET).remove([storagePath]);
+          setError(result.error);
+          return;
+        }
+
+        formRef.current?.reset();
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? `Upload failed: ${err.message}` : "Something went wrong uploading this file.");
       }
-      formRef.current?.reset();
-      onClose();
     });
   }
 
