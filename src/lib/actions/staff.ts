@@ -425,6 +425,39 @@ export async function extractStaffDocumentFromPhoto(formData: FormData): Promise
   }
 }
 
+export type DeleteStaffDocumentResult = { success: true } | { success: false; error: string };
+
+/** Removes one document from a staff member's file — used both for the
+ * required-document slots (which can now hold more than one file each) and
+ * the "Other documents" list. Only removes the one file picked, never the
+ * whole category, and takes the actual storage object with it so nothing
+ * orphaned is left behind in the bucket. */
+export async function deleteStaffDocument(staffId: string, documentId: string): Promise<DeleteStaffDocumentResult> {
+  const supabase = createClient();
+
+  const { data: doc } = await supabase
+    .from("staff_documents")
+    .select("storage_path")
+    .eq("id", documentId)
+    .eq("staff_id", staffId)
+    .maybeSingle();
+
+  if (!doc) {
+    return { success: false, error: "That document couldn't be found — it may have already been removed." };
+  }
+
+  const { error: deleteError } = await supabase.from("staff_documents").delete().eq("id", documentId);
+  if (deleteError) {
+    return { success: false, error: `Could not remove the document: ${deleteError.message}` };
+  }
+
+  await supabase.storage.from(BUCKET).remove([doc.storage_path]);
+
+  revalidatePath(`/staff/${staffId}`);
+  revalidatePath("/staff");
+  return { success: true };
+}
+
 export async function updateStaffQualification(
   staffId: string,
   fields: {

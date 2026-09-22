@@ -4,31 +4,37 @@ import type { StaffDocumentCategory, StaffQualificationStatus } from "@/lib/supa
 
 export type RequiredDocumentSlot = {
   category: StaffDocumentCategory;
-  document: StaffDocument | null;
+  /** Every document on file for this category, newest first — some
+   * requirements (e.g. "Qualification & Teacher Registration") genuinely
+   * need more than one piece of evidence, so a slot isn't limited to a
+   * single file the way it used to be. */
+  documents: StaffDocument[];
 };
 
-/** Picks the most recent document per category — `documents` is expected
- * already sorted newest-first (as getStaffById returns it), so the first
- * match per category is the current file for that slot. */
-function latestByCategory(documents: StaffDocument[]): Map<StaffDocumentCategory, StaffDocument> {
-  const map = new Map<StaffDocumentCategory, StaffDocument>();
+/** Groups documents by category — `documents` is expected already sorted
+ * newest-first (as getStaffById returns it), so each category's list stays
+ * newest-first too. */
+function groupByCategory(documents: StaffDocument[]): Map<StaffDocumentCategory, StaffDocument[]> {
+  const map = new Map<StaffDocumentCategory, StaffDocument[]>();
   for (const d of documents) {
-    if (!map.has(d.category)) map.set(d.category, d);
+    const existing = map.get(d.category);
+    if (existing) existing.push(d);
+    else map.set(d.category, [d]);
   }
   return map;
 }
 
 /** The required-document slots for this person's profile — 8 for everyone,
- * plus 2 more once they're ticked "Qualified" — each paired with whatever
- * file currently satisfies it, or null if it's still missing. */
+ * plus 2 more once they're ticked "Qualified" — each paired with every file
+ * currently on hand for it (which may be more than one, or none). */
 export function getRequiredDocumentSlots(
   qualificationStatus: StaffQualificationStatus,
   documents: StaffDocument[]
 ): RequiredDocumentSlot[] {
-  const latest = latestByCategory(documents);
+  const grouped = groupByCategory(documents);
   return getRequiredStaffDocumentCategories(qualificationStatus).map((category) => ({
     category,
-    document: latest.get(category) ?? null,
+    documents: grouped.get(category) ?? [],
   }));
 }
 

@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStaffById } from "@/lib/data/staff";
-import { updateStaffDetails, setStaffStatus, uploadStaffDocument, updateStaffQualification } from "@/lib/actions/staff";
+import {
+  updateStaffDetails,
+  setStaffStatus,
+  uploadStaffDocument,
+  deleteStaffDocument,
+  updateStaffQualification,
+} from "@/lib/actions/staff";
 import { StaffDetailsForm } from "@/components/staff/staff-details-form";
 import { StaffPhotoUpload } from "@/components/staff/staff-photo-upload";
 import { StaffProfileForm } from "@/components/staff/staff-profile-form";
@@ -122,6 +128,7 @@ export default async function StaffDetailPage({ params }: { params: { id: string
           slots={requiredDocumentSlots}
           otherDocuments={otherDocuments}
           onUpload={uploadStaffDocument.bind(null, staffMember.id)}
+          onDelete={deleteStaffDocument.bind(null, staffMember.id)}
         />
       </section>
 
