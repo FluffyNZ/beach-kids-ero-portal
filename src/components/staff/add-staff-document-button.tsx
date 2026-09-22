@@ -3,12 +3,17 @@
 import { useState } from "react";
 import { AddStaffDocumentModal } from "./add-staff-document-modal";
 import { UploadIcon } from "@/components/icons";
-import type { UploadStaffDocumentResult } from "@/lib/actions/staff";
+import type { RecordStaffDocumentFields, RecordStaffDocumentResult } from "@/lib/actions/staff";
 
+// NOTE: this component isn't currently used anywhere in the app — the
+// Required Documents panel on a staff profile renders AddStaffDocumentModal
+// directly instead. Kept in sync with the modal's current props (rather
+// than deleted) so it doesn't silently rot and break the build again if it
+// gets picked up later.
 export function AddStaffDocumentButton({
   onUpload,
 }: {
-  onUpload: (formData: FormData) => Promise<UploadStaffDocumentResult>;
+  onUpload: (fields: RecordStaffDocumentFields) => Promise<RecordStaffDocumentResult>;
 }) {
   const [open, setOpen] = useState(false);
   return (

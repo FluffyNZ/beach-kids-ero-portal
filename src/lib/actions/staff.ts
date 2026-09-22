@@ -202,68 +202,6 @@ export async function setStaffStatus(staffId: string, status: StaffStatus) {
   revalidatePath("/staff");
 }
 
-export type UploadStaffDocumentResult = { success: true } | { success: false; error: string };
-
-/** Kept for reference/other callers, but the main Staff Document upload UI
- * no longer uses this — see recordStaffDocumentUpload below for why. It
- * routes the actual file bytes through this Server Action, which is capped
- * at Vercel's hard request-body limit on serverless functions — around
- * 4.5MB — regardless of the higher `bodySizeLimit` set in next.config.js.
- * That's silent and shows up to the person only as a generic "client-side
- * exception" page, which is what made a ~6MB scanned document or a big
- * phone photo fail while small files worked fine. */
-export async function uploadStaffDocument(
-  staffId: string,
-  formData: FormData
-): Promise<UploadStaffDocumentResult> {
-  const file = formData.get("file") as File | null;
-  const category = (String(formData.get("category") ?? "").trim() || "other") as StaffDocumentCategory;
-  const documentDate = (formData.get("document_date") as string) || null;
-  const expiryDate = (formData.get("expiry_date") as string) || null;
-  const notes = String(formData.get("notes") ?? "").trim() || null;
-
-  if (!file || file.size === 0) {
-    return { success: false, error: "Choose a file to upload." };
-  }
-
-  const supabase = createClient();
-  const userId = await currentUserId();
-
-  const storagePath = safeStoragePath(file);
-  const arrayBuffer = await file.arrayBuffer();
-
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, arrayBuffer, {
-    contentType: file.type || "application/octet-stream",
-    upsert: false,
-  });
-
-  if (uploadError) {
-    return { success: false, error: `Upload failed: ${uploadError.message}` };
-  }
-
-  const { error: insertError } = await supabase.from("staff_documents").insert({
-    staff_id: staffId,
-    category,
-    storage_path: storagePath,
-    original_filename: file.name,
-    mime_type: file.type || null,
-    file_size_bytes: file.size,
-    document_date: documentDate,
-    expiry_date: expiryDate,
-    notes,
-    uploaded_by: userId,
-  } as any);
-
-  if (insertError) {
-    await supabase.storage.from(BUCKET).remove([storagePath]);
-    return { success: false, error: `Could not save the document: ${insertError.message}` };
-  }
-
-  revalidatePath(`/staff/${staffId}`);
-  revalidatePath("/staff");
-  return { success: true };
-}
-
 export type RecordStaffDocumentFields = {
   category: StaffDocumentCategory;
   storage_path: string;
@@ -280,10 +218,9 @@ export type RecordStaffDocumentResult = { success: true } | { success: false; er
 /** Records a staff document the browser has ALREADY uploaded straight to
  * Supabase Storage (see AddStaffDocumentModal) — this action only ever
  * receives a handful of small text fields, never the file itself, so a
- * large scanned PDF or photo can't hit Vercel's request-body limit here the
- * way it could with the old formData-with-a-file-in-it approach above. If
- * the insert fails, the caller is responsible for removing the
- * now-orphaned storage object it already uploaded. */
+ * large scanned PDF or photo can't hit Vercel's ~4.5MB request-body limit
+ * on serverless functions. If the insert fails, the caller is responsible
+ * for removing the now-orphaned storage object it already uploaded. */
 export async function recordStaffDocumentUpload(
   staffId: string,
   fields: RecordStaffDocumentFields
