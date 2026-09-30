@@ -3,7 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --focus-ring: 0 0 0 2px theme("colors.burgundy.500");
+  /* Phase 3 (Contra visual refit, 2026-09-24): focus ring moved off brand
+     burgundy onto the neutral near-black system colour — see
+     DESIGN_SYSTEM.md. Burgundy is now reserved for specific
+     Beach-Kids-branded actions (.btn-brand) rather than every default
+     focus/active state. */
+  --focus-ring: 0 0 0 2px theme("colors.charcoal");
 }
 
 html {
@@ -12,41 +17,58 @@ html {
 }
 
 body {
-  @apply bg-cream text-charcoal antialiased;
+  @apply bg-neutral-50 text-charcoal antialiased;
   overflow-x: hidden;
 }
 
 * {
-  scrollbar-color: theme("colors.burgundy.100") transparent;
+  scrollbar-color: theme("colors.neutral.300") transparent;
 }
 
 @layer components {
+  /* Bordered flat surface, no drop shadow — see tailwind.config.ts's
+     `card` boxShadow token (now "none"). */
   .card {
     @apply rounded-2xl border border-charcoal/10 bg-white shadow-card;
   }
 
+  /* Phase 3: reverted from the previous "Contra-style pill buttons"
+     (rounded-full) back to a moderate radius — that fully-rounded pass was
+     itself a loose interpretation of Contra, which actually uses pill
+     shapes sparingly (a couple of top-right CTAs) and moderate-radius
+     rectangles everywhere else, including its modal footer buttons. */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* Primary: charcoal/near-black with white text — Contra's default
+     button colour. Burgundy is no longer the default primary action. */
   .btn-primary {
-    @apply btn bg-burgundy-500 text-white hover:bg-burgundy-600;
+    @apply btn bg-charcoal text-white hover:bg-charcoal/85;
   }
 
   .btn-secondary {
-    @apply btn border border-charcoal/15 bg-white text-charcoal hover:bg-sand-100;
+    @apply btn border border-charcoal/15 bg-white text-charcoal hover:bg-charcoal/5;
   }
 
   .btn-ghost {
-    @apply btn text-charcoal hover:bg-sand-100;
+    @apply btn text-charcoal hover:bg-charcoal/5;
   }
 
   .btn-danger {
     @apply btn bg-status-action text-white hover:opacity-90;
   }
 
+  /* Burgundy, on purpose: for the small number of actions that should read
+     as distinctly Beach-Kids-branded rather than a neutral app action
+     (e.g. a headline "book a tour"-style CTA, if one is ever added). Not
+     used by default anywhere in this pass. */
+  .btn-brand {
+    @apply btn bg-burgundy-500 text-white hover:bg-burgundy-600;
+  }
+
   .input {
-    @apply w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-charcoal/40 focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20;
+    @apply w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-charcoal/40 focus:border-charcoal/30 focus:outline-none focus:ring-2 focus:ring-charcoal/10;
   }
 
   .label {

@@ -35,7 +35,22 @@ const config: Config = {
         // of the original coastal tokens above (kept for anything not yet
         // restyled in this pass).
         cream: "#F6F1E7",
-        charcoal: "#353530",
+        // Phase 3 (Contra visual refit, 2026-09-24): shifted from a warm
+        // dark taupe (#353530) to a true near-black so "text-charcoal" and
+        // every charcoal/NN opacity border/text derived from it reads as
+        // Contra's near-black-on-off-white system app-wide, without having
+        // to touch each of the many call sites individually.
+        charcoal: "#18181B",
+        // Pale lilac/grey accent used ONLY for the sidebar's active-nav
+        // background and a couple of quiet tag chips — Contra's stand-in
+        // for a brand colour in navigation. Burgundy is deliberately not
+        // used there any more; see DESIGN_SYSTEM.md's Phase 3 notes.
+        lilac: {
+          50: "#F7F6FC",
+          100: "#EFEDF9",
+          200: "#E1DDF3",
+          600: "#6D5FA6",
+        },
         burgundy: {
           50: "#FBEAF0",
           100: "#F5D0DD",
@@ -103,14 +118,23 @@ const config: Config = {
         ],
         display: ["var(--font-bitter)", "Georgia", "serif"],
       },
-      borderRadius: {
-        xl: "1rem",
-        "2xl": "1.25rem",
-        "3xl": "1.75rem",
-      },
+      // Phase 3 (Contra visual refit): the previous overrides pushed every
+      // radius toward "pill" territory (xl=16px, 2xl=20px, 3xl=28px).
+      // Contra uses moderate radii — large containers ~12-16px,
+      // inputs/buttons ~10-14px — which is exactly Tailwind's own default
+      // scale, so the overrides are removed rather than replaced:
+      // rounded-xl is back to 12px, rounded-2xl to 16px, rounded-3xl to
+      // 24px everywhere they're already used across the app.
       boxShadow: {
-        card: "0 1px 2px rgba(15, 36, 44, 0.04), 0 4px 16px rgba(15, 36, 44, 0.06)",
-        cardHover: "0 4px 12px rgba(15, 36, 44, 0.08), 0 8px 24px rgba(15, 36, 44, 0.08)",
+        // Cards/panels now rely on a 1px border for definition, not a drop
+        // shadow — "card" stays defined (rather than being deleted) so any
+        // existing `shadow-card` class becomes a harmless no-op instead of
+        // a build error.
+        card: "none",
+        // Reserved for things that genuinely float above page content (an
+        // open dropdown menu, a modal surface) — deliberately faint, not
+        // the old dual-layer drop shadow.
+        cardHover: "0 1px 3px rgba(15, 15, 20, 0.08), 0 4px 10px rgba(15, 15, 20, 0.06)",
       },
     },
   },

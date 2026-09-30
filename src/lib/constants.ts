@@ -38,6 +38,144 @@ export const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ] as const;
 
+// ---------------------------------------------------------------------------
+// Application shell navigation (Phase 1 -- CRM-direction IA)
+// ---------------------------------------------------------------------------
+//
+// This is the sidebar's information architecture, distinct from the flat
+// NAV_ITEMS above (which mobile-nav.tsx still uses as-is -- untouched by
+// this pass). Every item here maps to a route that already exists and
+// already works; nothing new was built to fill a gap. Two kinds of items
+// don't have their own dedicated page yet:
+//
+//   - status: "soon"  -- no existing implementation at all (e.g. Messages).
+//     Rendered disabled, never a real link, so nothing fake is exposed.
+//   - children        -- an existing feature (e.g. Evidence Library, Audit
+//     Pack) that's real and built, but doesn't have its "final" combined
+//     section yet, so it's nested under the closest existing page instead
+//     of being dropped from the nav.
+//
+// A few labels intentionally point at an existing page whose current name
+// doesn't match the new label ("Rooms" -> /roster, "Tasks" -> /actions,
+// "Attendance" -> /children/hours, "Health & Safety" -> /records) -- see
+// DESIGN_SYSTEM.md for the reasoning behind each of those.
+
+export type ShellNavStatus = "active" | "soon";
+
+export type ShellNavChild = {
+  href: string;
+  label: string;
+};
+
+export type ShellNavItem = {
+  label: string;
+  icon: string;
+  status: ShellNavStatus;
+  href?: string; // set when status is "active"
+  children?: ShellNavChild[];
+};
+
+export type ShellNavGroup = {
+  label: string;
+  items: ShellNavItem[];
+};
+
+export const NAV_GROUPS: ShellNavGroup[] = [
+  {
+    label: "Home",
+    items: [{ href: "/dashboard", label: "Home", icon: "home", status: "active" }],
+  },
+  {
+    label: "Centre",
+    items: [
+      { href: "/children", label: "Children", icon: "children", status: "active" },
+      { href: "/staff", label: "Staff", icon: "staff", status: "active" },
+      { href: "/roster", label: "Rooms", icon: "rooms", status: "active" },
+      { href: "/children/hours", label: "Attendance", icon: "attendance", status: "active" },
+    ],
+  },
+  {
+    label: "Engage",
+    items: [
+      { href: "/learning/stories", label: "Learning", icon: "learning", status: "active" },
+      { label: "Messages", icon: "messages", status: "soon" },
+      { href: "/calendar", label: "Calendar", icon: "calendar", status: "active" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/actions", label: "Tasks", icon: "actions", status: "active" },
+      { label: "Records", icon: "recordsFolder", status: "soon" },
+      { href: "/finances", label: "Finance", icon: "finances", status: "active" },
+      // Not in the brief's list, but a real, already-built feature that
+      // needs a home somewhere so it isn't dropped from the nav entirely --
+      // flagged in DESIGN_SYSTEM.md, easy to move once you tell me where.
+      { href: "/stock-orders", label: "Stock Orders", icon: "stock", status: "active" },
+    ],
+  },
+  {
+    label: "Compliance",
+    items: [
+      {
+        href: "/checklist",
+        label: "ERO & Compliance",
+        icon: "checklist",
+        status: "active",
+        children: [
+          { href: "/checklist", label: "ERO Checklist" },
+          { href: "/evidence", label: "Evidence Library" },
+          { href: "/audit-pack", label: "Audit Pack" },
+        ],
+      },
+      { href: "/policies", label: "Policies", icon: "policies", status: "active" },
+      { href: "/records", label: "Health & Safety", icon: "records", status: "active" },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [{ label: "Reports", icon: "reports", status: "soon" }],
+  },
+];
+
+// Rendered as their own unlabelled group at the very bottom of the sidebar,
+// above the account footer.
+export const NAV_BOTTOM_ITEMS: ShellNavItem[] = [
+  { label: "Help", icon: "help", status: "soon" },
+  { href: "/settings", label: "Settings", icon: "settings", status: "active" },
+];
+
+type PageTitleEntry = { href: string; label: string };
+
+const PAGE_TITLE_ENTRIES: PageTitleEntry[] = (() => {
+  const entries: PageTitleEntry[] = [];
+  NAV_GROUPS.forEach((group) => {
+    group.items.forEach((item) => {
+      if (item.href) entries.push({ href: item.href, label: item.label });
+      item.children?.forEach((child) => entries.push({ href: child.href, label: child.label }));
+    });
+  });
+  NAV_BOTTOM_ITEMS.forEach((item) => {
+    if (item.href) entries.push({ href: item.href, label: item.label });
+  });
+  return entries;
+})();
+
+/** Derives the persistent top header's page title (Phase 3) from the
+ * current route, by matching it against the same NAV_GROUPS/NAV_BOTTOM_ITEMS
+ * data the sidebar already renders — so every page gets a consistent header
+ * title without each one having to declare it separately. A route nested
+ * under a nav item (e.g. "/children/123", "/roster/ratios") falls back to
+ * that item's label; among several matches, the longest (most specific)
+ * href wins. */
+export function getPageTitle(pathname: string): string {
+  const matches = PAGE_TITLE_ENTRIES.filter(
+    (entry) => pathname === entry.href || pathname.startsWith(`${entry.href}/`)
+  );
+  if (matches.length === 0) return "Beach Kids";
+  return matches.reduce((best, entry) => (entry.href.length > best.href.length ? entry : best)).label;
+}
+
 export const STAFF_LEAVE_TYPES: StaffLeaveType[] = ["annual", "sick", "unpaid", "other"];
 
 export const STAFF_LEAVE_TYPE_LABEL: Record<StaffLeaveType, string> = {

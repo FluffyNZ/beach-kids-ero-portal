@@ -13,6 +13,17 @@ export function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
+/** Full weekday + date, e.g. "Thursday, 24 September 2026" — used under the
+ * Home dashboard's greeting. */
+export function formatLongDate(date: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-NZ", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
