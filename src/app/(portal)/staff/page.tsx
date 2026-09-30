@@ -12,7 +12,14 @@ export default async function StaffPage({
 }: {
   searchParams: { q?: string; status?: string };
 }) {
-  const staff = await getStaffList({ search: searchParams.q, status: searchParams.status });
+  // Default to active staff only when no filter has been chosen yet —
+  // former staff should still be reachable via the "All staff"/"Former
+  // staff" options, just not shown by default. "all" is its own explicit
+  // value (see StaffSearchBar) so it's distinguishable from "no choice
+  // made yet", which otherwise both look like a missing query param.
+  const statusFilter =
+    searchParams.status === undefined ? "active" : searchParams.status === "all" ? undefined : searchParams.status;
+  const staff = await getStaffList({ search: searchParams.q, status: statusFilter });
 
   const activeCount = staff.filter((s) => s.status === "active").length;
   const documentsDue = staff.filter((s) => {

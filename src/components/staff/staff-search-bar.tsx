@@ -45,12 +45,12 @@ export function StaffSearchBar() {
 
       <select
         className="input sm:w-48"
-        value={searchParams.get("status") ?? ""}
+        value={searchParams.get("status") ?? "active"}
         onChange={(e) => pushParams({ status: e.target.value })}
       >
-        <option value="">All staff</option>
         <option value="active">Active</option>
         <option value="former">Former staff</option>
+        <option value="all">All staff</option>
       </select>
     </div>
   );
