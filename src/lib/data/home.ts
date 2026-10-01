@@ -21,7 +21,7 @@ import { addDays, formatShortDate } from "@/lib/utils";
  * relief-staff pool rather than a physical room with its own enrolled
  * children, so it's left out here — it's untouched everywhere else
  * (Roster, Roster ratios) that already uses all four rooms. */
-const HOME_ROOM_NAMES = ["Tainui", "Ohinemuri", "Pukewa"];
+export const HOME_ROOM_NAMES = ["Tainui", "Ohinemuri", "Pukewa"];
 
 function weekdayKeyFor(date: Date): Weekday | null {
   switch (date.getDay()) {

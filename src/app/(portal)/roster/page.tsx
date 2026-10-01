@@ -49,6 +49,9 @@ export default async function RosterPage({
           <Link href="/roster/ratios" className="btn-ghost">
             Room ratios →
           </Link>
+          <Link href="/roster/attendance-roll" className="btn-ghost">
+            Attendance roll →
+          </Link>
         </div>
       </div>
 
