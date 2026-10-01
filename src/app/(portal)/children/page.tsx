@@ -45,6 +45,9 @@ export default async function ChildrenPage({
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/children/fees-by-family" className="btn-secondary">
+            Fees by family
+          </Link>
           <Link href="/children/hours" className="btn-secondary">
             Enter weekly hours
           </Link>

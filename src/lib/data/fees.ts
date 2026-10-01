@@ -3,7 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getChildrenList } from "@/lib/data/children";
 import { calculateChildWeeklyFee, scheduleToWeekdayHours } from "@/lib/fees";
 import { isEceEligible } from "@/lib/constants";
-import type { ChildEnrolledSchedule, FeeSettings, WeeklyFeesSummary } from "@/lib/types";
+import type {
+  ChildEnrolledSchedule,
+  FamilyWeeklyFee,
+  FamilyWeeklyFeeChild,
+  FeeSettings,
+  WeeklyFeesByFamily,
+  WeeklyFeesSummary,
+} from "@/lib/types";
 
 /** The one fee_settings row — seeded with the real numbers from the
  * uploaded fees report (Assumptions tab), editable from Settings. Falls
@@ -129,5 +136,90 @@ export async function getWeeklyFeesSummary(weekStartDate: string): Promise<Weekl
     totalFees: fees.reduce((sum, f) => sum + f.fee_total, 0),
     totalWinz: fees.reduce((sum, f) => sum + f.winz_payment, 0),
     totalParentPays: fees.reduce((sum, f) => sum + f.parent_pays, 0),
+  };
+}
+
+/** The same week's fees as getWeeklyFeesSummary, rolled up to one total per
+ * family (bill payer) instead of one row per child — this is the number
+ * that would actually go on an invoice, before any sending or Xero
+ * machinery exists. ChildWeeklyFee doesn't carry bill-payer info, so this
+ * independently loads the active children list (which does) and joins the
+ * two by child_id, the same "join two independently-fetched collections"
+ * approach already used for the attendance roll. Children with no bill
+ * payer set are returned separately under unassignedChildren rather than
+ * silently folded into a family or dropped from the totals. */
+export async function getWeeklyFeesByFamily(weekStartDate: string): Promise<WeeklyFeesByFamily> {
+  const [summary, children] = await Promise.all([
+    getWeeklyFeesSummary(weekStartDate),
+    getChildrenList({ status: "active" }),
+  ]);
+
+  const billPayerByChildId = new Map(
+    children.map((c) => [c.id, { bill_payer_id: c.bill_payer_id, bill_payer_name: c.bill_payer_name }])
+  );
+
+  const familiesById = new Map<string, FamilyWeeklyFee>();
+  const unassignedChildren: FamilyWeeklyFeeChild[] = [];
+
+  summary.children.forEach((fee) => {
+    const line: FamilyWeeklyFeeChild = {
+      child_id: fee.child_id,
+      full_name: fee.full_name,
+      room_name: fee.room_name,
+      room_color: fee.room_color,
+      fee_total: fee.fee_total,
+      winz_payment: fee.winz_payment,
+      parent_pays: fee.parent_pays,
+      is_estimated: fee.is_estimated,
+    };
+
+    const billPayer = billPayerByChildId.get(fee.child_id);
+    if (!billPayer?.bill_payer_id) {
+      unassignedChildren.push(line);
+      return;
+    }
+
+    const existing = familiesById.get(billPayer.bill_payer_id);
+    if (existing) {
+      existing.children.push(line);
+      existing.totalFeeTotal += line.fee_total;
+      existing.totalWinz += line.winz_payment;
+      existing.totalParentPays += line.parent_pays;
+      existing.isEstimated = existing.isEstimated || line.is_estimated;
+    } else {
+      familiesById.set(billPayer.bill_payer_id, {
+        bill_payer_id: billPayer.bill_payer_id,
+        bill_payer_name: billPayer.bill_payer_name ?? "Unnamed bill payer",
+        bill_payer_email: null,
+        children: [line],
+        totalFeeTotal: line.fee_total,
+        totalWinz: line.winz_payment,
+        totalParentPays: line.parent_pays,
+        isEstimated: line.is_estimated,
+      });
+    }
+  });
+
+  // Fill in each family's email in one batched query, same reasoning as the
+  // WINZ-payment batch above — avoids a query per family.
+  const billPayerIds = Array.from(familiesById.keys());
+  if (billPayerIds.length > 0) {
+    const supabase = createClient();
+    const { data: billPayerRows } = await supabase.from("bill_payers").select("id, email").in("id", billPayerIds);
+    (billPayerRows ?? []).forEach((row) => {
+      const family = familiesById.get(row.id);
+      if (family) family.bill_payer_email = row.email;
+    });
+  }
+
+  const families = Array.from(familiesById.values()).sort((a, b) => a.bill_payer_name.localeCompare(b.bill_payer_name));
+
+  return {
+    weekStartDate,
+    hasAnyHoursEntered: summary.hasAnyHoursEntered,
+    families,
+    unassignedChildren,
+    totalParentPays: families.reduce((sum, f) => sum + f.totalParentPays, 0) +
+      unassignedChildren.reduce((sum, c) => sum + c.parent_pays, 0),
   };
 }

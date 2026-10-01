@@ -76,6 +76,9 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
             marked paid yet. Weeks are grouped Monday–Sunday, so a week straddling the start or end of a period
             counts fully wherever its Monday falls, not split by exact day.
           </p>
+          <Link href="/children/fees-by-family" className="mt-1 text-sm font-medium text-burgundy-600 hover:underline">
+            See this week&apos;s fees rolled up by family →
+          </Link>
         </div>
       </section>
 

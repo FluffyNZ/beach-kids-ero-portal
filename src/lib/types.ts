@@ -474,6 +474,46 @@ export type WeeklyFeesSummary = {
   totalParentPays: number;
 };
 
+// A trimmed-down per-child line for the family rollup below — just what's
+// needed to show "this family's children" and add up to the family total.
+export type FamilyWeeklyFeeChild = {
+  child_id: string;
+  full_name: string;
+  room_name: string | null;
+  room_color: string | null;
+  fee_total: number;
+  winz_payment: number;
+  parent_pays: number;
+  is_estimated: boolean;
+};
+
+// One family's (one bill payer's) weekly fee total — this is the number
+// that would actually go on an invoice to them, across every child they're
+// billed for, rather than Children & Fees' one-row-per-child view.
+export type FamilyWeeklyFee = {
+  bill_payer_id: string;
+  bill_payer_name: string;
+  bill_payer_email: string | null;
+  children: FamilyWeeklyFeeChild[];
+  totalFeeTotal: number;
+  totalWinz: number;
+  totalParentPays: number;
+  // true if any child in this family is on an estimated (not yet
+  // confirmed) week — the family total should be read as provisional.
+  isEstimated: boolean;
+};
+
+export type WeeklyFeesByFamily = {
+  weekStartDate: string;
+  hasAnyHoursEntered: boolean;
+  families: FamilyWeeklyFee[];
+  // Active children with no bill payer set yet — can't be billed until
+  // one's assigned, so they're called out separately rather than silently
+  // dropped from the totals.
+  unassignedChildren: FamilyWeeklyFeeChild[];
+  totalParentPays: number;
+};
+
 export type StockOrderItem = {
   id: string;
   supplier: StockSupplier;
