@@ -7,9 +7,12 @@ import { formatCurrency, formatShortDate } from "@/lib/utils";
 import { syncXeroPayments, confirmXeroMatch } from "@/lib/actions/xero";
 
 /** Pulls recent "money received" transactions from the connected Xero bank
- * account and proposes matches against outstanding invoices, purely by
- * amount. Nothing is written to the database until you click Confirm on a
- * specific pairing — this panel only ever shows a preview. */
+ * account and proposes matches against outstanding invoices for currently
+ * active children, by amount first and then — when several invoices share
+ * an amount — by whether the payment's own bank reference/name looks like
+ * one of those families. Nothing is written to the database until you
+ * click Confirm on a specific pairing — this panel only ever shows a
+ * preview. */
 export function XeroSyncPanel() {
   const router = useRouter();
   const [result, setResult] = useState<XeroSyncResult | null>(null);
@@ -63,8 +66,8 @@ export function XeroSyncPanel() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-charcoal/60">
-          Checks the last ~100 transactions in your connected account and matches them against outstanding invoices
-          by amount.
+          Checks the last ~100 transactions in your connected account against outstanding invoices for currently
+          active children, by amount and the payment&apos;s bank reference/name.
         </p>
         <button type="button" onClick={handleSync} disabled={syncPending} className="btn-primary whitespace-nowrap">
           {syncPending && !confirmingKey ? "Syncing…" : "Sync now"}
@@ -141,21 +144,29 @@ export function XeroSyncPanel() {
                   <div className="flex flex-wrap gap-2">
                     {am.candidates.map((candidate) => {
                       const key = `ambiguous-${am.payment.bankTransactionId}-${candidate.id}`;
+                      const likely = am.likelyInvoiceIds.includes(candidate.id);
                       return (
                         <button
                           key={candidate.id}
                           type="button"
                           disabled={syncPending}
                           onClick={() => handleConfirm(key, candidate, am.payment)}
-                          className="btn-secondary px-3 py-1.5 text-xs"
+                          className={likely ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}
+                          title={likely ? "The payment's bank reference/name looks like this family" : undefined}
                         >
                           {confirmingKey === key
                             ? "Confirming…"
-                            : `${candidate.bill_payer_name} — ${candidate.invoice_number}`}
+                            : `${likely ? "✓ " : ""}${candidate.bill_payer_name} — ${candidate.invoice_number}`}
                         </button>
                       );
                     })}
                   </div>
+                  {am.likelyInvoiceIds.length > 0 && (
+                    <p className="text-xs text-charcoal/40">
+                      ✓ = the payment&apos;s bank reference or name looks like that family — still your call to
+                      confirm.
+                    </p>
+                  )}
                 </div>
               ))
             )}

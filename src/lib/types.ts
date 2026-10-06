@@ -604,7 +604,15 @@ export type XeroReceivedPayment = {
 // than the portal guessing.
 export type XeroAmbiguousMatch = {
   payment: XeroReceivedPayment;
+  // Same invoices as returned, but with any name-plausible ones (see
+  // likelyInvoiceIds) listed first.
   candidates: Invoice[];
+  // IDs of candidates whose bill payer or child names look close to the
+  // payment's own bank reference/contact text — a hint for which to pick,
+  // never applied automatically (more than one still-ambiguous candidate
+  // can look plausible, e.g. two invoices for siblings in different
+  // families with similar surnames).
+  likelyInvoiceIds: string[];
 };
 
 export type XeroSyncResult = {

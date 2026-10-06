@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureValidXeroAccessToken } from "@/lib/data/xero";
 import { getXeroReceivedPayments } from "@/lib/xero/client";
 import { getInvoicesList } from "@/lib/data/invoices";
+import { getChildrenList } from "@/lib/data/children";
 import type { Invoice, XeroReceivedPayment, XeroSyncResult } from "@/lib/types";
 
 export async function disconnectXero() {
@@ -38,14 +39,77 @@ function amountsMatch(a: number, b: number): boolean {
   return Math.abs(a - b) < 0.005;
 }
 
+// --- Name matching -----------------------------------------------------
+// Bank payment references are free text parents type themselves — no
+// consistent format, often misspelled, shortened, or just a first name.
+// This is a lightweight, dependency-free "does this look like the same
+// family?" check: no fuzzy-matching package exists in this codebase yet
+// and the API here (a handful of word comparisons) doesn't need one.
+
+function nameTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
+}
+
+// Plain Levenshtein edit distance between two short strings.
+function levenshteinDistance(a: string, b: string): number {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dp: number[][] = Array.from({ length: rows }, () => new Array(cols).fill(0));
+  for (let i = 0; i < rows; i++) dp[i][0] = i;
+  for (let j = 0; j < cols; j++) dp[0][j] = j;
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+// True when two individual name words are "close enough" to count as the
+// same word: identical, one is a prefix of the other (nicknames, initials,
+// truncated bank text), or a small typo-sized edit distance relative to
+// word length. Anything under 3 characters is only ever compared exactly,
+// to avoid short words (e.g. "jo", "le") matching almost anything.
+function wordsAreClose(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length < 3 || b.length < 3) return false;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  const maxLen = Math.max(a.length, b.length);
+  return levenshteinDistance(a, b) <= Math.max(1, Math.floor(maxLen * 0.25));
+}
+
+/** Does this Xero payment's own text (its bank reference and/or the
+ * counterparty name Xero recorded) look like it came from this invoice's
+ * family — either the bill payer or one of the children billed? Used only
+ * to help pick between invoices that already share the same dollar amount;
+ * it never substitutes for the amount match itself. */
+function paymentLooksLikeFamily(payment: XeroReceivedPayment, invoice: Invoice): boolean {
+  const paymentWords = nameTokens(`${payment.reference ?? ""} ${payment.contactName ?? ""}`);
+  if (paymentWords.length === 0) return false;
+
+  const candidateWords = nameTokens(
+    [invoice.bill_payer_name, ...invoice.line_items.map((li) => li.child_name)].join(" ")
+  );
+
+  return candidateWords.some((cw) => paymentWords.some((pw) => wordsAreClose(cw, pw)));
+}
+
 /** Reads recent "money received" transactions from the connected Xero
  * bank account and proposes matches against every currently-outstanding
- * invoice, purely by comparing amounts — nothing is written to the
+ * invoice for a currently-active child — nothing is written to the
  * database here. A payment/invoice pair only goes into confidentMatches
- * when the amount is unique on both sides; any amount shared by more than
- * one payment or more than one invoice is surfaced as ambiguous instead
- * of guessed at. Nothing is ever marked paid until confirmXeroMatch runs
- * on a specific pairing. */
+ * when the amount is unique on both sides, or when several invoices share
+ * the amount but the payment's own text looks like it belongs to exactly
+ * one of those families (checked against the bill payer's name and every
+ * billed child's name, allowing for typos/short forms — never an exact
+ * match requirement). Anything still shared by more than one plausible
+ * family is surfaced as ambiguous instead of guessed at. Nothing is ever
+ * marked paid until confirmXeroMatch runs on a specific pairing. */
 export async function syncXeroPayments(): Promise<XeroSyncResult> {
   const supabase = createClient();
   const { data: connection } = await supabase.from("xero_connection").select("*").eq("id", true).maybeSingle();
@@ -56,15 +120,24 @@ export async function syncXeroPayments(): Promise<XeroSyncResult> {
   const tokenInfo = await ensureValidXeroAccessToken();
   if (!tokenInfo) throw new Error("Xero isn't connected — reconnect it first.");
 
-  const [payments, allInvoices] = await Promise.all([
+  const [payments, allInvoices, activeChildren] = await Promise.all([
     getXeroReceivedPayments(tokenInfo.accessToken, tokenInfo.tenantId, connection.bank_account_id),
     getInvoicesList(),
+    getChildrenList({ status: "active" }),
   ]);
+
+  const activeChildIds = new Set(activeChildren.map((c) => c.id));
 
   const usedTransactionIds = new Set(
     allInvoices.filter((inv) => inv.xero_transaction_id).map((inv) => inv.xero_transaction_id as string)
   );
-  const outstandingInvoices = allInvoices.filter((inv) => inv.status === "sent");
+  // Only invoices still billing at least one currently-active (not left)
+  // child — a family whose kids have all left stops being a match
+  // candidate here, though any payment that still comes in for them will
+  // simply show up as unmatched rather than silently vanishing.
+  const outstandingInvoices = allInvoices.filter(
+    (inv) => inv.status === "sent" && inv.line_items.some((li) => li.child_id && activeChildIds.has(li.child_id))
+  );
   const unmatchedPaymentsPool = payments.filter((p) => !usedTransactionIds.has(p.bankTransactionId));
 
   // Group both sides by amount (rounded to cents as a string key to avoid
@@ -105,7 +178,27 @@ export async function syncXeroPayments(): Promise<XeroSyncResult> {
     }
 
     paymentsAtAmount.forEach((payment) => {
-      ambiguousMatches.push({ payment, candidates: candidateInvoices });
+      const nameMatches = candidateInvoices.filter((inv) => paymentLooksLikeFamily(payment, inv));
+
+      // Several invoices share this amount, but the payment's own text
+      // only looks like one of those families — that combination (same
+      // amount + only one plausible name) is confident enough to offer
+      // as a one-click confirm, same as a unique amount would be.
+      if (nameMatches.length === 1) {
+        confidentMatches.push({ invoice: nameMatches[0], payment });
+        matchedInvoiceIds.add(nameMatches[0].id);
+        return;
+      }
+
+      // Otherwise still ambiguous — but list any name-plausible
+      // candidates first so the likelier picks are easiest to find.
+      const likelyIds = new Set(nameMatches.map((inv) => inv.id));
+      const orderedCandidates = [...candidateInvoices].sort((a, b) => {
+        const aLikely = likelyIds.has(a.id) ? 0 : 1;
+        const bLikely = likelyIds.has(b.id) ? 0 : 1;
+        return aLikely - bLikely;
+      });
+      ambiguousMatches.push({ payment, candidates: orderedCandidates, likelyInvoiceIds: [...likelyIds] });
     });
   });
 
