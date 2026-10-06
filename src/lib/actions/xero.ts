@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureValidXeroAccessToken } from "@/lib/data/xero";
 import { getXeroReceivedPayments } from "@/lib/xero/client";
 import { getInvoicesList } from "@/lib/data/invoices";
-import { getChildrenList } from "@/lib/data/children";
 import type { Invoice, XeroReceivedPayment, XeroSyncResult } from "@/lib/types";
 
 export async function disconnectXero() {
@@ -120,13 +119,16 @@ export async function syncXeroPayments(): Promise<XeroSyncResult> {
   const tokenInfo = await ensureValidXeroAccessToken();
   if (!tokenInfo) throw new Error("Xero isn't connected — reconnect it first.");
 
-  const [payments, allInvoices, activeChildren] = await Promise.all([
+  const [payments, allInvoices, { data: activeChildRows }] = await Promise.all([
     getXeroReceivedPayments(tokenInfo.accessToken, tokenInfo.tenantId, connection.bank_account_id),
     getInvoicesList(),
-    getChildrenList({ status: "active" }),
+    // A minimal direct query (id only) rather than the full getChildrenList
+    // helper — that one also signs photo URLs and joins rooms/bill payers/
+    // WINZ records for the Children list page, none of which this needs.
+    supabase.from("children").select("id").eq("status", "active"),
   ]);
 
-  const activeChildIds = new Set(activeChildren.map((c) => c.id));
+  const activeChildIds = new Set((activeChildRows ?? []).map((c) => c.id as string));
 
   const usedTransactionIds = new Set(
     allInvoices.filter((inv) => inv.xero_transaction_id).map((inv) => inv.xero_transaction_id as string)
