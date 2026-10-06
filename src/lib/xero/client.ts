@@ -145,18 +145,22 @@ function parseXeroDate(value: string | null | undefined): string {
 }
 
 /** The most recent "money received" transactions in one bank account —
- * bounded to the API's default page (most recent ~100), newest first,
- * rather than filtering by an exact date range server-side, since that
- * covers any realistic weekly/fortnightly sync and keeps the query
- * simple. Only Type=="RECEIVE" (money in) — SPEND transactions (money
- * out, e.g. your own bills) are never considered. */
+ * newest first, bounded to one page (100 — confirmed against a real
+ * account: BankTransactions does NOT cap itself at 100 when `page` is
+ * left off, it returns the account's entire history, which for a bank
+ * feed that's been running for years can be several thousand rows and
+ * makes both this query and the page listing them painfully slow).
+ * Explicitly requesting page=1 with order=Date DESC gets the 100 most
+ * recent instead, which comfortably covers any realistic weekly/
+ * fortnightly sync. Only Type=="RECEIVE" (money in) — SPEND transactions
+ * (money out, e.g. your own bills) are never considered. */
 export async function getXeroReceivedPayments(
   accessToken: string,
   tenantId: string,
   bankAccountId: string
 ): Promise<XeroReceivedPayment[]> {
   const where = encodeURIComponent(`Type=="RECEIVE" && BankAccount.AccountID=Guid("${bankAccountId}")`);
-  const data = await xeroApiGet(`/BankTransactions?where=${where}&order=Date DESC`, accessToken, tenantId);
+  const data = await xeroApiGet(`/BankTransactions?where=${where}&order=Date DESC&page=1`, accessToken, tenantId);
   return (data.BankTransactions ?? []).map((t: any) => ({
     bankTransactionId: t.BankTransactionID,
     date: parseXeroDate(t.Date),
