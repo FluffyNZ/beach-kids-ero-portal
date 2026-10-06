@@ -113,6 +113,47 @@ export async function sendInvoice(invoiceId: string) {
   revalidatePath("/finances/statements");
 }
 
+/** Same email, same template, as a real send — but to an address you
+ * choose instead of the family's real one on file, and clearly marked as
+ * a test everywhere it shows up afterwards. Still moves the invoice to
+ * "sent" so you can exercise the rest of the pipeline for real (it'll
+ * show up in Statements and be a genuine candidate for Xero sync
+ * matching) without any email ever reaching an actual parent. Use this to
+ * try out the whole flow before sending real invoices; void the invoice
+ * afterwards if you don't want it sitting in Statements as something a
+ * real family owes. */
+export async function sendTestInvoiceEmail(invoiceId: string, testEmail: string) {
+  const invoice = await getInvoiceById(invoiceId);
+  if (!invoice) throw new Error("Invoice not found.");
+  if (invoice.status === "void") throw new Error("This invoice has been voided.");
+
+  const trimmed = testEmail.trim();
+  if (!trimmed || !trimmed.includes("@")) {
+    throw new Error("Enter a valid email address to send the test to.");
+  }
+
+  const resend = getResendClient();
+  const { error } = await resend.emails.send({
+    from: getInvoiceFromAddress(),
+    to: trimmed,
+    subject: `[TEST] Invoice ${invoice.invoice_number} — Beach Kids`,
+    html: renderInvoiceEmail(invoice),
+  });
+  if (error) throw new Error(`Resend couldn't send this test email: ${error.message}`);
+
+  const supabase = createClient();
+  const { error: updateError } = await (supabase.from("invoices") as any)
+    .update({ status: "sent", sent_at: new Date().toISOString(), sent_to_email: `TEST → ${trimmed}` })
+    .eq("id", invoiceId);
+  if (updateError) {
+    throw new Error(`The test email was sent, but the invoice couldn't be marked as sent: ${updateError.message}`);
+  }
+
+  revalidatePath("/finances/invoices");
+  revalidatePath("/finances/statements");
+  revalidatePath("/finances/xero");
+}
+
 /** Toggles an invoice between "sent" (outstanding) and "paid" — this is the
  * manual step that keeps the "currently owing" statement figure accurate,
  * since there's no live bank/Xero reconciliation wired in yet. */

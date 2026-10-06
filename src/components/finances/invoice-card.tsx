@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Invoice, InvoiceStatus } from "@/lib/types";
 import { formatCurrency, formatShortDate } from "@/lib/utils";
-import { sendInvoice, markInvoicePaid, voidInvoice } from "@/lib/actions/invoices";
+import { sendInvoice, sendTestInvoiceEmail, markInvoicePaid, voidInvoice } from "@/lib/actions/invoices";
+
+// Pre-filled into the test-send box below so a one-click test goes to you
+// by default — still editable if you'd rather send the test somewhere else.
+const DEFAULT_TEST_EMAIL = "ethan@beachkids.co.nz";
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = {
   draft: "Draft",
@@ -27,6 +31,8 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showTestSend, setShowTestSend] = useState(false);
+  const [testEmail, setTestEmail] = useState(DEFAULT_TEST_EMAIL);
 
   function run(action: () => Promise<void>) {
     setError(null);
@@ -80,6 +86,31 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
 
       {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-xs text-status-action">{error}</p>}
 
+      {invoice.status === "draft" && showTestSend && (
+        <div className="flex flex-wrap items-center justify-end gap-2 rounded-lg bg-sand-50 px-3 py-2">
+          <p className="w-full text-xs text-charcoal/50">
+            Sends this exact invoice email to the address below instead of {invoice.bill_payer_name}'s real one, and
+            still marks it "Sent — outstanding" so you can test Statements and Xero sync. Void it afterwards if you
+            don't want it sitting as something a real family owes.
+          </p>
+          <input
+            type="email"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="min-w-0 flex-1 rounded-lg border border-sand-200 bg-white px-3 py-1.5 text-xs text-charcoal"
+          />
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => sendTestInvoiceEmail(invoice.id, testEmail))}
+            className="btn-secondary px-3 py-1.5 text-xs"
+          >
+            {pending ? "Sending…" : "Send test email"}
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         {invoice.status === "draft" && (
           <>
@@ -90,6 +121,14 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
               className="btn-ghost px-3 py-1.5 text-xs"
             >
               Void
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setShowTestSend((v) => !v)}
+              className="btn-ghost px-3 py-1.5 text-xs"
+            >
+              {showTestSend ? "Hide test send" : "Send test…"}
             </button>
             <button
               type="button"
