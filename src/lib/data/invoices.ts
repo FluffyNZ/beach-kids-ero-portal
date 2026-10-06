@@ -63,6 +63,8 @@ export async function getInvoicesList(filters?: { status?: InvoiceStatus }): Pro
       notes: row.notes,
       created_at: row.created_at,
       line_items: lineItemsByInvoiceId.get(row.id) ?? [],
+      xero_transaction_id: row.xero_transaction_id ?? null,
+      xero_matched_at: row.xero_matched_at ?? null,
     };
   });
 }

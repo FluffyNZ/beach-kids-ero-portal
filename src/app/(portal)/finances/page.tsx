@@ -111,6 +111,10 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
           <h2 className="font-display text-lg font-semibold text-charcoal">Statements</h2>
           <p className="mt-1 text-sm text-charcoal/60">What every family currently owes, and a one-click statement email.</p>
         </Link>
+        <Link href="/finances/xero" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
+          <h2 className="font-display text-lg font-semibold text-charcoal">Xero bank sync</h2>
+          <p className="mt-1 text-sm text-charcoal/60">Match real bank payments against outstanding invoices automatically.</p>
+        </Link>
       </div>
 
       <p className="text-xs text-charcoal/40">

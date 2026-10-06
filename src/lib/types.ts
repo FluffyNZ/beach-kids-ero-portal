@@ -564,6 +564,59 @@ export type FamilyStatement = {
   totalOwing: number;
 };
 
+// ---------------------------------------------------------------------------
+// Xero bank sync (see migration 0043). Read-only on Xero's side — this
+// portal never writes anything back to Xero, it only reads bank
+// transactions from your dedicated fees account and proposes matches
+// against outstanding invoices for you to confirm.
+// ---------------------------------------------------------------------------
+
+export type XeroConnectionStatus = {
+  connected: boolean;
+  tenantName: string | null;
+  bankAccountId: string | null;
+  bankAccountName: string | null;
+  connectedAt: string | null;
+};
+
+export type XeroBankAccountOption = {
+  accountId: string;
+  name: string;
+  code: string | null;
+};
+
+// One Xero bank transaction (a "money received" line in your dedicated
+// fees account) that doesn't yet have a confirmed match to an invoice.
+export type XeroReceivedPayment = {
+  bankTransactionId: string;
+  date: string;
+  amount: number;
+  reference: string | null;
+  contactName: string | null;
+};
+
+// A payment whose amount matches more than one outstanding invoice (e.g.
+// two families both owing $45 this week) — you pick which one, rather
+// than the portal guessing.
+export type XeroAmbiguousMatch = {
+  payment: XeroReceivedPayment;
+  candidates: Invoice[];
+};
+
+export type XeroSyncResult = {
+  // Exactly one outstanding invoice shares this payment's amount — a
+  // one-click confirm away from being marked paid.
+  confidentMatches: Array<{ invoice: Invoice; payment: XeroReceivedPayment }>;
+  ambiguousMatches: XeroAmbiguousMatch[];
+  // Payments in the account with no outstanding invoice at that amount —
+  // could be a deposit from before this feature existed, an overpayment,
+  // or something else entirely. Shown so nothing silently gets dropped.
+  unmatchedPayments: XeroReceivedPayment[];
+  // Outstanding invoices with no payment of that amount found in Xero yet.
+  unmatchedInvoices: Invoice[];
+  syncedAt: string;
+};
+
 export type StockOrderItem = {
   id: string;
   supplier: StockSupplier;

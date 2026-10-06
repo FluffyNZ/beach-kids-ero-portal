@@ -122,12 +122,17 @@ export async function markInvoicePaid(invoiceId: string, paid: boolean) {
     .update({
       status: paid ? "paid" : "sent",
       paid_at: paid ? new Date().toISOString() : null,
+      // Undoing a paid mark also clears any Xero match, so the invoice is
+      // genuinely outstanding again rather than stuck "already matched"
+      // the next time a Xero sync runs against it (see migration 0043).
+      ...(paid ? {} : { xero_transaction_id: null, xero_matched_at: null }),
     })
     .eq("id", invoiceId);
   if (error) throw new Error(`Could not update this invoice: ${error.message}`);
 
   revalidatePath("/finances/invoices");
   revalidatePath("/finances/statements");
+  revalidatePath("/finances/xero");
 }
 
 /** Voids an invoice (e.g. it was drafted by mistake, or needs redoing) —
