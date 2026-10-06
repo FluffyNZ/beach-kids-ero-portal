@@ -15,7 +15,13 @@ const TOKEN_URL = "https://identity.xero.com/connect/token";
 const CONNECTIONS_URL = "https://api.xero.com/connections";
 const API_BASE = "https://api.xero.com/api.xro/2.0";
 
-export const XERO_SCOPES = "offline_access accounting.transactions.read accounting.settings.read";
+// Xero deprecated the old broad "accounting.transactions" (and its
+// ".read" sibling) in favour of granular per-resource scopes — every app
+// created after March 2026 (this one included) only gets the new ones,
+// so the old broad scope name is rejected outright with invalid_scope.
+// accounting.banktransactions.read is the correct read-only scope for
+// reading bank transactions under the new model.
+export const XERO_SCOPES = "offline_access accounting.banktransactions.read accounting.settings.read";
 
 function requireXeroEnv(): { clientId: string; clientSecret: string } {
   const clientId = process.env.XERO_CLIENT_ID;
