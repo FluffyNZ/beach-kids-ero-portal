@@ -101,6 +101,16 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
             .
           </p>
         </Link>
+        <Link href="/finances/invoices" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
+          <h2 className="font-display text-lg font-semibold text-charcoal">Invoices</h2>
+          <p className="mt-1 text-sm text-charcoal/60">
+            Parent fee invoices drafted from Fees by family — draft, send and mark them paid.
+          </p>
+        </Link>
+        <Link href="/finances/statements" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
+          <h2 className="font-display text-lg font-semibold text-charcoal">Statements</h2>
+          <p className="mt-1 text-sm text-charcoal/60">What every family currently owes, and a one-click statement email.</p>
+        </Link>
       </div>
 
       <p className="text-xs text-charcoal/40">

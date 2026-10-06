@@ -514,6 +514,56 @@ export type WeeklyFeesByFamily = {
   totalParentPays: number;
 };
 
+// ---------------------------------------------------------------------------
+// Parent fee invoices + statements (see migration 0042). An invoice is a
+// frozen snapshot of a family's fee numbers at the time it was drafted —
+// it does not change if hours are edited afterwards.
+// ---------------------------------------------------------------------------
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+
+export type InvoiceLineItem = {
+  id: string;
+  child_id: string | null;
+  child_name: string;
+  room_name: string | null;
+  fee_total: number;
+  winz_payment: number;
+  parent_pays: number;
+  is_estimated: boolean;
+};
+
+export type Invoice = {
+  id: string;
+  bill_payer_id: string;
+  bill_payer_name: string;
+  bill_payer_email: string | null;
+  week_start_date: string;
+  invoice_number: string;
+  status: InvoiceStatus;
+  subtotal: number;
+  winz_total: number;
+  total_due: number;
+  issued_date: string;
+  due_date: string | null;
+  sent_at: string | null;
+  sent_to_email: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  created_at: string;
+  line_items: InvoiceLineItem[];
+};
+
+// One family's running balance — every sent-but-not-yet-paid invoice,
+// totalled up. This is the "currently owing" figure for a statement.
+export type FamilyStatement = {
+  bill_payer_id: string;
+  bill_payer_name: string;
+  bill_payer_email: string | null;
+  outstandingInvoices: Invoice[];
+  totalOwing: number;
+};
+
 export type StockOrderItem = {
   id: string;
   supplier: StockSupplier;

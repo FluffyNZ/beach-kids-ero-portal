@@ -1,10 +1,12 @@
 import type { WeeklyFeesByFamily } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { DraftInvoiceButton } from "@/components/finances/draft-invoice-button";
 
 /** One row per family (bill payer), with their children and this week's
  * total underneath — the number that would actually go on an invoice.
- * Read-only: this is a review of fee numbers already calculated in
- * Children & Fees, not a place to edit them. */
+ * The fee numbers themselves are read-only here; "Draft invoice" is the
+ * one action available, and it freezes a copy rather than editing this
+ * live view. */
 export function FamilyFeesTable({ data }: { data: WeeklyFeesByFamily }) {
   if (data.families.length === 0 && data.unassignedChildren.length === 0) {
     return (
@@ -23,11 +25,14 @@ export function FamilyFeesTable({ data }: { data: WeeklyFeesByFamily }) {
               <h3 className="font-display text-lg font-semibold text-charcoal">{family.bill_payer_name}</h3>
               {family.bill_payer_email && <p className="text-xs text-charcoal/50">{family.bill_payer_email}</p>}
             </div>
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-wide text-charcoal/50">
-                Owing this week{family.isEstimated ? " (estimated)" : ""}
-              </p>
-              <p className="font-display text-xl font-bold text-charcoal">{formatCurrency(family.totalParentPays)}</p>
+            <div className="flex items-end gap-3">
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-wide text-charcoal/50">
+                  Owing this week{family.isEstimated ? " (estimated)" : ""}
+                </p>
+                <p className="font-display text-xl font-bold text-charcoal">{formatCurrency(family.totalParentPays)}</p>
+              </div>
+              <DraftInvoiceButton billPayerId={family.bill_payer_id} weekStartDate={data.weekStartDate} />
             </div>
           </div>
 
