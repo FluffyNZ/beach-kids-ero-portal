@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getXeroAuthorizeUrl } from "@/lib/xero/client";
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
   // cookie so the callback can confirm the redirect it received really
   // followed from a connect click made in this browser, not a forged
   // callback hit some other way.
-  const state = crypto.randomUUID();
+  const state = randomUUID();
 
   let authorizeUrl: string;
   try {

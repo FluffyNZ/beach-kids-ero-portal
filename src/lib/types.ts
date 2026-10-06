@@ -552,6 +552,10 @@ export type Invoice = {
   notes: string | null;
   created_at: string;
   line_items: InvoiceLineItem[];
+  // Set only once a Xero bank payment has been confirmed against this
+  // invoice (see migration 0043) — null for every invoice until then.
+  xero_transaction_id: string | null;
+  xero_matched_at: string | null;
 };
 
 // One family's running balance — every sent-but-not-yet-paid invoice,
