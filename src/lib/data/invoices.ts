@@ -74,6 +74,27 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
   return invoices.find((i) => i.id === id) ?? null;
 }
 
+/** True when this bill payer has had some OTHER invoice actually sent
+ * (sent or paid) before — drafts and voids don't count. Used to decide
+ * whether an invoice email gets the full first-time "how to pay"
+ * explanation or just the short repeat version (see sendInvoice). Note
+ * this only sees invoices created in this app — a long-standing family
+ * moving onto this system from the old one will get the full explanation
+ * once more here, which is a reasonable re-introduction rather than a
+ * bug. */
+export async function hasPriorInvoiceForBillPayer(billPayerId: string, excludeInvoiceId: string): Promise<boolean> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("bill_payer_id", billPayerId)
+    .neq("id", excludeInvoiceId)
+    .in("status", ["sent", "paid"])
+    .limit(1);
+  if (error) throw new Error(`Could not check this family's invoice history: ${error.message}`);
+  return (data?.length ?? 0) > 0;
+}
+
 /** Every family with at least one sent-but-unpaid invoice, and what they
  * currently owe in total — the figure a statement would show. A family
  * that's fully paid up (or only has drafts/voids) doesn't appear here. */

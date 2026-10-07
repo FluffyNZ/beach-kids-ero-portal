@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getWeeklyFeesByFamily } from "@/lib/data/fees";
-import { getInvoiceById, getFamilyStatements } from "@/lib/data/invoices";
+import { getInvoiceById, getFamilyStatements, hasPriorInvoiceForBillPayer } from "@/lib/data/invoices";
 import { getResendClient, getInvoiceFromAddress } from "@/lib/email/resend-client";
 import { renderInvoiceEmail, renderStatementEmail } from "@/lib/email/invoice-email";
 
@@ -92,12 +92,14 @@ export async function sendInvoice(invoiceId: string) {
     throw new Error("This family has no email address on file — add one to their bill payer details first.");
   }
 
+  const isFirstInvoice = !(await hasPriorInvoiceForBillPayer(invoice.bill_payer_id, invoice.id));
+
   const resend = getResendClient();
   const { error } = await resend.emails.send({
     from: getInvoiceFromAddress(),
     to: invoice.bill_payer_email,
     subject: `Invoice ${invoice.invoice_number} — Beach Kids`,
-    html: renderInvoiceEmail(invoice),
+    html: renderInvoiceEmail(invoice, { isFirstInvoice }),
   });
   if (error) throw new Error(`Resend couldn't send this email: ${error.message}`);
 
@@ -132,12 +134,16 @@ export async function sendTestInvoiceEmail(invoiceId: string, testEmail: string)
     throw new Error("Enter a valid email address to send the test to.");
   }
 
+  // Same first-invoice check a real send would make, so the test preview
+  // actually shows you the version this family would get.
+  const isFirstInvoice = !(await hasPriorInvoiceForBillPayer(invoice.bill_payer_id, invoice.id));
+
   const resend = getResendClient();
   const { error } = await resend.emails.send({
     from: getInvoiceFromAddress(),
     to: trimmed,
     subject: `[TEST] Invoice ${invoice.invoice_number} — Beach Kids`,
-    html: renderInvoiceEmail(invoice),
+    html: renderInvoiceEmail(invoice, { isFirstInvoice }),
   });
   if (error) throw new Error(`Resend couldn't send this test email: ${error.message}`);
 
