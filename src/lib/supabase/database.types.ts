@@ -40,7 +40,8 @@ export type StaffDocumentCategory =
   | "tax_kiwisaver"
   | "cv_interview"
   | "pay_parity_agreement"
-  | "secondary_identification";
+  | "secondary_identification"
+  | "safety_check";
 export type EmergencyDrillType = "fire_evacuation" | "earthquake" | "tsunami" | "lockdown" | "other";
 export type StaffQualificationStatus = "not_qualified" | "qualified" | "studying";
 export type ChildStatus = "active" | "left";

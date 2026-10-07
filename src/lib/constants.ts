@@ -349,6 +349,7 @@ export const EMERGENCY_DRILL_TYPE_LABEL: Record<EmergencyDrillType, string> = {
 export const REQUIRED_STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "contract",
   "police_vet",
+  "safety_check",
   "staff_profile_form",
   "identification",
   "secondary_identification",
@@ -394,6 +395,7 @@ export const STAFF_DOCUMENT_CATEGORY_LABEL: Record<StaffDocumentCategory, string
   contract: "Contract",
   identification: "Identification",
   police_vet: "Police Verification",
+  safety_check: "Safety Checking",
   child_protection: "Child protection",
   first_aid: "First aid certificate",
   qualification: "Qualification & Teacher Registration",
