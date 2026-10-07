@@ -101,6 +101,12 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
             .
           </p>
         </Link>
+        <Link href="/finances/clients" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
+          <h2 className="font-display text-lg font-semibold text-charcoal">Clients</h2>
+          <p className="mt-1 text-sm text-charcoal/60">
+            Every family — contact details, who they&apos;re billed for, and what they currently owe.
+          </p>
+        </Link>
         <Link href="/finances/invoices" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
           <h2 className="font-display text-lg font-semibold text-charcoal">Invoices</h2>
           <p className="mt-1 text-sm text-charcoal/60">

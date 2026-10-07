@@ -40,7 +40,13 @@ export default async function StatementsPage() {
                   {statement.bill_payer_email ? (
                     <p className="text-xs text-charcoal/50">{statement.bill_payer_email}</p>
                   ) : (
-                    <p className="text-xs text-status-action">No email on file — add one to send a statement.</p>
+                    <p className="text-xs text-status-action">
+                      No email on file —{" "}
+                      <Link href="/finances/clients" className="underline">
+                        add one on their client record
+                      </Link>
+                      .
+                    </p>
                   )}
                 </div>
                 <div className="flex items-end gap-3">
