@@ -186,6 +186,25 @@ export function SearchIcon({ className = base }: IconProps) {
   );
 }
 
+// Was referenced by topbar.tsx and dashboard/home-header.tsx but never
+// actually defined here — a pre-existing gap that only surfaces as a hard
+// failure on Vercel's `tsc` build step (not in local `next dev`, which
+// just warns), unrelated to the invoicing redesign. Added to unblock the
+// deploy.
+export function BellIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3a5 5 0 0 0-5 5v3.2c0 .6-.2 1.2-.6 1.7L5 15.5c-.7.9 0 2.3 1.2 2.3h11.6c1.2 0 1.9-1.4 1.2-2.3l-1.4-2.6a2.8 2.8 0 0 1-.6-1.7V8a5 5 0 0 0-5-5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M9.5 20a2.5 2.5 0 0 0 5 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function AlertIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
