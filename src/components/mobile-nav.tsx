@@ -63,7 +63,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-charcoal/10 bg-white/95 px-1 py-1.5 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-charcoal/10 bg-white/95 px-1 py-1.5 backdrop-blur md:hidden print:hidden">
         {primaryItems.map((item) => {
           const Icon = ICONS[item.icon];
           const active = isActive(pathname, item.href);

@@ -141,7 +141,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-charcoal/10 bg-white md:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-charcoal/10 bg-white md:flex print:hidden">
       {/* Phase 3 (Contra visual refit): styled as a bordered "workspace"
           box near the top, matching Contra's proportions for that slot.
           Beach Kids only ever has the one centre, so — unlike Contra —

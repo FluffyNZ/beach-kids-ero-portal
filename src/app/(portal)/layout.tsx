@@ -11,8 +11,8 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="flex min-h-screen">
       <Sidebar userName={userName} userEmail={profile?.email} />
       <div className="flex min-h-screen flex-1 flex-col">
-        <Topbar />
-        <main className="flex-1 px-4 pb-20 pt-6 md:px-8 md:pb-10">{children}</main>
+        <Topbar userName={userName} />
+        <main className="flex-1 px-4 pb-20 pt-6 md:px-8 md:pb-10 print:p-0">{children}</main>
       </div>
       <MobileNav />
     </div>

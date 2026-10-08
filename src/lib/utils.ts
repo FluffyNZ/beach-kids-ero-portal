@@ -13,17 +13,6 @@ export function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-/** Full weekday + date, e.g. "Thursday, 24 September 2026" — used under the
- * Home dashboard's greeting. */
-export function formatLongDate(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-NZ", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
@@ -112,6 +101,18 @@ export function mondayOfDateString(dateStr: string): string {
   const diff = weekday === 0 ? -6 : 1 - weekday;
   utc.setUTCDate(utc.getUTCDate() + diff);
   return utc.toISOString().slice(0, 10);
+}
+
+/** A full date label for things like the dashboard greeting, e.g.
+ * "Monday, 24 August 2026". Takes a real `Date` (not a plain date string)
+ * since it's only ever used with "now". */
+export function formatLongDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-NZ", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 export function formatShortDate(dateStr: string | null | undefined): string {

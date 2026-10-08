@@ -43,7 +43,7 @@ type ScheduleRow = {
 };
 
 /**
- * One attendance roll per room (Tainui / Ohinemuri / Pukewa — the same
+ * One booked-sessions roll per room (Tainui / Ohinemuri / Pukewa — the same
  * three classrooms the Home dashboard and Roster ratios use; "Float" is a
  * relief-staff pool, not a room with its own enrolled children, so it's
  * left out here the same way it is there).
@@ -53,11 +53,16 @@ type ScheduleRow = {
  * Hours page's "Estimated" rows already read. Nothing new is stored here,
  * and editing a child's schedule on their profile is reflected the next
  * time this page loads. It does NOT reflect one-off changes for a specific
- * week (an extra day, a confirmed absence) — those aren't tracked as
- * structured data anywhere in the app yet, so nothing here is invented to
- * fill that gap.
+ * week (an extra day, a confirmed absence, a room transition taking effect
+ * partway through the week) — those aren't tracked as structured data
+ * anywhere in the app yet, so nothing here is invented to fill that gap.
+ * The printed roll leaves a blank column for staff to note those by hand.
+ *
+ * `roomId` optionally narrows this to a single room (e.g. for printing just
+ * Tainui) — omit it for every room, which is still the default everywhere
+ * this was already used before the room filter existed.
  */
-export async function getAttendanceRoll(): Promise<AttendanceRollRoom[]> {
+export async function getAttendanceRoll(roomId?: string): Promise<AttendanceRollRoom[]> {
   const supabase = createClient();
 
   const [rooms, children] = await Promise.all([getRosterRooms(), getChildrenList({ status: "active" })]);
@@ -76,7 +81,7 @@ export async function getAttendanceRoll(): Promise<AttendanceRollRoom[]> {
   const scheduleByChildId = new Map((scheduleRows ?? []).map((r) => [(r as ScheduleRow).child_id, r as ScheduleRow]));
 
   return rooms
-    .filter((r) => HOME_ROOM_NAMES.includes(r.name))
+    .filter((r) => HOME_ROOM_NAMES.includes(r.name) && (!roomId || r.id === roomId))
     .sort((a, b) => HOME_ROOM_NAMES.indexOf(a.name) - HOME_ROOM_NAMES.indexOf(b.name))
     .map((room) => {
       const roomChildren: AttendanceRollChild[] = children

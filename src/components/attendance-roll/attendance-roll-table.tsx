@@ -1,4 +1,4 @@
-import { formatTime } from "@/lib/utils";
+import { formatTime, formatShortDate, addDays } from "@/lib/utils";
 import { getRoomColorClasses } from "@/lib/constants";
 import { ATTENDANCE_WEEKDAYS, type AttendanceRollRoom } from "@/lib/data/attendance-roll";
 
@@ -7,14 +7,30 @@ function cellLabel(day: { start: string | null; end: string | null }): string {
   return `${formatTime(day.start)}–${formatTime(day.end)}`;
 }
 
-export function AttendanceRollTable({ room }: { room: AttendanceRollRoom }) {
+/** `weekStartDate` labels this room's page with the Monday it's for, and
+ * shows each weekday's actual date alongside "Mon"/"Tue"/etc. `pageBreakAfter`
+ * puts a hard page break after this room when printing, so the printed roll
+ * comes out one room to an A4 page — the last room in the list should leave
+ * this off so printing doesn't end on a trailing blank page. */
+export function AttendanceRollTable({
+  room,
+  weekStartDate,
+  pageBreakAfter = false,
+}: {
+  room: AttendanceRollRoom;
+  weekStartDate: string;
+  pageBreakAfter?: boolean;
+}) {
   const colors = getRoomColorClasses(room.color);
 
   return (
-    <section className="card break-inside-avoid overflow-hidden p-0">
-      <div className={`flex items-center gap-2 px-4 py-3 ${colors.bg}`}>
+    <section className={`card break-inside-avoid overflow-hidden p-0 ${pageBreakAfter ? "print:break-after-page" : ""}`}>
+      <div className={`flex flex-wrap items-center gap-2 px-4 py-3 ${colors.bg}`}>
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colors.chip}`} />
         <h2 className={`font-display text-lg font-semibold ${colors.text}`}>{room.name}</h2>
+        <span className={`text-xs font-medium ${colors.text} opacity-70`}>
+          Week starting {formatShortDate(weekStartDate)}
+        </span>
         <span className={`ml-auto text-xs font-medium ${colors.text}`}>
           {room.children.length} {room.children.length === 1 ? "child" : "children"} enrolled
         </span>
@@ -28,11 +44,12 @@ export function AttendanceRollTable({ room }: { room: AttendanceRollRoom }) {
             <thead>
               <tr className="border-b border-charcoal/10 text-xs uppercase tracking-wide text-charcoal/50">
                 <th className="px-4 py-3 font-medium">Child</th>
-                {ATTENDANCE_WEEKDAYS.map((d) => (
+                {ATTENDANCE_WEEKDAYS.map((d, i) => (
                   <th key={d.key} className="px-3 py-3 font-medium">
-                    {d.label}
+                    {d.label} <span className="font-normal normal-case text-charcoal/40">{formatShortDate(addDays(weekStartDate, i))}</span>
                   </th>
                 ))}
+                <th className="px-3 py-3 font-medium print:w-28">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/5">
@@ -44,6 +61,7 @@ export function AttendanceRollTable({ room }: { room: AttendanceRollRoom }) {
                       {cellLabel(c.days[d.key])}
                     </td>
                   ))}
+                  <td className="px-3 py-2.5" />
                 </tr>
               ))}
             </tbody>
@@ -55,6 +73,7 @@ export function AttendanceRollTable({ room }: { room: AttendanceRollRoom }) {
                     {room.bookedTotals[d.key]}
                   </td>
                 ))}
+                <td className="px-3 py-2.5" />
               </tr>
             </tfoot>
           </table>
