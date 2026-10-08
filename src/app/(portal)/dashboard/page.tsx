@@ -4,7 +4,7 @@ import { getTodaySummary, getRoomsToday, getUpcomingEvents, getRecentActivity } 
 import { getAttendanceRoll } from "@/lib/data/attendance-roll";
 import { formatLongDate, mondayOf, addDays } from "@/lib/utils";
 import { HomeHeader } from "@/components/dashboard/home-header";
-import { TodaySummaryGrid } from "@/components/dashboard/today-summary";
+import { TodaySummaryInline } from "@/components/dashboard/today-summary";
 import { RoomsToday } from "@/components/dashboard/rooms-today";
 import { NeedsAttention } from "@/components/dashboard/needs-attention";
 import { UpcomingPanel } from "@/components/dashboard/upcoming-panel";
@@ -49,7 +49,9 @@ export default async function DashboardPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-charcoal">Today at Beach Kids</h2>
-        <TodaySummaryGrid summary={summary} />
+        <div className="card p-5">
+          <TodaySummaryInline summary={summary} />
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">
