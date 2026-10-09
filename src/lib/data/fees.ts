@@ -71,7 +71,7 @@ export async function getWeeklyFeesSummary(weekStartDate: string): Promise<Weekl
   const scheduleByChildId = new Map<string, ChildEnrolledSchedule>();
   const { data: scheduleRows } = await supabase
     .from("child_enrolled_schedule")
-    .select("child_id, mon_start, mon_end, tue_start, tue_end, wed_start, wed_end, thu_start, thu_end, fri_start, fri_end, updated_at")
+    .select("child_id, mon_start, mon_end, tue_start, tue_end, wed_start, wed_end, thu_start, thu_end, fri_start, fri_end, tbc, updated_at")
     .in(
       "child_id",
       children.map((c) => c.id)
