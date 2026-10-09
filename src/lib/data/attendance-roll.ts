@@ -18,6 +18,7 @@ export type AttendanceRollChild = {
   id: string;
   full_name: string;
   days: Record<AttendanceWeekday, { start: string | null; end: string | null }>;
+  notes: string | null;
 };
 
 export type AttendanceRollRoom = {
@@ -40,6 +41,7 @@ type ScheduleRow = {
   thu_end: string | null;
   fri_start: string | null;
   fri_end: string | null;
+  notes: string | null;
 };
 
 /**
@@ -56,7 +58,9 @@ type ScheduleRow = {
  * week (an extra day, a confirmed absence, a room transition taking effect
  * partway through the week) — those aren't tracked as structured data
  * anywhere in the app yet, so nothing here is invented to fill that gap.
- * The printed roll leaves a blank column for staff to note those by hand.
+ * The Notes column shows a child's `child_enrolled_schedule.notes` when one
+ * is set (e.g. "No sleeps") — set it from the child's profile — and is
+ * otherwise left blank for staff to write one-off changes in by hand.
  *
  * `roomId` optionally narrows this to a single room (e.g. for printing just
  * Tainui) — omit it for every room, which is still the default everywhere
@@ -73,7 +77,7 @@ export async function getAttendanceRoll(roomId?: string): Promise<AttendanceRoll
       ? await supabase
           .from("child_enrolled_schedule")
           .select(
-            "child_id, mon_start, mon_end, tue_start, tue_end, wed_start, wed_end, thu_start, thu_end, fri_start, fri_end"
+            "child_id, mon_start, mon_end, tue_start, tue_end, wed_start, wed_end, thu_start, thu_end, fri_start, fri_end, notes"
           )
           .in("child_id", childIds)
       : { data: [] as ScheduleRow[] };
@@ -97,7 +101,7 @@ export async function getAttendanceRoll(roomId?: string): Promise<AttendanceRoll
               },
             ])
           ) as AttendanceRollChild["days"];
-          return { id: c.id, full_name: c.full_name, days };
+          return { id: c.id, full_name: c.full_name, days, notes: schedule?.notes ?? null };
         });
 
       const bookedTotals = Object.fromEntries(

@@ -61,7 +61,7 @@ export function AttendanceRollTable({
                       {cellLabel(c.days[d.key])}
                     </td>
                   ))}
-                  <td className="px-3 py-2.5" />
+                  <td className="px-3 py-2.5 text-charcoal/80">{c.notes}</td>
                 </tr>
               ))}
             </tbody>

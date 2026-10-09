@@ -81,8 +81,9 @@ export default async function AttendanceRollPage({
         <p className="text-xs text-charcoal/40 print:hidden">
           Booked sessions shown reflect each child&apos;s regular enrolled schedule on file today — this updates
           automatically whenever a schedule changes. One-off changes for this specific week (an extra day, a
-          confirmed absence, a room move partway through the week) aren&apos;t tracked as data here yet, so use the
-          blank Notes column on the printout for last-minute changes.
+          confirmed absence, a room move partway through the week) aren&apos;t tracked as data here yet. The Notes
+          column shows a standing note from the child&apos;s profile (e.g. an allergy or a sleep preference) when one
+          is set, and is otherwise blank for staff to write last-minute changes in by hand.
         </p>
       </div>
     </div>
