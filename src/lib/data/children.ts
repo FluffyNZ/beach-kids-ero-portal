@@ -263,6 +263,7 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
           thu_end: scheduleRow.thu_end,
           fri_start: scheduleRow.fri_start,
           fri_end: scheduleRow.fri_end,
+          tbc: scheduleRow.tbc,
           updated_at: scheduleRow.updated_at,
         }
       : null,

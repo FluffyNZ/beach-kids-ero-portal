@@ -414,6 +414,7 @@ export type ChildEnrolledSchedule = {
   thu_end: string | null;
   fri_start: string | null;
   fri_end: string | null;
+  tbc: boolean;
   updated_at: string;
 };
 

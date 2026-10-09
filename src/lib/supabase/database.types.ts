@@ -417,6 +417,7 @@ type ChildEnrolledScheduleRow = {
   fri_start: string | null;
   fri_end: string | null;
   notes: string | null;
+  tbc: boolean;
   updated_at: string;
   updated_by: string | null;
 };

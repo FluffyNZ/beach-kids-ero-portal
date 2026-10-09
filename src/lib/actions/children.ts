@@ -282,6 +282,31 @@ export async function updateChildEnrolledSchedule(
   revalidatePath("/children/hours");
 }
 
+/** Flags (or un-flags) a child's enrolled schedule as "to be confirmed" —
+ * the Weekly Booked Sessions roll shows "TBC" instead of their times and
+ * leaves them out of the daily booked totals while this is on, without
+ * touching whatever times are already saved, so turning it back off needs
+ * no re-entry. Upserts rather than requiring a schedule row to already
+ * exist, since a brand-new child can be marked TBC before any hours are
+ * set. */
+export async function setChildScheduleTbc(childId: string, tbc: boolean) {
+  const supabase = createClient();
+  const userId = await currentUserId();
+
+  const { error } = await (supabase
+    .from("child_enrolled_schedule") as any)
+    .upsert({ child_id: childId, tbc, updated_by: userId } as any, { onConflict: "child_id" });
+
+  if (error) {
+    throw new Error(`Could not update this child's TBC status: ${error.message}`);
+  }
+
+  revalidatePath(`/children/${childId}`);
+  revalidatePath("/children");
+  revalidatePath("/children/hours");
+  revalidatePath("/roster/attendance-roll");
+}
+
 export async function setChildStatus(childId: string, status: ChildStatus) {
   const supabase = createClient();
   await (supabase.from("children") as any).update({ status } as any).eq("id", childId);

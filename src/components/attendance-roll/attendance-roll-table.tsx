@@ -55,12 +55,25 @@ export function AttendanceRollTable({
             <tbody className="divide-y divide-charcoal/5">
               {room.children.map((c) => (
                 <tr key={c.id}>
-                  <td className="px-4 py-2.5 font-medium text-charcoal">{c.full_name}</td>
-                  {ATTENDANCE_WEEKDAYS.map((d) => (
-                    <td key={d.key} className="px-3 py-2.5 text-charcoal/80">
-                      {cellLabel(c.days[d.key])}
-                    </td>
-                  ))}
+                  <td className="px-4 py-2.5 font-medium text-charcoal">
+                    {c.full_name}
+                    {c.tbc && (
+                      <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-status-attention">
+                        TBC
+                      </span>
+                    )}
+                  </td>
+                  {ATTENDANCE_WEEKDAYS.map((d) =>
+                    c.tbc ? (
+                      <td key={d.key} className="px-3 py-2.5 font-medium text-status-attention">
+                        TBC
+                      </td>
+                    ) : (
+                      <td key={d.key} className="px-3 py-2.5 text-charcoal/80">
+                        {cellLabel(c.days[d.key])}
+                      </td>
+                    )
+                  )}
                   <td className="px-3 py-2.5 text-charcoal/80">{c.notes}</td>
                 </tr>
               ))}

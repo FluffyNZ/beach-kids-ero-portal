@@ -19,6 +19,7 @@ export type AttendanceRollChild = {
   full_name: string;
   days: Record<AttendanceWeekday, { start: string | null; end: string | null }>;
   notes: string | null;
+  tbc: boolean;
 };
 
 export type AttendanceRollRoom = {
@@ -42,6 +43,7 @@ type ScheduleRow = {
   fri_start: string | null;
   fri_end: string | null;
   notes: string | null;
+  tbc: boolean;
 };
 
 /**
@@ -60,7 +62,10 @@ type ScheduleRow = {
  * anywhere in the app yet, so nothing here is invented to fill that gap.
  * The Notes column shows a child's `child_enrolled_schedule.notes` when one
  * is set (e.g. "No sleeps") — set it from the child's profile — and is
- * otherwise left blank for staff to write one-off changes in by hand.
+ * otherwise left blank for staff to write one-off changes in by hand. A
+ * child flagged TBC on their profile shows "TBC" in place of their times
+ * here and is left out of the daily booked totals, without losing whatever
+ * times are already on file underneath.
  *
  * `roomId` optionally narrows this to a single room (e.g. for printing just
  * Tainui) — omit it for every room, which is still the default everywhere
@@ -77,7 +82,7 @@ export async function getAttendanceRoll(roomId?: string): Promise<AttendanceRoll
       ? await supabase
           .from("child_enrolled_schedule")
           .select(
-            "child_id, mon_start, mon_end, tue_start, tue_end, wed_start, wed_end, thu_start, thu_end, fri_start, fri_end, notes"
+            "child_id, mon_start, mon_end, tue_start, tue_end, wed_start, wed_end, thu_start, thu_end, fri_start, fri_end, notes, tbc"
           )
           .in("child_id", childIds)
       : { data: [] as ScheduleRow[] };
@@ -101,13 +106,21 @@ export async function getAttendanceRoll(roomId?: string): Promise<AttendanceRoll
               },
             ])
           ) as AttendanceRollChild["days"];
-          return { id: c.id, full_name: c.full_name, days, notes: schedule?.notes ?? null };
+          return {
+            id: c.id,
+            full_name: c.full_name,
+            days,
+            notes: schedule?.notes ?? null,
+            tbc: schedule?.tbc ?? false,
+          };
         });
 
       const bookedTotals = Object.fromEntries(
         ATTENDANCE_WEEKDAYS.map((d) => [
           d.key,
-          roomChildren.filter((c) => c.days[d.key].start && c.days[d.key].end).length,
+          // TBC children are left out of the booked total — their hours
+          // aren't confirmed, so they shouldn't be counted as booked yet.
+          roomChildren.filter((c) => !c.tbc && c.days[d.key].start && c.days[d.key].end).length,
         ])
       ) as Record<AttendanceWeekday, number>;
 

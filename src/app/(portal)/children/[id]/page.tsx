@@ -9,6 +9,7 @@ import {
   updateChildFeeSettings,
   updateChildWinzSubsidy,
   updateChildEnrolledSchedule,
+  setChildScheduleTbc,
   setChildStatus,
 } from "@/lib/actions/children";
 import { ChildDetailsForm } from "@/components/children/child-details-form";
@@ -148,6 +149,7 @@ export default async function ChildDetailPage({ params }: { params: { id: string
         <ChildEnrolledScheduleForm
           schedule={child.enrolled_schedule}
           onSave={updateChildEnrolledSchedule.bind(null, child.id)}
+          onToggleTbc={setChildScheduleTbc.bind(null, child.id)}
         />
       </section>
 

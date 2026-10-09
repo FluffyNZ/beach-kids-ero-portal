@@ -41,17 +41,30 @@ function hoursBetween(start: string, end: string): number {
 /** A child's regular booked days/times — a template of a normal week,
  * used to estimate fees for weeks nobody has entered actual attendance
  * for yet (see the Weekly Hours page). Editing this doesn't change any
- * week's confirmed hours, only the estimate future weeks start from. */
+ * week's confirmed hours, only the estimate future weeks start from.
+ *
+ * `onToggleTbc` flags the whole week "to be confirmed" — the Weekly Booked
+ * Sessions roll shows "TBC" instead of these times and leaves this child
+ * out of the daily booked totals while it's on. It's a separate action
+ * from Save changes so it can be flipped in one click without touching the
+ * times below (which stay as they are, ready to show again once
+ * confirmed). */
 export function ChildEnrolledScheduleForm({
   schedule,
   onSave,
+  onToggleTbc,
 }: {
   schedule: ChildEnrolledSchedule | null;
   onSave: (fields: ScheduleFields) => Promise<void>;
+  onToggleTbc: (tbc: boolean) => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [tbc, setTbc] = useState(schedule?.tbc ?? false);
+  const [tbcPending, startTbcTransition] = useTransition();
+  const [tbcError, setTbcError] = useState<string | null>(null);
 
   const [times, setTimes] = useState<Record<string, { start: string; end: string }>>(() =>
     Object.fromEntries(
@@ -89,6 +102,39 @@ export function ChildEnrolledScheduleForm({
         then — it feeds the Weekly Hours page as a starting estimate, which can still be adjusted for any
         specific week (holidays, absences, extra days).
       </p>
+
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-charcoal/10 bg-sand-50 px-3 py-2.5">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-charcoal">
+            {tbc ? "Marked as to be confirmed (TBC)" : "Days/times below are confirmed"}
+          </p>
+          <p className="text-xs text-charcoal/50">
+            {tbc
+              ? "The Weekly Booked Sessions roll shows “TBC” for this child and leaves them out of the booked totals. The times below are kept, not cleared."
+              : "Turn this on if the family hasn’t confirmed their days/times yet — the roll will show “TBC” instead of guessing."}
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={tbcPending}
+          className={tbc ? "btn-primary px-3.5 py-2 text-sm" : "btn-ghost px-3.5 py-2 text-sm"}
+          onClick={() =>
+            startTbcTransition(async () => {
+              setTbcError(null);
+              const next = !tbc;
+              try {
+                await onToggleTbc(next);
+                setTbc(next);
+              } catch (err) {
+                setTbcError(err instanceof Error ? err.message : "Could not update TBC status.");
+              }
+            })
+          }
+        >
+          {tbcPending ? "Saving…" : tbc ? "Mark as confirmed" : "Mark as TBC"}
+        </button>
+      </div>
+      {tbcError && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{tbcError}</p>}
 
       <div className="flex flex-col gap-2">
         {DAYS.map((d) => {
