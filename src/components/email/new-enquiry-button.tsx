@@ -65,7 +65,7 @@ export function NewEnquiryButton({ rooms }: { rooms: RosterRoom[] }) {
         router.refresh();
         return;
       }
-      if ("needsConfirmation" in result && result.needsConfirmation) {
+      if ("duplicates" in result) {
         setDuplicates(result.duplicates);
         return;
       }
