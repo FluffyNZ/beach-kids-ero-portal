@@ -19,6 +19,7 @@ import type {
   HazardRiskLevel,
   StaffLeaveType,
 } from "@/lib/supabase/database.types";
+import type { EmailTemplateCategory, EmailMessageStatus, EmailReminderKind } from "@/lib/types";
 
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -31,6 +32,7 @@ export const NAV_ITEMS = [
   { href: "/roster", label: "Roster", icon: "roster" },
   { href: "/children", label: "Children & Fees", icon: "children" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
+  { href: "/email", label: "Email", icon: "email" },
   { href: "/stock-orders", label: "Stock Orders", icon: "stock" },
   { href: "/finances", label: "Finances", icon: "finances" },
   { href: "/actions", label: "Actions", icon: "actions" },
@@ -48,8 +50,10 @@ export const NAV_ITEMS = [
 // already works; nothing new was built to fill a gap. Two kinds of items
 // don't have their own dedicated page yet:
 //
-//   - status: "soon"  -- no existing implementation at all (e.g. Messages).
+//   - status: "soon"  -- no existing implementation at all (e.g. Reports).
 //     Rendered disabled, never a real link, so nothing fake is exposed.
+//     ("Messages" used to be one of these -- it's now the real, built
+//     "Email" page below, linking to /email.)
 //   - children        -- an existing feature (e.g. Evidence Library, Audit
 //     Pack) that's real and built, but doesn't have its "final" combined
 //     section yet, so it's nested under the closest existing page instead
@@ -73,6 +77,11 @@ export type ShellNavItem = {
   status: ShellNavStatus;
   href?: string; // set when status is "active"
   children?: ShellNavChild[];
+  // Set on exactly the Email nav item — tells the sidebar to look up a live
+  // count (outstanding birthday/welcome/farewell reminders) in the
+  // `badgeCounts` map passed in from the layout, rather than baking a
+  // number into this static list.
+  badgeKey?: "emailReminders";
 };
 
 export type ShellNavGroup = {
@@ -98,7 +107,7 @@ export const NAV_GROUPS: ShellNavGroup[] = [
     label: "Engage",
     items: [
       { href: "/learning/stories", label: "Learning", icon: "learning", status: "active" },
-      { label: "Messages", icon: "messages", status: "soon" },
+      { href: "/email", label: "Email", icon: "email", status: "active", badgeKey: "emailReminders" },
       { href: "/calendar", label: "Calendar", icon: "calendar", status: "active" },
     ],
   },
@@ -192,6 +201,62 @@ export const STOCK_SUPPLIER_LABEL: Record<StockSupplier, string> = {
   qizzle: "Qizzle",
   clean_boss: "Clean Boss",
 };
+
+// ---------------------------------------------------------------------------
+// Email feature labels/tones (see src/lib/data/email.ts, src/app/(portal)/email)
+// ---------------------------------------------------------------------------
+
+export const EMAIL_TEMPLATE_CATEGORIES: EmailTemplateCategory[] = ["enrolment", "everyday", "fees", "events"];
+
+export const EMAIL_TEMPLATE_CATEGORY_LABEL: Record<EmailTemplateCategory, string> = {
+  enrolment: "Enquiries & Enrolment",
+  everyday: "Everyday & Updates",
+  fees: "Fees & Admin",
+  events: "Events & Farewells",
+};
+
+export const EMAIL_REMINDER_KIND_LABEL: Record<EmailReminderKind, string> = {
+  birthday: "Birthday",
+  welcome: "Welcome",
+  farewell: "Farewell",
+};
+
+/** Which seeded template a reminder's "Prepare email" button starts from —
+ * see migration 0050's seed data for these three keys. */
+export const EMAIL_REMINDER_TEMPLATE_KEY: Record<EmailReminderKind, string> = {
+  birthday: "birthday_wishes",
+  welcome: "welcome",
+  farewell: "farewell",
+};
+
+export const EMAIL_MESSAGE_STATUS_LABEL: Record<EmailMessageStatus, string> = {
+  draft: "Draft",
+  sending: "Sending",
+  sent: "Sent",
+  failed: "Failed",
+};
+
+export function emailMessageStatusTone(status: EmailMessageStatus): StatusTone {
+  switch (status) {
+    case "sent":
+      return "ready";
+    case "draft":
+      return "neutral";
+    case "sending":
+      return "attention";
+    case "failed":
+      return "action";
+  }
+}
+
+/** Tone for a reminder's handled-state chip on the Email page's two "coming
+ * up" panels — `null` (nothing drafted yet) is the one that should actually
+ * catch the eye, since it's the one still needing action. */
+export function emailReminderTone(alreadyHandled: "draft" | "sent" | null): StatusTone {
+  if (alreadyHandled === "sent") return "ready";
+  if (alreadyHandled === "draft") return "neutral";
+  return "attention";
+}
 
 // Suggestions only, offered via a datalist on the outgoing form — not an
 // enforced enum, since real overhead categories vary business to business

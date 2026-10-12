@@ -170,6 +170,8 @@ export async function updateChildDetails(
     bill_payer_name?: string | null;
     bill_payer_unlisted_note?: string | null;
     notes?: string | null;
+    start_date?: string | null;
+    leaving_date?: string | null;
   }
 ) {
   const { bill_payer_name, ...rest } = fields;
@@ -199,6 +201,11 @@ export async function updateChildDetails(
   }
   revalidatePath(`/children/${childId}`);
   revalidatePath("/children");
+  // start_date/leaving_date drive the Welcomes & Farewells reminders on the
+  // Email page, so a change there needs to be reflected immediately.
+  if (fields.start_date !== undefined || fields.leaving_date !== undefined) {
+    revalidatePath("/email");
+  }
 }
 
 export async function updateChildFeeSettings(

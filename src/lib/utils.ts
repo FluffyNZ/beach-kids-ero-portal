@@ -150,3 +150,34 @@ export function initials(name: string | null | undefined): string {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+/** "Today" as a plain "YYYY-MM-DD" string in NZ local time, regardless of
+ * what timezone the server process itself is running in (Vercel's
+ * serverless functions run in UTC, which is up to 13 hours behind NZ — a
+ * plain `new Date().toISOString()` can land on the wrong day late in the NZ
+ * evening). Used anywhere "today" needs to match what a Beach Kids parent
+ * or staff member in Waihi would call today — the Email reminders in
+ * particular (see src/lib/data/email.ts), which the brief specifically
+ * calls out as needing Pacific/Auckland dates. */
+export function nzTodayDateString(): string {
+  // en-CA happens to format as YYYY-MM-DD, which saves reassembling the
+  // parts by hand.
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland" }).format(new Date());
+}
+
+/** "1st" / "2nd" / "3rd" / "4th" etc — used for "turning {{turning_age}}"
+ * in the birthday email template. */
+export function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}

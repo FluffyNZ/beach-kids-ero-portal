@@ -24,7 +24,7 @@ import {
   ShieldCheckIcon,
   BookOpenIcon,
   CalendarIcon,
-  MessagesIcon,
+  MailIcon,
   RecordsFolderIcon,
   ReportsIcon,
   HelpIcon,
@@ -39,7 +39,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   rooms: RoomsIcon,
   attendance: AttendanceIcon,
   learning: BookOpenIcon,
-  messages: MessagesIcon,
+  email: MailIcon,
   calendar: CalendarIcon,
   actions: ActionsIcon,
   recordsFolder: RecordsFolderIcon,
@@ -57,7 +57,16 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-function NavRow({ item, pathname }: { item: ShellNavItem; pathname: string }) {
+function NavRow({
+  item,
+  pathname,
+  badgeCounts,
+}: {
+  item: ShellNavItem;
+  pathname: string;
+  badgeCounts?: Record<string, number>;
+}) {
+  const badgeCount = item.badgeKey ? badgeCounts?.[item.badgeKey] ?? 0 : 0;
   const Icon = ICONS[item.icon];
   const hasChildren = Boolean(item.children?.length);
   const childActive = item.children?.some((c) => isActive(pathname, c.href)) ?? false;
@@ -93,6 +102,11 @@ function NavRow({ item, pathname }: { item: ShellNavItem; pathname: string }) {
         <Link href={item.href!} className="flex flex-1 items-center gap-3 px-3 py-2 text-sm">
           <Icon className="h-[18px] w-[18px] shrink-0" />
           <span className="truncate">{item.label}</span>
+          {badgeCount > 0 && (
+            <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-status-action px-1.5 text-[11px] font-semibold text-white">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          )}
         </Link>
         {hasChildren && (
           <button
@@ -134,9 +148,11 @@ function NavRow({ item, pathname }: { item: ShellNavItem; pathname: string }) {
 export function Sidebar({
   userName,
   userEmail,
+  badgeCounts,
 }: {
   userName: string;
   userEmail?: string | null;
+  badgeCounts?: Record<string, number>;
 }) {
   const pathname = usePathname();
 
@@ -169,7 +185,7 @@ export function Sidebar({
               {group.label}
             </p>
             {group.items.map((item) => (
-              <NavRow key={item.label} item={item} pathname={pathname} />
+              <NavRow key={item.label} item={item} pathname={pathname} badgeCounts={badgeCounts} />
             ))}
           </div>
         ))}
@@ -177,7 +193,7 @@ export function Sidebar({
 
       <div className="flex flex-col gap-0.5 border-t border-charcoal/10 px-3 py-3">
         {NAV_BOTTOM_ITEMS.map((item) => (
-          <NavRow key={item.label} item={item} pathname={pathname} />
+          <NavRow key={item.label} item={item} pathname={pathname} badgeCounts={badgeCounts} />
         ))}
       </div>
 

@@ -10,7 +10,7 @@ import {
   StaffIcon,
   ActionsIcon,
   CalendarIcon,
-  MessagesIcon,
+  MailIcon,
   AlertIcon,
   BookOpenIcon,
   UploadIcon,
@@ -35,9 +35,7 @@ type QuickCreateItem =
 // Every item here opens the existing page where that thing is actually
 // created today (a modal on that page, or — for Incident — a real "new"
 // route) rather than trying to recreate that creation flow inline in the
-// header. "Message" has no destination at all yet — there's no messaging
-// feature anywhere in the app — so it's shown disabled instead of linking
-// somewhere fake. See DESIGN_SYSTEM.md / the Home dashboard build notes.
+// header. See DESIGN_SYSTEM.md / the Home dashboard build notes.
 const ITEMS: QuickCreateItem[] = [
   { label: "Child", description: "Add a new enrolment", icon: ChildrenIcon, href: "/children" },
   { label: "Staff record", description: "Add a new team member", icon: StaffIcon, href: "/staff" },
@@ -51,7 +49,7 @@ const ITEMS: QuickCreateItem[] = [
   },
   { label: "Learning story", description: "Start a new story", icon: BookOpenIcon, href: "/learning/stories" },
   { label: "Document", description: "Upload to the Evidence Library", icon: UploadIcon, href: "/evidence" },
-  { label: "Message", description: "Messaging isn't built yet", icon: MessagesIcon, status: "soon" },
+  { label: "Email", description: "Draft a new email", icon: MailIcon, href: "/email" },
 ];
 
 export function QuickCreateMenu() {

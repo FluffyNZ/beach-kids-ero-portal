@@ -1,13 +1,16 @@
+import Link from "next/link";
 import { getCurrentProfile } from "@/lib/data/profiles";
 import { getNeedsAttention } from "@/lib/data/dashboard";
 import { getTodaySummary, getRoomsToday, getUpcomingEvents, getRecentActivity } from "@/lib/data/home";
 import { getAttendanceRoll } from "@/lib/data/attendance-roll";
+import { getUpcomingFamilyReminders } from "@/lib/data/email";
 import { formatLongDate, mondayOf, addDays } from "@/lib/utils";
 import { HomeHeader } from "@/components/dashboard/home-header";
 import { TodaySummaryInline } from "@/components/dashboard/today-summary";
 import { RoomsToday } from "@/components/dashboard/rooms-today";
 import { NeedsAttention } from "@/components/dashboard/needs-attention";
 import { UpcomingPanel } from "@/components/dashboard/upcoming-panel";
+import { EmailRemindersCard } from "@/components/dashboard/email-reminders-card";
 import { RecentActivityPanel } from "@/components/dashboard/recent-activity-panel";
 import { WeeklyBookedSessionsCard } from "@/components/dashboard/weekly-booked-sessions-card";
 
@@ -27,7 +30,7 @@ function greetingForHour(hour: number): string {
 export default async function DashboardPage() {
   const nextWeekStartDate = addDays(mondayOf(new Date()), 7);
 
-  const [profile, summary, rooms, needsAttention, upcoming, recentActivity, bookedSessionsRooms] = await Promise.all([
+  const [profile, summary, rooms, needsAttention, upcoming, recentActivity, bookedSessionsRooms, emailReminders] = await Promise.all([
     getCurrentProfile(),
     getTodaySummary(),
     getRoomsToday(),
@@ -35,6 +38,10 @@ export default async function DashboardPage() {
     getUpcomingEvents(14),
     getRecentActivity(8),
     getAttendanceRoll(),
+    // Guarded the same way as the sidebar badge (see the portal layout) —
+    // this depends on the 0050 migration, and Home must never 500 just
+    // because that migration hasn't been run yet.
+    getUpcomingFamilyReminders(7).catch(() => []),
   ]);
 
   const rawFirstName = profile?.full_name?.trim().split(/\s+/)[0] || "there";
@@ -64,7 +71,7 @@ export default async function DashboardPage() {
         <WeeklyBookedSessionsCard rooms={bookedSessionsRooms} nextWeekStartDate={nextWeekStartDate} />
       </section>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold text-charcoal">Needs attention</h2>
           <NeedsAttention items={needsAttention} />
@@ -73,6 +80,16 @@ export default async function DashboardPage() {
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold text-charcoal">Upcoming</h2>
           <UpcomingPanel events={upcoming} />
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-charcoal">Email reminders</h2>
+            <Link href="/email" className="text-xs font-medium text-burgundy-600 hover:underline">
+              Open Email →
+            </Link>
+          </div>
+          <EmailRemindersCard reminders={emailReminders} />
         </section>
       </div>
 

@@ -18,6 +18,8 @@ export function ChildDetailsForm({
   billPayerUnlistedNote: initialBillPayerUnlistedNote,
   billPayerOptions,
   notes: initialNotes,
+  startDate: initialStartDate,
+  leavingDate: initialLeavingDate,
   onSave,
 }: {
   fullName: string;
@@ -34,6 +36,8 @@ export function ChildDetailsForm({
   billPayerUnlistedNote: string | null;
   billPayerOptions: Array<{ id: string; full_name: string }>;
   notes: string | null;
+  startDate: string | null;
+  leavingDate: string | null;
   onSave: (fields: {
     full_name?: string;
     gender?: string | null;
@@ -47,6 +51,8 @@ export function ChildDetailsForm({
     bill_payer_name?: string | null;
     bill_payer_unlisted_note?: string | null;
     notes?: string | null;
+    start_date?: string | null;
+    leaving_date?: string | null;
   }) => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
@@ -65,6 +71,8 @@ export function ChildDetailsForm({
   const [billPayerName, setBillPayerName] = useState(initialBillPayerName ?? "");
   const [billPayerUnlistedNote, setBillPayerUnlistedNote] = useState(initialBillPayerUnlistedNote ?? "");
   const [notes, setNotes] = useState(initialNotes ?? "");
+  const [startDate, setStartDate] = useState(initialStartDate ?? "");
+  const [leavingDate, setLeavingDate] = useState(initialLeavingDate ?? "");
 
   function markDirty() {
     setSaved(false);
@@ -143,6 +151,34 @@ export function ChildDetailsForm({
         />
         <p className="mt-1 text-xs text-charcoal/40">Used to show birthdays on the centre calendar.</p>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">Start date</label>
+          <input
+            type="date"
+            className="input"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              markDirty();
+            }}
+          />
+        </div>
+        <div>
+          <label className="label">Leaving date</label>
+          <input
+            type="date"
+            className="input"
+            value={leavingDate}
+            onChange={(e) => {
+              setLeavingDate(e.target.value);
+              markDirty();
+            }}
+          />
+        </div>
+      </div>
+      <p className="-mt-2 text-xs text-charcoal/40">Used for the Welcomes &amp; Farewells reminders on the Email page.</p>
 
       <div>
         <label className="label">Residential address</label>
@@ -273,6 +309,8 @@ export function ChildDetailsForm({
                   bill_payer_name: billPayerName,
                   bill_payer_unlisted_note: billPayerUnlistedNote || null,
                   notes: notes || null,
+                  start_date: startDate || null,
+                  leaving_date: leavingDate || null,
                 });
                 setSaved(true);
               } catch (err) {

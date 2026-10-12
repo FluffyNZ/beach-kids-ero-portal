@@ -24,3 +24,15 @@ export function getResendClient(): Resend {
 export function getInvoiceFromAddress(): string {
   return process.env.INVOICE_FROM_EMAIL || "Beach Kids <onboarding@resend.dev>";
 }
+
+/** The "from" address everyday family emails (the Email page — enquiries,
+ * welcomes, birthdays, reminders, etc.) are sent with. Same test-sender
+ * fallback and the same one-time setup as INVOICE_FROM_EMAIL — set
+ * CONTACT_FROM_EMAIL once beachkids.co.nz is verified in Resend, e.g.
+ * "Beach Kids <hello@beachkids.co.nz>". Deliberately a separate env var
+ * from INVOICE_FROM_EMAIL so the two can use different addresses if you
+ * ever want invoices and everyday messages to come from different inboxes;
+ * set them to the same value if you don't. */
+export function getContactFromAddress(): string {
+  return process.env.CONTACT_FROM_EMAIL || process.env.INVOICE_FROM_EMAIL || "Beach Kids <onboarding@resend.dev>";
+}

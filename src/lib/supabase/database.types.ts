@@ -355,6 +355,8 @@ type ChildrenRow = {
   twenty_hours_ece: boolean;
   special_weekly_override: number | null;
   notes: string | null;
+  start_date: string | null;
+  leaving_date: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -420,6 +422,84 @@ type ChildEnrolledScheduleRow = {
   tbc: boolean;
   updated_at: string;
   updated_by: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// Email feature (migration 0050) — see src/lib/data/email.ts /
+// src/lib/actions/email.ts.
+// ---------------------------------------------------------------------------
+
+export type EmailTemplateCategoryDb = "enrolment" | "everyday" | "fees" | "events";
+
+type EmailTemplatesRow = {
+  id: string;
+  key: string;
+  label: string;
+  category: EmailTemplateCategoryDb;
+  icon: string;
+  subject: string;
+  body: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+type FamilyContactsRow = {
+  id: string;
+  bill_payer_id: string;
+  full_name: string;
+  relationship: string | null;
+  email: string | null;
+  phone: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type FamilyEnquiryStatusDb = "enquiry" | "converted" | "dismissed";
+
+type FamilyEnquiriesRow = {
+  id: string;
+  child_full_name: string;
+  parent_full_name: string;
+  parent_email: string;
+  parent_phone: string | null;
+  intended_room_id: string | null;
+  intended_start_date: string | null;
+  status: FamilyEnquiryStatusDb;
+  converted_child_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type EmailMessageStatusDb = "draft" | "sending" | "sent" | "failed";
+export type EmailReminderKindDb = "birthday" | "welcome" | "farewell";
+
+type EmailMessagesRow = {
+  id: string;
+  template_key: string | null;
+  child_id: string | null;
+  bill_payer_id: string | null;
+  family_enquiry_id: string | null;
+  recipient_name: string | null;
+  recipient_email: string;
+  subject: string;
+  body: string;
+  status: EmailMessageStatusDb;
+  reminder_kind: EmailReminderKindDb | null;
+  reminder_event_date: string | null;
+  attachments: { name: string; storage_path: string; size: number }[];
+  provider_message_id: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
 };
 
 type StockOrderItemRow = {
@@ -1061,6 +1141,47 @@ export interface Database {
           end_date: string;
         };
         Update: Partial<StaffLeaveRow>;
+        Relationships: [];
+      };
+      email_templates: {
+        Row: EmailTemplatesRow;
+        Insert: Partial<EmailTemplatesRow> & {
+          key: string;
+          label: string;
+          category: EmailTemplateCategoryDb;
+          subject: string;
+          body: string;
+        };
+        Update: Partial<EmailTemplatesRow>;
+        Relationships: [];
+      };
+      family_contacts: {
+        Row: FamilyContactsRow;
+        Insert: Partial<FamilyContactsRow> & {
+          bill_payer_id: string;
+          full_name: string;
+        };
+        Update: Partial<FamilyContactsRow>;
+        Relationships: [];
+      };
+      family_enquiries: {
+        Row: FamilyEnquiriesRow;
+        Insert: Partial<FamilyEnquiriesRow> & {
+          child_full_name: string;
+          parent_full_name: string;
+          parent_email: string;
+        };
+        Update: Partial<FamilyEnquiriesRow>;
+        Relationships: [];
+      };
+      email_messages: {
+        Row: EmailMessagesRow;
+        Insert: Partial<EmailMessagesRow> & {
+          recipient_email: string;
+          subject: string;
+          body: string;
+        };
+        Update: Partial<EmailMessagesRow>;
         Relationships: [];
       };
     };

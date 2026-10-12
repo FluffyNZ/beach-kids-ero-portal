@@ -405,3 +405,103 @@ export function HelpIcon({ className = base }: IconProps) {
     </svg>
   );
 }
+
+// -- Email feature icons ----------------------------------------------------
+// MailIcon replaces MessagesIcon in the sidebar now that "Messages" has
+// become the real "Email" page; MessagesIcon itself is left in place above
+// since nothing else references removing it. The other six are used on the
+// template grid to tell the four template categories apart at a glance.
+
+export function MailIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M4 6.5l7.3 6a1.1 1.1 0 0 0 1.4 0L20 6.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function PeopleIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M15.5 6a3 3 0 0 1 0 5.9M19.5 19c0-2.6-1.9-4.5-4.3-4.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function DocumentIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path d="M6 3.5h8l4 4V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M14 3.5v4h4" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M8 12.5h8M8 16h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function GiftIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <rect x="3.5" y="9" width="17" height="11" rx="1.3" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3.5 13h17M12 9v11" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M12 9c0-2.3-1.6-4-3.5-4S6 6.2 6 7.5 7.1 9 8.5 9H12Zm0 0c0-2.3 1.6-4 3.5-4S18 6.2 18 7.5 16.9 9 15.5 9H12Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function StarIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 3.5l2.5 5.3 5.7.7-4.2 4 1.1 5.7-5.1-2.8-5.1 2.8 1.1-5.7-4.2-4 5.7-.7L12 3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function CreditCardIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <rect x="3" y="5.5" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3 9.5h18" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M6.5 14.5h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function EditIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M4 20h4.2L19 9.2a1.6 1.6 0 0 0 0-2.3L17.1 5a1.6 1.6 0 0 0-2.3 0L4 15.8V20Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M13 7.5l3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function HeartIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 20s-7.5-4.6-9.7-9.3C1 7.6 2.5 4.5 5.6 4a4.4 4.4 0 0 1 6.4 1.8A4.4 4.4 0 0 1 18.4 4c3.1.5 4.6 3.6 3.3 6.7C19.5 15.4 12 20 12 20Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

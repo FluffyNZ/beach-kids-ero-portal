@@ -103,6 +103,8 @@ export default async function ChildDetailPage({ params }: { params: { id: string
           billPayerUnlistedNote={child.bill_payer_unlisted_note}
           billPayerOptions={billPayerOptions}
           notes={child.notes}
+          startDate={child.start_date}
+          leavingDate={child.leaving_date}
           onSave={updateChildDetails.bind(null, child.id)}
         />
       </section>

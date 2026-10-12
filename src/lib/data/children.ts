@@ -28,6 +28,8 @@ type ChildRow = {
   twenty_hours_ece: boolean;
   special_weekly_override: number | null;
   notes: string | null;
+  start_date: string | null;
+  leaving_date: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -168,6 +170,8 @@ export async function getChildrenList(options?: {
       twenty_hours_ece: r.twenty_hours_ece,
       special_weekly_override: r.special_weekly_override,
       notes: r.notes,
+      start_date: r.start_date,
+      leaving_date: r.leaving_date,
       created_at: r.created_at,
       updated_at: r.updated_at,
       sibling_discount_eligible: r.status === "active" && siblingCount > 1,
@@ -244,6 +248,8 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
     twenty_hours_ece: childRow.twenty_hours_ece,
     special_weekly_override: childRow.special_weekly_override,
     notes: childRow.notes,
+    start_date: childRow.start_date,
+    leaving_date: childRow.leaving_date,
     created_at: childRow.created_at,
     updated_at: childRow.updated_at,
     sibling_discount_eligible: childRow.status === "active" && activeSiblingCount > 1,

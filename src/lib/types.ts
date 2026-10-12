@@ -387,6 +387,11 @@ export type ChildMember = {
   twenty_hours_ece: boolean;
   special_weekly_override: number | null;
   notes: string | null;
+  // Purely informational — nothing auto-changes `status` from either of
+  // these (see migration 0050). Used by the Email page's "Welcomes &
+  // farewells" reminders.
+  start_date: string | null;
+  leaving_date: string | null;
   created_at: string;
   updated_at: string;
   // Derived, not stored: true when this child's bill payer is also billed
@@ -1073,4 +1078,119 @@ export type CalendarDay = {
   date: string;
   inMonth: boolean;
   events: CalendarEvent[];
+};
+
+// ---------------------------------------------------------------------------
+// Email — templates, family contacts, enquiries, and sent/drafted history
+// (migration 0050). See src/lib/data/email.ts and src/lib/actions/email.ts.
+// ---------------------------------------------------------------------------
+
+export type EmailTemplateCategory = "enrolment" | "everyday" | "fees" | "events";
+
+export type EmailTemplate = {
+  id: string;
+  key: string;
+  label: string;
+  category: EmailTemplateCategory;
+  icon: string;
+  subject: string;
+  body: string;
+  is_active: boolean;
+  sort_order: number;
+  updated_at: string;
+};
+
+export type FamilyContact = {
+  id: string;
+  bill_payer_id: string;
+  full_name: string;
+  relationship: string | null;
+  email: string | null;
+  phone: string | null;
+  is_primary: boolean;
+};
+
+/** One person an email could go to for a given child — the bill payer, the
+ * child's own primary contact (PC1) if set and different, and any extra
+ * family_contacts rows for that family. Always has a real email address
+ * already (no option without one is ever offered); `source` is only for
+ * labelling in the recipient picker. */
+export type EmailRecipientOption = {
+  source: "bill_payer" | "primary_contact" | "family_contact";
+  id: string | null; // family_contacts.id when source is "family_contact", else null
+  name: string;
+  relationship: string | null;
+  email: string;
+};
+
+export type FamilyEnquiryStatus = "enquiry" | "converted" | "dismissed";
+
+export type FamilyEnquiry = {
+  id: string;
+  child_full_name: string;
+  parent_full_name: string;
+  parent_email: string;
+  parent_phone: string | null;
+  intended_room_id: string | null;
+  intended_room_name: string | null;
+  intended_start_date: string | null;
+  status: FamilyEnquiryStatus;
+  converted_child_id: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type PotentialDuplicateFamily = {
+  kind: "bill_payer" | "enquiry";
+  id: string;
+  parent_name: string;
+  email: string | null;
+  childNames: string[];
+};
+
+export type EmailMessageStatus = "draft" | "sending" | "sent" | "failed";
+export type EmailReminderKind = "birthday" | "welcome" | "farewell";
+
+export type EmailAttachment = {
+  name: string;
+  storage_path: string;
+  size: number;
+};
+
+export type EmailMessage = {
+  id: string;
+  template_key: string | null;
+  template_label: string | null;
+  child_id: string | null;
+  child_name: string | null;
+  bill_payer_id: string | null;
+  family_enquiry_id: string | null;
+  recipient_name: string | null;
+  recipient_email: string;
+  subject: string;
+  body: string;
+  status: EmailMessageStatus;
+  reminder_kind: EmailReminderKind | null;
+  reminder_event_date: string | null;
+  attachments: EmailAttachment[];
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+};
+
+/** A birthday, start date or leaving date falling within the next few days
+ * — what the Email page's two "coming up" panels show. `alreadyHandled` is
+ * set once a draft or sent email_messages row already exists for this
+ * exact occurrence, so the panel can show that instead of inviting a second
+ * one (see the uniq_email_messages_reminder_occurrence index). */
+export type UpcomingFamilyReminder = {
+  kind: EmailReminderKind;
+  date: string; // this occurrence's real calendar date (this year's birthday, the actual start/leaving date)
+  childId: string;
+  childName: string;
+  roomName: string | null;
+  turningAge: number | null; // only set for "birthday"
+  isToday: boolean;
+  alreadyHandled: "draft" | "sent" | null;
+  draftEmailId: string | null; // set when alreadyHandled === "draft", to resume editing it
 };
