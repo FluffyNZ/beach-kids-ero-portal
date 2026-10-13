@@ -108,7 +108,7 @@ export async function createDraftEmailFromTemplate(input: {
   const body = fillTemplateTokens(template.body, values);
 
   const userId = await currentUserId();
-  const { data: created, error } = await (supabase.from("email_messages") as any)
+  const { data: created, error } = await supabase.from("email_messages")
     .insert({
       template_key: template.key,
       child_id: input.childId ?? null,
@@ -163,7 +163,7 @@ export async function createBlankDraftEmail(input: {
   }
   const supabase = createClient();
   const userId = await currentUserId();
-  const { data: created, error } = await (supabase.from("email_messages") as any)
+  const { data: created, error } = await supabase.from("email_messages")
     .insert({
       child_id: input.childId,
       recipient_name: input.recipientName,
@@ -212,7 +212,7 @@ export async function createBulkEventReminderDrafts(
 
     const supabase = createClient();
     const userId = await currentUserId();
-    const { data: row, error } = await (supabase.from("email_messages") as any)
+    const { data: row, error } = await supabase.from("email_messages")
       .insert({
         template_key: template.key,
         child_id: childId,
@@ -256,7 +256,7 @@ export async function updateDraftEmail(
   }
 
   const supabase = createClient();
-  const { data, error } = await (supabase.from("email_messages") as any)
+  const { data, error } = await supabase.from("email_messages")
     .update(fields as any)
     .eq("id", id)
     .in("status", ["draft", "failed"])
@@ -316,7 +316,7 @@ export async function addEmailAttachment(emailId: string, formData: FormData): P
   if (uploadError) return { success: false, error: `Upload failed: ${uploadError.message}` };
 
   const nextAttachments: EmailAttachment[] = [...((existing.attachments as EmailAttachment[]) ?? []), { name: file.name, storage_path: storagePath, size: file.size }];
-  const { error: updateError } = await (supabase.from("email_messages") as any)
+  const { error: updateError } = await supabase.from("email_messages")
     .update({ attachments: nextAttachments } as any)
     .eq("id", emailId)
     .in("status", ["draft", "failed"]);
@@ -342,7 +342,7 @@ export async function removeEmailAttachment(emailId: string, storagePath: string
   }
 
   const nextAttachments = ((existing.attachments as EmailAttachment[]) ?? []).filter((a) => a.storage_path !== storagePath);
-  const { error: updateError } = await (supabase.from("email_messages") as any)
+  const { error: updateError } = await supabase.from("email_messages")
     .update({ attachments: nextAttachments } as any)
     .eq("id", emailId)
     .in("status", ["draft", "failed"]);
@@ -384,7 +384,7 @@ export type SendEmailResult = { success: true } | { success: false; error: strin
 export async function sendEmail(emailId: string): Promise<SendEmailResult> {
   const supabase = createClient();
 
-  const { data: claimed, error: claimError } = await (supabase.from("email_messages") as any)
+  const { data: claimed, error: claimError } = await supabase.from("email_messages")
     .update({ status: "sending" } as any)
     .eq("id", emailId)
     .in("status", ["draft", "failed"])
@@ -395,7 +395,7 @@ export async function sendEmail(emailId: string): Promise<SendEmailResult> {
   if (!claimed) return { success: false, error: "This email has already been sent (or is already being sent)." };
 
   if (hasUnresolvedPlaceholders(claimed.subject) || hasUnresolvedPlaceholders(claimed.body)) {
-    await (supabase.from("email_messages") as any).update({ status: "draft" } as any).eq("id", emailId);
+    await supabase.from("email_messages").update({ status: "draft" } as any).eq("id", emailId);
     return { success: false, error: "This email still has a [[...]] placeholder that needs filling in before it can be sent." };
   }
 
@@ -411,11 +411,11 @@ export async function sendEmail(emailId: string): Promise<SendEmailResult> {
     });
 
     if (error) {
-      await (supabase.from("email_messages") as any).update({ status: "failed", error_message: error.message } as any).eq("id", emailId);
+      await supabase.from("email_messages").update({ status: "failed", error_message: error.message } as any).eq("id", emailId);
       return { success: false, error: `Resend couldn't send this email: ${error.message}` };
     }
 
-    await (supabase.from("email_messages") as any)
+    await supabase.from("email_messages")
       .update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: data?.id ?? null, error_message: null } as any)
       .eq("id", emailId);
 
@@ -423,7 +423,7 @@ export async function sendEmail(emailId: string): Promise<SendEmailResult> {
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong sending this email.";
-    await (supabase.from("email_messages") as any).update({ status: "failed", error_message: message } as any).eq("id", emailId);
+    await supabase.from("email_messages").update({ status: "failed", error_message: message } as any).eq("id", emailId);
     return { success: false, error: message };
   }
 }
@@ -471,7 +471,7 @@ export async function createFamilyEnquiry(
 
   const supabase = createClient();
   const userId = await currentUserId();
-  const { data: created, error } = await (supabase.from("family_enquiries") as any)
+  const { data: created, error } = await supabase.from("family_enquiries")
     .insert({
       child_full_name: childFullName,
       parent_full_name: parentFullName,
@@ -493,7 +493,7 @@ export async function createFamilyEnquiry(
 
 export async function updateFamilyEnquiryStatus(id: string, status: "enquiry" | "converted" | "dismissed"): Promise<UpdateDraftResult> {
   const supabase = createClient();
-  const { error } = await (supabase.from("family_enquiries") as any).update({ status } as any).eq("id", id);
+  const { error } = await supabase.from("family_enquiries").update({ status } as any).eq("id", id);
   if (error) return { success: false, error: `Could not update this enquiry: ${error.message}` };
   revalidatePath("/email");
   return { success: true };
@@ -512,7 +512,7 @@ export async function addFamilyContact(
 
   const supabase = createClient();
   const userId = await currentUserId();
-  const { error } = await (supabase.from("family_contacts") as any).insert({
+  const { error } = await supabase.from("family_contacts").insert({
     bill_payer_id: billPayerId,
     full_name: fullName,
     relationship: fields.relationship?.trim() || null,
@@ -533,7 +533,7 @@ export async function updateFamilyContact(
   fields: { full_name?: string; relationship?: string | null; email?: string | null; phone?: string | null; is_primary?: boolean }
 ): Promise<UpdateDraftResult> {
   const supabase = createClient();
-  const { error } = await (supabase.from("family_contacts") as any).update(fields as any).eq("id", id);
+  const { error } = await supabase.from("family_contacts").update(fields as any).eq("id", id);
   if (error) return { success: false, error: `Could not save changes: ${error.message}` };
   revalidatePath("/email");
   revalidatePath("/children");
@@ -562,7 +562,7 @@ export async function updateEmailTemplate(
 
   const supabase = createClient();
   const userId = await currentUserId();
-  const { error } = await (supabase.from("email_templates") as any)
+  const { error } = await supabase.from("email_templates")
     .update({ ...fields, updated_by: userId } as any)
     .eq("key", key);
   if (error) return { success: false, error: `Could not save this template: ${error.message}` };
