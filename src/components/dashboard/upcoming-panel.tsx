@@ -15,7 +15,7 @@ export function UpcomingPanel({ events }: { events: UpcomingEvent[] }) {
       <div className="card flex flex-col items-center gap-2 px-5 py-10 text-center">
         <CalendarIcon className="h-7 w-7 text-charcoal/20" />
         <p className="text-sm font-medium text-charcoal">Nothing on the calendar in the next two weeks</p>
-        <p className="text-xs text-charcoal/45">Public holidays, booked staff leave and birthdays show up here.</p>
+        <p className="text-xs text-charcoal/45">Public holidays, booked staff leave and staff birthdays show up here.</p>
       </div>
     );
   }

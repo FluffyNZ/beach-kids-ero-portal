@@ -76,7 +76,7 @@ function NavRow({
   if (item.status === "soon") {
     return (
       <div
-        className="flex cursor-default items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-charcoal/30"
+        className="flex cursor-default items-center gap-3 rounded-lg px-3 py-[7px] text-sm font-medium text-charcoal/30"
         title="Coming soon — not built yet"
       >
         <Icon className="h-[18px] w-[18px] shrink-0" />
@@ -99,7 +99,7 @@ function NavRow({
           active ? "bg-lilac-100 font-semibold text-charcoal" : "font-medium text-charcoal/60 hover:bg-charcoal/5 hover:text-charcoal"
         )}
       >
-        <Link href={item.href!} className="flex flex-1 items-center gap-3 px-3 py-2 text-sm">
+        <Link href={item.href!} className="flex flex-1 items-center gap-3 px-3 py-[7px] text-sm">
           <Icon className="h-[18px] w-[18px] shrink-0" />
           <span className="truncate">{item.label}</span>
           {badgeCount > 0 && (
@@ -163,10 +163,10 @@ export function Sidebar({
           Beach Kids only ever has the one centre, so — unlike Contra —
           there's nothing to switch between and no dropdown chevron here;
           it's a real link back to Home, not a fake workspace switcher. */}
-      <div className="px-3 pb-2 pt-4">
+      <div className="px-3 pb-1.5 pt-3.5">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2.5 rounded-xl border border-charcoal/10 px-3 py-2.5 transition-colors hover:bg-charcoal/[0.03]"
+          className="flex items-center gap-2.5 rounded-xl border border-charcoal/10 px-3 py-2 transition-colors hover:bg-charcoal/[0.03]"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-charcoal text-white">
             <WaveIcon className="h-4 w-4" />
@@ -178,10 +178,10 @@ export function Sidebar({
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 pb-2 pt-1">
+      <nav className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-3 pb-2 pt-1">
         {NAV_GROUPS.map((group) => (
           <div key={group.label} className="flex flex-col gap-0.5">
-            <p className="px-3 pb-1 pt-1 text-[10px] font-medium uppercase tracking-wider text-charcoal/30">
+            <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium uppercase tracking-wider text-charcoal/30">
               {group.label}
             </p>
             {group.items.map((item) => (
@@ -191,13 +191,13 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="flex flex-col gap-0.5 border-t border-charcoal/10 px-3 py-3">
+      <div className="flex flex-col gap-0.5 border-t border-charcoal/10 px-3 py-2.5">
         {NAV_BOTTOM_ITEMS.map((item) => (
           <NavRow key={item.label} item={item} pathname={pathname} badgeCounts={badgeCounts} />
         ))}
       </div>
 
-      <div className="flex items-center gap-2.5 border-t border-charcoal/10 px-4 py-3">
+      <div className="flex items-center gap-2.5 border-t border-charcoal/10 px-3 py-2.5">
         <Avatar name={userName} size="md" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-charcoal">{userName}</p>

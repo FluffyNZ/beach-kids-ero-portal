@@ -75,7 +75,7 @@ export function MobileNav() {
               href={item.href}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-xs font-medium",
-                active ? "text-burgundy-600" : "text-charcoal/40"
+                active ? "text-charcoal" : "text-charcoal/40"
               )}
             >
               <Icon className="h-6 w-6" />
@@ -88,7 +88,7 @@ export function MobileNav() {
           onClick={() => setMoreOpen(true)}
           className={cn(
             "flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-xs font-medium",
-            moreActive ? "text-burgundy-600" : "text-charcoal/40"
+            moreActive ? "text-charcoal" : "text-charcoal/40"
           )}
         >
           <MoreIcon className="h-6 w-6" />
@@ -109,8 +109,8 @@ export function MobileNav() {
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center text-sm font-medium",
                   active
-                    ? "border-burgundy-200 bg-burgundy-50 text-burgundy-600"
-                    : "border-charcoal/10 text-charcoal hover:bg-sand-100"
+                    ? "border-lilac-200 bg-lilac-100 text-charcoal"
+                    : "border-charcoal/10 text-charcoal hover:bg-charcoal/5"
                 )}
               >
                 <Icon className="h-6 w-6" />

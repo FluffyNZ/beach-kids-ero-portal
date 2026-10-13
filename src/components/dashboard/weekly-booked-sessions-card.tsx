@@ -22,7 +22,7 @@ export function WeeklyBookedSessionsCard({
     <div className="card flex flex-col gap-4 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-lg font-semibold text-charcoal">Weekly Booked Sessions</h3>
+          <h3 className="text-lg font-semibold text-charcoal">Weekly Booked Sessions</h3>
           <p className="mt-0.5 text-sm text-charcoal/60">
             {totalBooked} {totalBooked === 1 ? "child" : "children"} currently booked across {rooms.length} rooms for
             the week starting {formatShortDate(nextWeekStartDate)}.
@@ -52,7 +52,7 @@ export function WeeklyBookedSessionsCard({
         })}
       </div>
 
-      <Link href="/roster/attendance-roll" className="self-start text-sm font-medium text-burgundy-600 hover:underline">
+      <Link href="/roster/attendance-roll" className="self-start text-sm font-medium text-charcoal/60 hover:text-charcoal hover:underline">
         Choose a different week or room →
       </Link>
     </div>

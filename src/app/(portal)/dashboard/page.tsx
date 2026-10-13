@@ -30,7 +30,7 @@ function greetingForHour(hour: number): string {
 export default async function DashboardPage() {
   const nextWeekStartDate = addDays(mondayOf(new Date()), 7);
 
-  const [profile, summary, rooms, needsAttention, upcoming, recentActivity, bookedSessionsRooms, emailReminders] = await Promise.all([
+  const [profile, summary, rooms, needsAttention, upcomingEvents, recentActivity, bookedSessionsRooms, familyReminders] = await Promise.all([
     getCurrentProfile(),
     getTodaySummary(),
     getRoomsToday(),
@@ -44,6 +44,14 @@ export default async function DashboardPage() {
     getUpcomingFamilyReminders(7).catch(() => []),
   ]);
 
+  // getUpcomingFamilyReminders (above) already covers child birthdays, in
+  // more detail (turning age, and whether an email's been drafted/sent) —
+  // it drives the "Birthdays, starters & farewells" panel below. Filtering
+  // child_birthday out of the general calendar events here means that one
+  // isn't shown a second time in "Staff & dates"; staff birthdays, staff
+  // leave and public holidays have no equivalent elsewhere, so they stay.
+  const staffAndDateEvents = upcomingEvents.filter((e) => e.kind !== "child_birthday");
+
   const rawFirstName = profile?.full_name?.trim().split(/\s+/)[0] || "there";
   const firstName = rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1);
   const now = new Date();
@@ -55,43 +63,43 @@ export default async function DashboardPage() {
       <HomeHeader greeting={greeting} dateLabel={dateLabel} />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-charcoal">Today at Beach Kids</h2>
-        <div className="card p-5">
-          <TodaySummaryInline summary={summary} />
+        <h2 className="text-lg font-semibold text-charcoal">Today</h2>
+        <div className="card flex flex-col divide-y divide-charcoal/5">
+          <div className="p-5">
+            <TodaySummaryInline summary={summary} />
+          </div>
+          <div className="p-5">
+            <RoomsToday rooms={rooms} isWeekend={summary.isWeekend} />
+          </div>
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-charcoal">Rooms today</h2>
-        <RoomsToday rooms={rooms} isWeekend={summary.isWeekend} />
-      </section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-charcoal">Birthdays, starters & farewells</h2>
+            <Link href="/email" className="text-xs font-medium text-charcoal/60 hover:text-charcoal hover:underline">
+              Open Email →
+            </Link>
+          </div>
+          <EmailRemindersCard reminders={familyReminders} />
+        </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-charcoal">Weekly booked sessions</h2>
-        <WeeklyBookedSessionsCard rooms={bookedSessionsRooms} nextWeekStartDate={nextWeekStartDate} />
-      </section>
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold text-charcoal">Needs attention</h2>
           <NeedsAttention items={needsAttention} />
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-charcoal">Upcoming</h2>
-          <UpcomingPanel events={upcoming} />
-        </section>
-
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-charcoal">Email reminders</h2>
-            <Link href="/email" className="text-xs font-medium text-burgundy-600 hover:underline">
-              Open Email →
-            </Link>
-          </div>
-          <EmailRemindersCard reminders={emailReminders} />
+          <h2 className="text-lg font-semibold text-charcoal">Staff & dates</h2>
+          <UpcomingPanel events={staffAndDateEvents} />
         </section>
       </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-charcoal">Weekly booked sessions</h2>
+        <WeeklyBookedSessionsCard rooms={bookedSessionsRooms} nextWeekStartDate={nextWeekStartDate} />
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-charcoal">Recent activity</h2>
