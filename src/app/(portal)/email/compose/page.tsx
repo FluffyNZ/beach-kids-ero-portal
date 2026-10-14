@@ -6,6 +6,7 @@ import {
   getEmailMessageById,
 } from "@/lib/data/email";
 import { getChildById } from "@/lib/data/children";
+import { getStaffById } from "@/lib/data/staff";
 import { ComposeWizard } from "@/components/email/compose-wizard";
 import type { EmailReminderKind } from "@/lib/types";
 
@@ -16,8 +17,37 @@ const VALID_REMINDER_KINDS: EmailReminderKind[] = ["birthday", "welcome", "farew
 export default async function ComposeEmailPage({
   searchParams,
 }: {
-  searchParams: { template?: string; childId?: string; familyEnquiryId?: string; reminderKind?: string; reminderDate?: string; draftId?: string };
+  searchParams: {
+    template?: string;
+    childId?: string;
+    staffId?: string;
+    familyEnquiryId?: string;
+    reminderKind?: string;
+    reminderDate?: string;
+    draftId?: string;
+  };
 }) {
+  // "Email staff" on a staff profile — a blank ad hoc draft, no template
+  // (there's no staff-oriented template library yet). Checked before the
+  // template lookup below since this path never has a `template` param.
+  if (searchParams.staffId) {
+    const staff = await getStaffById(searchParams.staffId);
+    if (!staff) {
+      return (
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-3 py-16 text-center">
+          <h1 className="font-display text-xl font-bold text-charcoal">Staff member not found</h1>
+          <Link href="/staff" className="btn-secondary">
+            Back to Staff
+          </Link>
+        </div>
+      );
+    }
+    return (
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <ComposeWizard mode="new-blank" kind="staff" staffId={staff.id} staffName={staff.full_name} recipientEmail={staff.email} />
+      </div>
+    );
+  }
   // Resuming an existing draft (from "Continue draft", or the history page's
   // "Edit" on anything still in draft) — everything the review step needs
   // is already on the row itself, so there's nothing else to fetch.

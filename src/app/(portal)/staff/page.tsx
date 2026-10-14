@@ -1,16 +1,18 @@
 import { getStaffList } from "@/lib/data/staff";
+import { getRosterRooms } from "@/lib/data/roster";
 import { getDeadlineAlert } from "@/lib/evidence-deadline";
 import { StaffSearchBar } from "@/components/staff/staff-search-bar";
 import { StaffTable } from "@/components/staff/staff-table";
 import { NewStaffButton } from "@/components/staff/new-staff-button";
 import { StatTile } from "@/components/dashboard/stat-tile";
+import type { StaffContractType } from "@/lib/supabase/database.types";
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string };
+  searchParams: { q?: string; status?: string; room?: string; contractType?: string };
 }) {
   // Default to active staff only when no filter has been chosen yet —
   // former staff should still be reachable via the "All staff"/"Former
@@ -19,7 +21,15 @@ export default async function StaffPage({
   // made yet", which otherwise both look like a missing query param.
   const statusFilter =
     searchParams.status === undefined ? "active" : searchParams.status === "all" ? undefined : searchParams.status;
-  const staff = await getStaffList({ search: searchParams.q, status: statusFilter });
+  const [staff, rooms] = await Promise.all([
+    getStaffList({
+      search: searchParams.q,
+      status: statusFilter,
+      roomId: searchParams.room || undefined,
+      contractType: (searchParams.contractType as StaffContractType) || undefined,
+    }),
+    getRosterRooms(),
+  ]);
 
   const activeCount = staff.filter((s) => s.status === "active").length;
   const documentsDue = staff.filter((s) => {
@@ -53,7 +63,7 @@ export default async function StaffPage({
         <StatTile label="Incomplete profiles" value={incompleteProfiles} tone="attention" />
       </div>
 
-      <StaffSearchBar />
+      <StaffSearchBar rooms={rooms} />
 
       <StaffTable staff={staff} />
     </div>

@@ -20,7 +20,7 @@ export function StaffProfileForm({
         <label className="label">Notes &amp; other information</label>
         <textarea
           className="input min-h-[120px]"
-          placeholder="Anything else worth keeping on this person's profile — emergency contact, medical notes, general observations, etc."
+          placeholder="Anything else worth keeping on this person's profile — medical notes, general observations, etc. (Emergency contact now has its own field on Overview; dated, authored management notes live on the Notes tab.)"
           value={notes}
           onChange={(e) => {
             setNotes(e.target.value);

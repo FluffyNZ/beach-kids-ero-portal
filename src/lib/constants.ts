@@ -11,6 +11,7 @@ import type {
   StaffContractType,
   EmergencyDrillType,
   StaffQualificationStatus,
+  StaffGrowthCycleStatus,
   ChildStatus,
   StockSupplier,
   FinanceIncomeSource,
@@ -184,6 +185,21 @@ export function getPageTitle(pathname: string): string {
   if (matches.length === 0) return "Beach Kids";
   return matches.reduce((best, entry) => (entry.href.length > best.href.length ? entry : best)).label;
 }
+
+// A plain Mon-Fri weekday list with no "server-only" import attached, so it
+// can be used from client components too (e.g. StaffAvailabilityForm) —
+// lib/data/attendance-roll.ts re-exports this as ATTENDANCE_WEEKDAYS for its
+// existing server-side callers, rather than every caller needing its own
+// copy of the same 5 rows.
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri";
+
+export const WEEKDAYS: Array<{ key: Weekday; label: string }> = [
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+];
 
 export const STAFF_LEAVE_TYPES: StaffLeaveType[] = ["annual", "sick", "unpaid", "other"];
 
@@ -498,6 +514,41 @@ export const STAFF_DOCUMENT_CATEGORY_LABEL: Record<StaffDocumentCategory, string
   secondary_identification: "Identification (2nd form)",
   other: "Other",
 };
+
+// Which document categories belong on the Qualifications tab (teaching
+// qualification, practising certificate/registration, first aid and
+// safety-check records) vs the general Documents tab (contracts,
+// certificates and everything else) — per the brief's split between the
+// two tabs. Built from the existing category lists above rather than a
+// fresh fixed list, so a category never silently goes missing from both
+// tabs if the categories list itself changes later.
+export const STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "qualification",
+  "police_vet",
+  "safety_check",
+  "first_aid",
+];
+
+export function splitStaffDocumentCategoriesForTabs(categories: StaffDocumentCategory[]): {
+  qualificationTab: StaffDocumentCategory[];
+  documentsTab: StaffDocumentCategory[];
+} {
+  return {
+    qualificationTab: categories.filter((c) => STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES.includes(c)),
+    documentsTab: categories.filter((c) => !STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES.includes(c)),
+  };
+}
+
+export const STAFF_GROWTH_CYCLE_STATUSES: StaffGrowthCycleStatus[] = ["open", "closed"];
+
+export const STAFF_GROWTH_CYCLE_STATUS_LABEL: Record<StaffGrowthCycleStatus, string> = {
+  open: "Open",
+  closed: "Closed",
+};
+
+export function staffGrowthCycleTone(status: StaffGrowthCycleStatus): StatusTone {
+  return status === "open" ? "attention" : "ready";
+}
 
 export const SECTION_META: Record<string, { short: string; blurb: string }> = {
   C: { short: "Curriculum", blurb: "Teaching, learning and Te Whāriki." },

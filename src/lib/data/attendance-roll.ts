@@ -3,16 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getChildrenList } from "@/lib/data/children";
 import { getRosterRooms } from "@/lib/data/roster";
 import { HOME_ROOM_NAMES } from "@/lib/data/home";
+import { WEEKDAYS, type Weekday } from "@/lib/constants";
 
-export type AttendanceWeekday = "mon" | "tue" | "wed" | "thu" | "fri";
-
-export const ATTENDANCE_WEEKDAYS: Array<{ key: AttendanceWeekday; label: string }> = [
-  { key: "mon", label: "Mon" },
-  { key: "tue", label: "Tue" },
-  { key: "wed", label: "Wed" },
-  { key: "thu", label: "Thu" },
-  { key: "fri", label: "Fri" },
-];
+// Re-exported under this module's existing names so every caller that was
+// already importing AttendanceWeekday/ATTENDANCE_WEEKDAYS from here keeps
+// working unchanged — the actual list now lives in lib/constants.ts (which
+// has no "server-only" import) so a client component like
+// StaffAvailabilityForm can use the same 5 rows without pulling this
+// server-only module in too.
+export type AttendanceWeekday = Weekday;
+export const ATTENDANCE_WEEKDAYS = WEEKDAYS;
 
 export type AttendanceRollChild = {
   id: string;

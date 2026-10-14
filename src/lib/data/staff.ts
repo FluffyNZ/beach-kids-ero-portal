@@ -1,10 +1,19 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { getProfilesMap } from "./profiles";
+import { getProfilesMap, isAuthorisedManagement } from "./profiles";
 import { DEFAULT_STAFF_QUALIFICATION } from "@/lib/types";
 import { getRequiredStaffDocumentCategories } from "@/lib/constants";
-import type { StaffDocument, StaffMember, StaffQualification, StaffWithDetails } from "@/lib/types";
-import type { StaffQualificationStatus } from "@/lib/supabase/database.types";
+import type {
+  StaffDocument,
+  StaffMember,
+  StaffQualification,
+  StaffWithDetails,
+  StaffAccessLevel,
+  StaffAvailability,
+  StaffNote,
+  StaffGrowthCycle,
+} from "@/lib/types";
+import type { StaffQualificationStatus, StaffContractType } from "@/lib/supabase/database.types";
 
 const BUCKET = process.env.NEXT_PUBLIC_STAFF_DOCUMENTS_BUCKET || "staff-documents";
 const SIGNED_URL_TTL_SECONDS = 60 * 5; // 5 minutes — short-lived, minted on demand
@@ -15,24 +24,37 @@ const PHOTO_BUCKET = process.env.NEXT_PUBLIC_STAFF_PHOTOS_BUCKET || "staff-photo
 // reasoning as child photos.
 const PHOTO_SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
 
-function mapQualification(row: {
-  qualification_status: StaffQualificationStatus;
-  qualification_level: string | null;
-  registration_status: string | null;
-  pay_parity_step: string | null;
-  next_review_date: string | null;
-  is_studying: boolean;
-  studying_qualification: string | null;
-  expected_completion_date: string | null;
-  notes: string | null;
-  updated_at: string;
-} | null | undefined): StaffQualification {
+function mapQualification(
+  row:
+    | {
+        qualification_status: StaffQualificationStatus;
+        qualification_level: string | null;
+        registration_status: string | null;
+        pay_parity_step: string | null;
+        recognised_service: string | null;
+        next_review_date: string | null;
+        is_studying: boolean;
+        studying_qualification: string | null;
+        expected_completion_date: string | null;
+        notes: string | null;
+        updated_at: string;
+      }
+    | null
+    | undefined,
+  accessLevel: StaffAccessLevel
+): StaffQualification {
   if (!row) return DEFAULT_STAFF_QUALIFICATION;
   return {
     qualification_status: row.qualification_status,
     qualification_level: row.qualification_level,
     registration_status: row.registration_status,
-    pay_parity_step: row.pay_parity_step,
+    // Pay parity step and recognised service are restricted-to-management
+    // fields per the brief — masked to null here (not just hidden in the
+    // UI) for anyone who isn't "authorised management" right now. See
+    // isAuthorisedManagement() for what that does and doesn't protect
+    // against while Beach Kids still has one shared login.
+    pay_parity_step: accessLevel === "full" ? row.pay_parity_step : null,
+    recognised_service: accessLevel === "full" ? row.recognised_service : null,
     next_review_date: row.next_review_date,
     is_studying: row.is_studying,
     studying_qualification: row.studying_qualification,
@@ -78,6 +100,8 @@ function mapDocument(
 export async function getStaffList(options?: {
   search?: string;
   status?: string;
+  roomId?: string;
+  contractType?: StaffContractType;
 }): Promise<StaffMember[]> {
   const supabase = createClient();
 
@@ -86,14 +110,26 @@ export async function getStaffList(options?: {
   if (options?.status) {
     query = query.eq("status", options.status);
   }
+  if (options?.roomId) {
+    query = query.eq("room_id", options.roomId);
+  }
+  if (options?.contractType) {
+    query = query.eq("contract_type", options.contractType);
+  }
 
   if (options?.search && options.search.trim().length > 0) {
     const term = options.search.trim();
     query = query.or(`full_name.ilike.%${term}%,role.ilike.%${term}%`);
   }
 
-  const { data: rows } = await query;
+  const [{ data: rows }, accessLevel, { data: roomRows }] = await Promise.all([
+    query,
+    isAuthorisedManagement().then((full): StaffAccessLevel => (full ? "full" : "restricted")),
+    supabase.from("roster_rooms").select("id, name, color"),
+  ]);
   if (!rows || rows.length === 0) return [];
+
+  const roomById = new Map((roomRows ?? []).map((r) => [r.id as string, r as { id: string; name: string; color: string }]));
 
   const staffIds = rows.map((r) => r.id);
 
@@ -141,10 +177,12 @@ export async function getStaffList(options?: {
   }
 
   return rows.map((r) => {
-    const qualification = mapQualification(qualByStaff.get(r.id));
+    const qualification = mapQualification(qualByStaff.get(r.id), accessLevel);
     const required = getRequiredStaffDocumentCategories(qualification.qualification_status, r.contract_type);
     const present = categoriesByStaff.get(r.id) ?? new Set<string>();
     const photoStoragePath = (r as { photo_storage_path: string | null }).photo_storage_path;
+    const roomId = (r as { room_id: string | null }).room_id;
+    const room = roomId ? roomById.get(roomId) : undefined;
     return {
       id: r.id,
       full_name: r.full_name,
@@ -156,10 +194,21 @@ export async function getStaffList(options?: {
       photo_url: photoStoragePath ? photoUrlByPath.get(photoStoragePath) ?? null : null,
       status: r.status,
       contract_type: r.contract_type,
-      pay_rate: r.pay_rate,
+      // Current pay rate is restricted-to-management per the brief — same
+      // null-masking approach as pay_parity_step/recognised_service above.
+      pay_rate: accessLevel === "full" ? r.pay_rate : null,
       min_hours: r.min_hours,
       notes: r.notes,
       can_publish_learning_stories: Boolean((r as any).can_publish_learning_stories),
+      room_id: roomId ?? null,
+      room_name: room?.name ?? null,
+      room_color: room?.color ?? null,
+      email: (r as { email: string | null }).email ?? null,
+      mobile_phone: (r as { mobile_phone: string | null }).mobile_phone ?? null,
+      emergency_contact_name: (r as { emergency_contact_name: string | null }).emergency_contact_name ?? null,
+      emergency_contact_phone: (r as { emergency_contact_phone: string | null }).emergency_contact_phone ?? null,
+      emergency_contact_relationship:
+        (r as { emergency_contact_relationship: string | null }).emergency_contact_relationship ?? null,
       created_at: r.created_at,
       updated_at: r.updated_at,
       document_count: countByStaff.get(r.id) ?? 0,
@@ -167,35 +216,105 @@ export async function getStaffList(options?: {
       qualification,
       required_docs_completed: required.filter((c) => present.has(c)).length,
       required_docs_total: required.length,
+      accessLevel,
     };
   });
 }
 
+// Documents that count as a "contract" for the brief's "restrict pay,
+// contracts and confidential notes" requirement — kept out of a restricted
+// viewer's documents array entirely, not just visually hidden, while still
+// counting toward the required-documents percentage (computed from the
+// unfiltered list below, before this filter runs).
+const RESTRICTED_DOCUMENT_CATEGORIES = new Set(["contract"]);
+
 export async function getStaffById(id: string): Promise<StaffWithDetails | null> {
   const supabase = createClient();
 
-  const { data: row } = await supabase.from("staff").select("*").eq("id", id).maybeSingle();
+  const [{ data: row }, accessLevelFull, profiles] = await Promise.all([
+    supabase.from("staff").select("*").eq("id", id).maybeSingle(),
+    isAuthorisedManagement(),
+    getProfilesMap(),
+  ]);
   if (!row) return null;
+  const accessLevel: StaffAccessLevel = accessLevelFull ? "full" : "restricted";
 
-  const profiles = await getProfilesMap();
+  const [{ data: docRows }, { data: qualRow }, { data: availRow }, { data: noteRows }, { data: cycleRows }, roomRow] =
+    await Promise.all([
+      supabase.from("staff_documents").select("*").eq("staff_id", id).order("uploaded_at", { ascending: false }),
+      supabase.from("staff_qualifications").select("*").eq("staff_id", id).maybeSingle(),
+      supabase.from("staff_availability").select("*").eq("staff_id", id).maybeSingle(),
+      // Confidential notes are restricted to authorised management — don't
+      // even fetch them for a restricted viewer, so there's no path where a
+      // bug downstream could accidentally render what was fetched.
+      accessLevelFull
+        ? supabase.from("staff_notes").select("*").eq("staff_id", id).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as { id: string; staff_id: string; body: string; created_at: string; created_by: string | null }[] }),
+      supabase.from("staff_growth_cycles").select("*").eq("staff_id", id).order("created_at", { ascending: false }),
+      (row as { room_id: string | null }).room_id
+        ? supabase.from("roster_rooms").select("id, name, color").eq("id", (row as { room_id: string }).room_id).maybeSingle()
+        : Promise.resolve({ data: null as { id: string; name: string; color: string } | null }),
+    ]);
 
-  const { data: docRows } = await supabase
-    .from("staff_documents")
-    .select("*")
-    .eq("staff_id", id)
-    .order("uploaded_at", { ascending: false });
+  const allDocuments: StaffDocument[] = (docRows ?? []).map((d) => mapDocument(d, profiles));
 
-  const documents: StaffDocument[] = (docRows ?? []).map((d) => mapDocument(d, profiles));
-
-  const { data: qualRow } = await supabase
-    .from("staff_qualifications")
-    .select("*")
-    .eq("staff_id", id)
-    .maybeSingle();
-
-  const qualification = mapQualification(qualRow);
+  const qualification = mapQualification(qualRow, accessLevel);
   const required = getRequiredStaffDocumentCategories(qualification.qualification_status, row.contract_type);
-  const present = new Set(documents.map((d) => d.category));
+  const present = new Set(allDocuments.map((d) => d.category));
+  const required_docs_completed = required.filter((c) => present.has(c)).length;
+  const required_docs_total = required.length;
+
+  const documents =
+    accessLevel === "full" ? allDocuments : allDocuments.filter((d) => !RESTRICTED_DOCUMENT_CATEGORIES.has(d.category));
+
+  const cycleIds = (cycleRows ?? []).map((c) => c.id);
+  const { data: goalRows } =
+    cycleIds.length > 0
+      ? await supabase.from("staff_growth_goals").select("*").in("cycle_id", cycleIds).order("sort_order", { ascending: true })
+      : { data: [] as { id: string; cycle_id: string; description: string; is_complete: boolean; sort_order: number }[] };
+  const goalsByCycle = new Map<string, StaffWithDetails["growthCycles"][number]["goals"]>();
+  (goalRows ?? []).forEach((g) => {
+    const list = goalsByCycle.get(g.cycle_id) ?? [];
+    list.push({ id: g.id, description: g.description, is_complete: g.is_complete, sort_order: g.sort_order });
+    goalsByCycle.set(g.cycle_id, list);
+  });
+  const growthCycles: StaffGrowthCycle[] = (cycleRows ?? []).map((c) => ({
+    id: c.id,
+    staff_id: c.staff_id,
+    title: c.title,
+    start_date: c.start_date,
+    review_date: c.review_date,
+    status: c.status,
+    reflections: c.reflections,
+    goals: goalsByCycle.get(c.id) ?? [],
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+  }));
+
+  const notes_log: StaffNote[] = (noteRows ?? []).map((n) => ({
+    id: n.id,
+    staff_id: n.staff_id,
+    body: n.body,
+    created_at: n.created_at,
+    created_by_name: n.created_by ? profiles.get(n.created_by)?.full_name ?? null : null,
+  }));
+
+  const availability: StaffAvailability | null = availRow
+    ? {
+        mon_start: availRow.mon_start,
+        mon_end: availRow.mon_end,
+        tue_start: availRow.tue_start,
+        tue_end: availRow.tue_end,
+        wed_start: availRow.wed_start,
+        wed_end: availRow.wed_end,
+        thu_start: availRow.thu_start,
+        thu_end: availRow.thu_end,
+        fri_start: availRow.fri_start,
+        fri_end: availRow.fri_end,
+        notes: availRow.notes,
+        updated_at: availRow.updated_at,
+      }
+    : null;
 
   const photoStoragePath = (row as { photo_storage_path: string | null }).photo_storage_path;
   let photoUrl: string | null = null;
@@ -205,6 +324,8 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
       .createSignedUrl(photoStoragePath, PHOTO_SIGNED_URL_TTL_SECONDS);
     photoUrl = signed?.signedUrl ?? null;
   }
+
+  const room = roomRow.data;
 
   return {
     id: row.id,
@@ -217,10 +338,19 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
     photo_url: photoUrl,
     status: row.status,
     contract_type: row.contract_type,
-    pay_rate: row.pay_rate,
+    pay_rate: accessLevel === "full" ? row.pay_rate : null,
     min_hours: row.min_hours,
     notes: row.notes,
     can_publish_learning_stories: Boolean((row as any).can_publish_learning_stories),
+    room_id: (row as { room_id: string | null }).room_id ?? null,
+    room_name: room?.name ?? null,
+    room_color: room?.color ?? null,
+    email: (row as { email: string | null }).email ?? null,
+    mobile_phone: (row as { mobile_phone: string | null }).mobile_phone ?? null,
+    emergency_contact_name: (row as { emergency_contact_name: string | null }).emergency_contact_name ?? null,
+    emergency_contact_phone: (row as { emergency_contact_phone: string | null }).emergency_contact_phone ?? null,
+    emergency_contact_relationship:
+      (row as { emergency_contact_relationship: string | null }).emergency_contact_relationship ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     document_count: documents.length,
@@ -231,8 +361,12 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
         .sort()[0] ?? null,
     qualification,
     documents,
-    required_docs_completed: required.filter((c) => present.has(c)).length,
-    required_docs_total: required.length,
+    required_docs_completed,
+    required_docs_total,
+    accessLevel,
+    availability,
+    notes_log,
+    growthCycles,
   };
 }
 

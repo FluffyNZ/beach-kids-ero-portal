@@ -214,6 +214,7 @@ export type StaffQualification = {
   qualification_level: string | null;
   registration_status: string | null;
   pay_parity_step: string | null;
+  recognised_service: string | null;
   next_review_date: string | null;
   is_studying: boolean;
   studying_qualification: string | null;
@@ -227,6 +228,7 @@ export const DEFAULT_STAFF_QUALIFICATION: StaffQualification = {
   qualification_level: null,
   registration_status: null,
   pay_parity_step: null,
+  recognised_service: null,
   next_review_date: null,
   is_studying: false,
   studying_qualification: null,
@@ -234,6 +236,15 @@ export const DEFAULT_STAFF_QUALIFICATION: StaffQualification = {
   notes: null,
   updated_at: null,
 };
+
+// Whether the current viewer can see/edit pay, contracts and confidential
+// notes — see isAuthorisedManagement() in src/lib/data/profiles.ts. "full"
+// is profiles.role === "admin"; "restricted" is everyone else (including no
+// profile row at all, which fails closed to restricted). Beach Kids
+// currently has one shared login, so in practice every real person using
+// the app today gets whichever role that one login's profile row has — see
+// the report for what that does and doesn't protect against right now.
+export type StaffAccessLevel = "full" | "restricted";
 
 export type StaffMember = {
   id: string;
@@ -250,6 +261,14 @@ export type StaffMember = {
   photo_url: string | null;
   notes: string | null;
   can_publish_learning_stories: boolean;
+  room_id: string | null;
+  room_name: string | null;
+  room_color: string | null;
+  email: string | null;
+  mobile_phone: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relationship: string | null;
   created_at: string;
   updated_at: string;
   document_count: number;
@@ -257,10 +276,68 @@ export type StaffMember = {
   qualification: StaffQualification;
   required_docs_completed: number;
   required_docs_total: number;
+  // The CURRENT viewer's access level — same value on every row in a given
+  // request, included per-row purely so list/detail components don't need a
+  // second round trip to know whether to show "Restricted" instead of the
+  // real pay_rate/pay_parity_step/recognised_service values (which the data
+  // layer has already masked to null for a "restricted" viewer, not just
+  // hidden client-side).
+  accessLevel: StaffAccessLevel;
+};
+
+export type StaffAvailability = {
+  mon_start: string | null;
+  mon_end: string | null;
+  tue_start: string | null;
+  tue_end: string | null;
+  wed_start: string | null;
+  wed_end: string | null;
+  thu_start: string | null;
+  thu_end: string | null;
+  fri_start: string | null;
+  fri_end: string | null;
+  notes: string | null;
+  updated_at: string | null;
+};
+
+export type StaffNote = {
+  id: string;
+  staff_id: string;
+  body: string;
+  created_at: string;
+  created_by_name: string | null;
+};
+
+export type StaffGrowthGoal = {
+  id: string;
+  description: string;
+  is_complete: boolean;
+  sort_order: number;
+};
+
+export type StaffGrowthCycleStatus = "open" | "closed";
+
+export type StaffGrowthCycle = {
+  id: string;
+  staff_id: string;
+  title: string;
+  start_date: string | null;
+  review_date: string | null;
+  status: StaffGrowthCycleStatus;
+  reflections: string | null;
+  goals: StaffGrowthGoal[];
+  created_at: string;
+  updated_at: string;
 };
 
 export type StaffWithDetails = StaffMember & {
   documents: StaffDocument[];
+  availability: StaffAvailability | null;
+  // Empty + accessLevel "restricted" on the StaffMember itself means "not
+  // shown to this viewer", never "no notes exist" — the Notes tab shows a
+  // restricted banner rather than a plain empty state in that case.
+  notes_log: StaffNote[];
+  growthCycles: StaffGrowthCycle[];
 };
 
 // ---------------------------------------------------------------------------
@@ -1122,7 +1199,7 @@ export type FamilyContact = {
  * already (no option without one is ever offered); `source` is only for
  * labelling in the recipient picker. */
 export type EmailRecipientOption = {
-  source: "bill_payer" | "primary_contact" | "family_contact";
+  source: "bill_payer" | "primary_contact" | "family_contact" | "staff";
   id: string | null; // family_contacts.id when source is "family_contact", else null
   name: string;
   relationship: string | null;
@@ -1169,6 +1246,8 @@ export type EmailMessage = {
   template_label: string | null;
   child_id: string | null;
   child_name: string | null;
+  staff_id: string | null;
+  staff_name: string | null;
   bill_payer_id: string | null;
   family_enquiry_id: string | null;
   recipient_name: string | null;

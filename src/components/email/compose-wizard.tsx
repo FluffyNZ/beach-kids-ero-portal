@@ -14,6 +14,7 @@ import type {
 import type { EmailChildSearchResult } from "@/lib/data/email";
 import {
   createDraftEmailFromTemplate,
+  createBlankDraftEmail,
   updateDraftEmail,
   sendEmail,
   deleteDraftEmail,
@@ -37,9 +38,21 @@ type Props =
       initialEnquiry?: FamilyEnquiry;
       reminderKind?: EmailReminderKind | null;
       reminderDate?: string | null;
+    }
+  | {
+      // A blank, templateless ad hoc email — used for "Email staff" on a
+      // staff profile, since there's no staff-oriented template library yet
+      // (see the Staff section report). recipientEmail is null when the
+      // staff member has no email on file, in which case the wizard asks
+      // for one before creating the draft, rather than failing silently.
+      mode: "new-blank";
+      kind: "staff";
+      staffId: string;
+      staffName: string;
+      recipientEmail: string | null;
     };
 
-type Step = "pick-child" | "pick-recipient" | "creating" | "review";
+type Step = "pick-child" | "pick-recipient" | "enter-recipient" | "creating" | "review";
 
 // A simple client-side mirror of the server's hasUnresolvedPlaceholders
 // check (src/lib/email/template-email.ts) — just for showing the warning
@@ -60,10 +73,14 @@ export function ComposeWizard(props: Props) {
 
   const [step, setStep] = useState<Step>(() => {
     if (props.mode === "resume") return "review";
+    if (props.mode === "new-blank") return props.recipientEmail ? "creating" : "enter-recipient";
     if (props.initialEnquiry) return "creating";
     if (props.initialChild && props.initialRecipientOptions) return "pick-recipient";
     return "pick-child";
   });
+  const [typedRecipientEmail, setTypedRecipientEmail] = useState(
+    props.mode === "new-blank" ? props.recipientEmail ?? "" : ""
+  );
 
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -158,11 +175,55 @@ export function ComposeWizard(props: Props) {
   // waiting for a step the user would have nothing to do on.
   useEffect(() => {
     if (step !== "creating" || createdOnceRef.current) return;
-    if (props.mode !== "new" || !props.initialEnquiry) return;
-    createdOnceRef.current = true;
-    createFromTemplate(null, props.initialEnquiry.id, props.initialEnquiry.parent_email, props.initialEnquiry.parent_full_name);
+    if (props.mode === "new" && props.initialEnquiry) {
+      createdOnceRef.current = true;
+      createFromTemplate(null, props.initialEnquiry.id, props.initialEnquiry.parent_email, props.initialEnquiry.parent_full_name);
+      return;
+    }
+    if (props.mode === "new-blank" && props.recipientEmail) {
+      createdOnceRef.current = true;
+      createBlankForStaff(props.recipientEmail);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
+
+  /** Starts (or restarts, after a failed attempt) a blank ad hoc draft for
+   * the "Email staff" flow — no template, since there isn't a
+   * staff-oriented template library yet. */
+  function createBlankForStaff(email: string) {
+    if (props.mode !== "new-blank") return;
+    setError(null);
+    setStep("creating");
+    startTransition(async () => {
+      const result = await createBlankDraftEmail({
+        staffId: props.staffId,
+        recipientEmail: email,
+        recipientName: props.staffName,
+        subject: `A note from Beach Kids`,
+        body: "",
+      });
+      if (!result.success) {
+        setError(result.error);
+        setStep("enter-recipient");
+        return;
+      }
+      const msg = await fetchEmailMessage(result.id);
+      if (!msg) {
+        setError("Created the draft but couldn't load it back — try refreshing.");
+        return;
+      }
+      setDraftId(msg.id);
+      setStatus(msg.status);
+      setRecipientName(msg.recipient_name ?? "");
+      setRecipientEmail(msg.recipient_email);
+      setSubject(msg.subject);
+      setBody(msg.body);
+      setAttachments(msg.attachments);
+      setErrorMessage(msg.error_message);
+      setSentAt(msg.sent_at);
+      setStep("review");
+    });
+  }
 
   function confirmRecipient() {
     if (props.mode !== "new" || !selectedChild) return;
@@ -267,13 +328,16 @@ export function ComposeWizard(props: Props) {
   // Render
   // ------------------------------------------------------------------------
 
-  const templateLabel = props.mode === "new" ? props.template.label : props.draft.template_label ?? "Email";
+  const templateLabel =
+    props.mode === "new" ? props.template.label : props.mode === "new-blank" ? "Email" : props.draft.template_label ?? "Email";
   // Friendly "who/what this is about" line under the title — whichever of
   // these is actually known at this point in the flow.
   const contextLabel =
     props.mode === "resume"
-      ? props.draft.child_name
-      : selectedChild?.full_name ?? props.initialEnquiry?.child_full_name ?? null;
+      ? props.draft.staff_name ?? props.draft.child_name
+      : props.mode === "new-blank"
+        ? props.staffName
+        : selectedChild?.full_name ?? props.initialEnquiry?.child_full_name ?? null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -374,6 +438,34 @@ export function ComposeWizard(props: Props) {
               disabled={pending || recipientOptions.length === 0}
               className="btn-primary ml-auto"
               onClick={confirmRecipient}
+            >
+              {pending ? "Starting draft…" : "Continue"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "enter-recipient" && props.mode === "new-blank" && (
+        <div className="card flex flex-col gap-3 p-5">
+          <h2 className="text-sm font-semibold text-charcoal">What&apos;s {props.staffName}&apos;s email address?</h2>
+          <p className="text-sm text-charcoal/60">
+            No email is on file for {props.staffName} yet. Add one here to send this email — or add it permanently
+            on their profile&apos;s Overview tab so it&apos;s there next time.
+          </p>
+          <input
+            autoFocus
+            type="email"
+            className="input"
+            placeholder="name@example.com"
+            value={typedRecipientEmail}
+            onChange={(e) => setTypedRecipientEmail(e.target.value)}
+          />
+          <div className="flex justify-end">
+            <button
+              type="button"
+              disabled={pending || !typedRecipientEmail.includes("@")}
+              className="btn-primary"
+              onClick={() => createBlankForStaff(typedRecipientEmail.trim())}
             >
               {pending ? "Starting draft…" : "Continue"}
             </button>

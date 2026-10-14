@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getChildrenList, getChildById } from "@/lib/data/children";
+import { getStaffById } from "@/lib/data/staff";
 import { nzTodayDateString, addDays, formatShortDate, formatTime, ordinal } from "@/lib/utils";
 import { ATTENDANCE_WEEKDAYS } from "@/lib/data/attendance-roll";
 import type {
@@ -145,6 +146,26 @@ export async function getRecipientOptionsForChild(childId: string): Promise<Emai
   }
 
   return options;
+}
+
+/** The equivalent of getRecipientOptionsForChild, for a staff member — at
+ * most one option, built from staff.email (the structured contact email
+ * added in migration 0052). Nothing is guessed or defaulted: a staff
+ * member with no email on file yet gets an empty list, same as a child
+ * with no email on file anywhere, so the compose screen shows that plainly
+ * rather than inventing an address. */
+export async function getRecipientOptionsForStaff(staffId: string): Promise<EmailRecipientOption[]> {
+  const staff = await getStaffById(staffId);
+  if (!staff || !staff.email) return [];
+  return [
+    {
+      source: "staff",
+      id: null,
+      name: staff.full_name,
+      relationship: staff.role,
+      email: staff.email,
+    },
+  ];
 }
 
 function firstName(fullName: string): string {
@@ -507,6 +528,7 @@ type EmailMessageRow = {
   id: string;
   template_key: string | null;
   child_id: string | null;
+  staff_id: string | null;
   bill_payer_id: string | null;
   family_enquiry_id: string | null;
   recipient_name: string | null;
@@ -527,16 +549,19 @@ async function mapEmailMessages(rows: EmailMessageRow[]): Promise<EmailMessage[]
   const supabase = createClient();
 
   const childIds = Array.from(new Set(rows.map((r) => r.child_id).filter((v): v is string => Boolean(v))));
+  const staffIds = Array.from(new Set(rows.map((r) => r.staff_id).filter((v): v is string => Boolean(v))));
   const templateKeys = Array.from(new Set(rows.map((r) => r.template_key).filter((v): v is string => Boolean(v))));
 
-  const [{ data: childRows }, { data: templateRows }] = await Promise.all([
+  const [{ data: childRows }, { data: staffRows }, { data: templateRows }] = await Promise.all([
     childIds.length > 0 ? supabase.from("children").select("id, full_name").in("id", childIds) : Promise.resolve({ data: [] }),
+    staffIds.length > 0 ? supabase.from("staff").select("id, full_name").in("id", staffIds) : Promise.resolve({ data: [] }),
     templateKeys.length > 0
       ? supabase.from("email_templates").select("key, label").in("key", templateKeys)
       : Promise.resolve({ data: [] }),
   ]);
 
   const childNameById = new Map((childRows ?? []).map((c: any) => [c.id as string, c.full_name as string]));
+  const staffNameById = new Map((staffRows ?? []).map((s: any) => [s.id as string, s.full_name as string]));
   const templateLabelByKey = new Map((templateRows ?? []).map((t: any) => [t.key as string, t.label as string]));
 
   return rows.map((r) => ({
@@ -545,6 +570,8 @@ async function mapEmailMessages(rows: EmailMessageRow[]): Promise<EmailMessage[]
     template_label: r.template_key ? templateLabelByKey.get(r.template_key) ?? r.template_key : null,
     child_id: r.child_id,
     child_name: r.child_id ? childNameById.get(r.child_id) ?? null : null,
+    staff_id: r.staff_id,
+    staff_name: r.staff_id ? staffNameById.get(r.staff_id) ?? null : null,
     bill_payer_id: r.bill_payer_id,
     family_enquiry_id: r.family_enquiry_id,
     recipient_name: r.recipient_name,

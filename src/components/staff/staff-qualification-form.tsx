@@ -2,19 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { STAFF_QUALIFICATION_STATUSES, STAFF_QUALIFICATION_STATUS_LABEL } from "@/lib/constants";
-import type { StaffQualification } from "@/lib/types";
+import type { StaffQualification, StaffAccessLevel } from "@/lib/types";
 import type { StaffQualificationStatus } from "@/lib/supabase/database.types";
 
 export function StaffQualificationForm({
   qualification,
+  accessLevel,
   onSave,
 }: {
   qualification: StaffQualification;
+  accessLevel: StaffAccessLevel;
   onSave: (fields: {
     qualification_status: StaffQualificationStatus;
     qualification_level?: string | null;
     registration_status?: string | null;
     pay_parity_step?: string | null;
+    recognised_service?: string | null;
     next_review_date?: string | null;
     studying_qualification?: string | null;
     expected_completion_date?: string | null;
@@ -28,6 +31,7 @@ export function StaffQualificationForm({
   const [qualificationLevel, setQualificationLevel] = useState(qualification.qualification_level ?? "");
   const [registrationStatus, setRegistrationStatus] = useState(qualification.registration_status ?? "");
   const [payParityStep, setPayParityStep] = useState(qualification.pay_parity_step ?? "");
+  const [recognisedService, setRecognisedService] = useState(qualification.recognised_service ?? "");
   const [nextReviewDate, setNextReviewDate] = useState(qualification.next_review_date ?? "");
   const [studyingQualification, setStudyingQualification] = useState(qualification.studying_qualification ?? "");
   const [expectedCompletionDate, setExpectedCompletionDate] = useState(
@@ -100,29 +104,57 @@ export function StaffQualificationForm({
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="label">Pay parity step</label>
-              <input
-                className="input"
-                placeholder="e.g. Step 8"
-                value={payParityStep}
-                onChange={(e) => {
-                  setPayParityStep(e.target.value);
-                  markDirty();
-                }}
-              />
+              <label className="label">
+                Pay parity step <span className="text-charcoal/40">— restricted</span>
+              </label>
+              {accessLevel === "full" ? (
+                <input
+                  className="input"
+                  placeholder="e.g. Step 8"
+                  value={payParityStep}
+                  onChange={(e) => {
+                    setPayParityStep(e.target.value);
+                    markDirty();
+                  }}
+                />
+              ) : (
+                <p className="input flex items-center bg-charcoal/[0.03] text-charcoal/40">
+                  Restricted — authorised management only
+                </p>
+              )}
             </div>
             <div>
-              <label className="label">Next review date</label>
-              <input
-                type="date"
-                className="input"
-                value={nextReviewDate}
-                onChange={(e) => {
-                  setNextReviewDate(e.target.value);
-                  markDirty();
-                }}
-              />
+              <label className="label">
+                Recognised service <span className="text-charcoal/40">— restricted</span>
+              </label>
+              {accessLevel === "full" ? (
+                <input
+                  className="input"
+                  placeholder="e.g. 4 years recognised"
+                  value={recognisedService}
+                  onChange={(e) => {
+                    setRecognisedService(e.target.value);
+                    markDirty();
+                  }}
+                />
+              ) : (
+                <p className="input flex items-center bg-charcoal/[0.03] text-charcoal/40">
+                  Restricted — authorised management only
+                </p>
+              )}
             </div>
+          </div>
+          <div className="mt-3">
+            <label className="label">Next review date</label>
+            <input
+              type="date"
+              className="input max-w-xs"
+              value={nextReviewDate}
+              onChange={(e) => {
+                setNextReviewDate(e.target.value);
+                markDirty();
+              }}
+            />
           </div>
         </div>
       )}
@@ -181,11 +213,16 @@ export function StaffQualificationForm({
                 qualification_status: status,
                 qualification_level: status === "qualified" ? qualificationLevel || null : null,
                 registration_status: status === "qualified" ? registrationStatus || null : null,
-                pay_parity_step: status === "qualified" ? payParityStep || null : null,
                 next_review_date: status === "qualified" ? nextReviewDate || null : null,
                 studying_qualification: status === "studying" ? studyingQualification || null : null,
                 expected_completion_date: status === "studying" ? expectedCompletionDate || null : null,
                 notes: notes || null,
+                ...(accessLevel === "full"
+                  ? {
+                      pay_parity_step: status === "qualified" ? payParityStep || null : null,
+                      recognised_service: status === "qualified" ? recognisedService || null : null,
+                    }
+                  : {}),
               });
               setSaved(true);
             })

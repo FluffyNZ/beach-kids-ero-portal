@@ -10,6 +10,7 @@ import {
   getTemplateTokenValues,
   getEnquiryTemplateTokenValues,
   getRecipientOptionsForChild,
+  getRecipientOptionsForStaff,
   findPotentialDuplicateFamilies,
   searchChildrenForEmail,
   getEmailMessageById,
@@ -46,6 +47,10 @@ export async function searchChildrenForCompose(query: string): Promise<EmailChil
 
 export async function fetchRecipientOptions(childId: string): Promise<EmailRecipientOption[]> {
   return getRecipientOptionsForChild(childId);
+}
+
+export async function fetchRecipientOptionsForStaff(staffId: string): Promise<EmailRecipientOption[]> {
+  return getRecipientOptionsForStaff(staffId);
 }
 
 export async function fetchEmailMessage(id: string): Promise<EmailMessage | null> {
@@ -148,10 +153,12 @@ export async function createDraftEmailFromTemplate(input: {
 }
 
 /** A blank ad hoc draft — used when composing isn't tied to a template at
- * all (not offered directly in the UI today, but kept available for a
- * "start from scratch" option later without another migration). */
+ * all. This is what "Email staff" on a staff profile uses (there's no
+ * staff-oriented template library yet — see the report), and stays
+ * available as a general "start from scratch" option for a child too. */
 export async function createBlankDraftEmail(input: {
-  childId: string | null;
+  childId?: string | null;
+  staffId?: string | null;
   recipientEmail: string;
   recipientName: string | null;
   subject: string;
@@ -165,7 +172,8 @@ export async function createBlankDraftEmail(input: {
   const userId = await currentUserId();
   const { data: created, error } = await supabase.from("email_messages")
     .insert({
-      child_id: input.childId,
+      child_id: input.childId ?? null,
+      staff_id: input.staffId ?? null,
       recipient_name: input.recipientName,
       recipient_email: trimmedEmail,
       subject: input.subject,

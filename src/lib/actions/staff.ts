@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { getSignedStaffDocumentUrl } from "@/lib/data/staff";
+import { isAuthorisedManagement } from "@/lib/data/profiles";
 import type {
   StaffContractType,
   StaffDocumentCategory,
   StaffStatus,
   StaffQualificationStatus,
+  StaffGrowthCycleStatus,
 } from "@/lib/supabase/database.types";
 import type { StaffDocumentExtractDraft } from "@/lib/types";
 
@@ -116,25 +118,39 @@ export async function createMinimalStaffProfile(fullName: string): Promise<Creat
   return { success: true, staffId: staffRow.id };
 }
 
-export async function updateStaffDetails(
-  staffId: string,
-  fields: {
-    full_name?: string;
-    role?: string | null;
-    start_date?: string | null;
-    end_date?: string | null;
-    date_of_birth?: string | null;
-    contract_type?: StaffContractType | null;
-    pay_rate?: number | null;
-    min_hours?: number | null;
-    notes?: string | null;
+export type UpdateStaffDetailsFields = {
+  full_name?: string;
+  role?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  date_of_birth?: string | null;
+  contract_type?: StaffContractType | null;
+  pay_rate?: number | null;
+  min_hours?: number | null;
+  notes?: string | null;
+  room_id?: string | null;
+  email?: string | null;
+  mobile_phone?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relationship?: string | null;
+};
+
+/** Updates a staff member's own record. `pay_rate` is restricted to
+ * authorised management (profiles.role === "admin") per the brief — a
+ * restricted caller passing it gets a clear error rather than either a
+ * silent no-op or a write that goes through. See isAuthorisedManagement for
+ * the current real-world caveat (one shared login) that applies here too. */
+export async function updateStaffDetails(staffId: string, fields: UpdateStaffDetailsFields) {
+  if (fields.pay_rate !== undefined && !(await isAuthorisedManagement())) {
+    throw new Error("Pay rate is restricted to authorised management — you don't have permission to change it.");
   }
-) {
+
   const supabase = createClient();
   const { error } = await (supabase.from("staff") as any).update(fields as any).eq("id", staffId);
   if (error) {
     throw new Error(
-      `Could not save: ${error.message}. If this mentions a missing column, migration 0014_staff_employment_terms.sql hasn't been run in Supabase yet.`
+      `Could not save: ${error.message}. If this mentions a missing column, the latest staff migration (0052 onward) hasn't been run in Supabase yet.`
     );
   }
   revalidatePath(`/staff/${staffId}`);
@@ -452,20 +468,29 @@ export async function deleteStaffDocument(staffId: string, documentId: string): 
   return { success: true };
 }
 
-export async function updateStaffQualification(
-  staffId: string,
-  fields: {
-    qualification_status?: StaffQualificationStatus;
-    qualification_level?: string | null;
-    registration_status?: string | null;
-    pay_parity_step?: string | null;
-    next_review_date?: string | null;
-    is_studying?: boolean;
-    studying_qualification?: string | null;
-    expected_completion_date?: string | null;
-    notes?: string | null;
+export type UpdateStaffQualificationFields = {
+  qualification_status?: StaffQualificationStatus;
+  qualification_level?: string | null;
+  registration_status?: string | null;
+  pay_parity_step?: string | null;
+  recognised_service?: string | null;
+  next_review_date?: string | null;
+  is_studying?: boolean;
+  studying_qualification?: string | null;
+  expected_completion_date?: string | null;
+  notes?: string | null;
+};
+
+/** pay_parity_step and recognised_service are restricted to authorised
+ * management, same reasoning and same caveat as updateStaffDetails's
+ * pay_rate check above. */
+export async function updateStaffQualification(staffId: string, fields: UpdateStaffQualificationFields) {
+  if ((fields.pay_parity_step !== undefined || fields.recognised_service !== undefined) && !(await isAuthorisedManagement())) {
+    throw new Error(
+      "Pay parity step and recognised service are restricted to authorised management — you don't have permission to change them."
+    );
   }
-) {
+
   const supabase = createClient();
   const userId = await currentUserId();
 
@@ -475,6 +500,146 @@ export async function updateStaffQualification(
 
   revalidatePath(`/staff/${staffId}`);
   revalidatePath("/staff");
+}
+
+// ---------------------------------------------------------------------------
+// Weekly availability (Overview tab) — a template of when someone is
+// generally available, distinct from their contracted min_hours and from
+// actual rostered shifts (roster_shifts). See migration 0054.
+// ---------------------------------------------------------------------------
+
+export type UpdateStaffAvailabilityFields = {
+  mon_start?: string | null;
+  mon_end?: string | null;
+  tue_start?: string | null;
+  tue_end?: string | null;
+  wed_start?: string | null;
+  wed_end?: string | null;
+  thu_start?: string | null;
+  thu_end?: string | null;
+  fri_start?: string | null;
+  fri_end?: string | null;
+  notes?: string | null;
+};
+
+export async function updateStaffAvailability(staffId: string, fields: UpdateStaffAvailabilityFields) {
+  const supabase = createClient();
+  const userId = await currentUserId();
+
+  await (supabase.from("staff_availability") as any).upsert(
+    { staff_id: staffId, ...fields, updated_by: userId } as any,
+    { onConflict: "staff_id" }
+  );
+
+  revalidatePath(`/staff/${staffId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Notes (Notes tab) — dated, authored management notes. Restricted to
+// authorised management end-to-end: reading them already excludes a
+// restricted viewer at the data layer (see getStaffById), and these write
+// actions check again rather than relying only on that.
+// ---------------------------------------------------------------------------
+
+export type StaffNoteActionResult = { success: true } | { success: false; error: string };
+
+export async function addStaffNote(staffId: string, body: string): Promise<StaffNoteActionResult> {
+  if (!(await isAuthorisedManagement())) {
+    return { success: false, error: "Notes are restricted to authorised management." };
+  }
+  const trimmed = body.trim();
+  if (!trimmed) return { success: false, error: "Enter a note before saving." };
+
+  const supabase = createClient();
+  const userId = await currentUserId();
+  const { error } = await supabase.from("staff_notes").insert({ staff_id: staffId, body: trimmed, created_by: userId } as any);
+  if (error) return { success: false, error: `Could not save this note: ${error.message}` };
+
+  revalidatePath(`/staff/${staffId}`);
+  return { success: true };
+}
+
+export async function deleteStaffNote(staffId: string, noteId: string): Promise<StaffNoteActionResult> {
+  if (!(await isAuthorisedManagement())) {
+    return { success: false, error: "Notes are restricted to authorised management." };
+  }
+  const supabase = createClient();
+  const { error } = await supabase.from("staff_notes").delete().eq("id", noteId).eq("staff_id", staffId);
+  if (error) return { success: false, error: `Could not remove this note: ${error.message}` };
+
+  revalidatePath(`/staff/${staffId}`);
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Professional growth cycles + goals (Professional growth tab) — a first
+// pass: no restriction, since the brief doesn't list this among the
+// pay/contracts/confidential-notes fields that need gating.
+// ---------------------------------------------------------------------------
+
+export type GrowthCycleActionResult = { success: true; cycleId: string } | { success: false; error: string };
+
+export async function createStaffGrowthCycle(
+  staffId: string,
+  fields: { title: string; start_date?: string | null; review_date?: string | null }
+): Promise<GrowthCycleActionResult> {
+  const title = fields.title.trim();
+  if (!title) return { success: false, error: "Give this growth cycle a title." };
+
+  const supabase = createClient();
+  const userId = await currentUserId();
+  const { data, error } = await supabase
+    .from("staff_growth_cycles")
+    .insert({
+      staff_id: staffId,
+      title,
+      start_date: fields.start_date || null,
+      review_date: fields.review_date || null,
+      created_by: userId,
+    } as any)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) return { success: false, error: `Could not create this growth cycle: ${error?.message ?? "unknown error"}` };
+
+  revalidatePath(`/staff/${staffId}`);
+  return { success: true, cycleId: data.id };
+}
+
+export async function updateStaffGrowthCycle(
+  staffId: string,
+  cycleId: string,
+  fields: { title?: string; start_date?: string | null; review_date?: string | null; status?: StaffGrowthCycleStatus; reflections?: string | null }
+) {
+  const supabase = createClient();
+  await (supabase.from("staff_growth_cycles") as any).update(fields as any).eq("id", cycleId);
+  revalidatePath(`/staff/${staffId}`);
+}
+
+export async function deleteStaffGrowthCycle(staffId: string, cycleId: string) {
+  const supabase = createClient();
+  await supabase.from("staff_growth_cycles").delete().eq("id", cycleId);
+  revalidatePath(`/staff/${staffId}`);
+}
+
+export async function addStaffGrowthGoal(staffId: string, cycleId: string, description: string) {
+  const trimmed = description.trim();
+  if (!trimmed) return;
+  const supabase = createClient();
+  await supabase.from("staff_growth_goals").insert({ cycle_id: cycleId, description: trimmed } as any);
+  revalidatePath(`/staff/${staffId}`);
+}
+
+export async function toggleStaffGrowthGoal(staffId: string, goalId: string, isComplete: boolean) {
+  const supabase = createClient();
+  await (supabase.from("staff_growth_goals") as any).update({ is_complete: isComplete } as any).eq("id", goalId);
+  revalidatePath(`/staff/${staffId}`);
+}
+
+export async function deleteStaffGrowthGoal(staffId: string, goalId: string) {
+  const supabase = createClient();
+  await supabase.from("staff_growth_goals").delete().eq("id", goalId);
+  revalidatePath(`/staff/${staffId}`);
 }
 
 export type UploadChecklistEvidenceResult = { success: true } | { success: false; error: string };

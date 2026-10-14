@@ -59,6 +59,7 @@ export default async function EmailHistoryPage({
                   {m.recipient_name ? `${m.recipient_name} · ` : ""}
                   {m.recipient_email}
                   {m.child_name ? ` · ${m.child_name}` : ""}
+                  {m.staff_name ? ` · ${m.staff_name}` : ""}
                   {m.template_label ? ` · ${m.template_label}` : ""}
                 </p>
               </div>

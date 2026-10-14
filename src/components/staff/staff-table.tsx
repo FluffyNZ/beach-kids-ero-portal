@@ -53,7 +53,8 @@ export function StaffTable({ staff }: { staff: StaffMember[] }) {
                 )}
               </div>
               <p className="mt-0.5 truncate text-xs text-charcoal/50">
-                {s.role ?? "Role not set"} · {s.document_count} document{s.document_count === 1 ? "" : "s"}
+                {s.role ?? "Role not set"}
+                {s.room_name ? ` · ${s.room_name}` : ""}
                 {s.start_date ? ` · started ${formatDate(s.start_date)}` : ""}
               </p>
             </div>

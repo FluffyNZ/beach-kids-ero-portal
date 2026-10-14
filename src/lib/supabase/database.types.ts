@@ -199,9 +199,64 @@ type StaffRow = {
   photo_storage_path: string | null;
   notes: string | null;
   can_publish_learning_stories: boolean;
+  room_id: string | null;
+  email: string | null;
+  mobile_phone: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relationship: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
+};
+
+type StaffAvailabilityRow = {
+  staff_id: string;
+  mon_start: string | null;
+  mon_end: string | null;
+  tue_start: string | null;
+  tue_end: string | null;
+  wed_start: string | null;
+  wed_end: string | null;
+  thu_start: string | null;
+  thu_end: string | null;
+  fri_start: string | null;
+  fri_end: string | null;
+  notes: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+type StaffNotesRow = {
+  id: string;
+  staff_id: string;
+  body: string;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type StaffGrowthCycleStatus = "open" | "closed";
+
+type StaffGrowthCyclesRow = {
+  id: string;
+  staff_id: string;
+  title: string;
+  start_date: string | null;
+  review_date: string | null;
+  status: StaffGrowthCycleStatus;
+  reflections: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type StaffGrowthGoalsRow = {
+  id: string;
+  cycle_id: string;
+  description: string;
+  is_complete: boolean;
+  sort_order: number;
+  created_at: string;
 };
 
 type StaffDocumentsRow = {
@@ -225,6 +280,7 @@ type StaffQualificationsRow = {
   qualification_level: string | null;
   registration_status: string | null;
   pay_parity_step: string | null;
+  recognised_service: string | null;
   next_review_date: string | null;
   is_studying: boolean;
   studying_qualification: string | null;
@@ -484,6 +540,7 @@ type EmailMessagesRow = {
   id: string;
   template_key: string | null;
   child_id: string | null;
+  staff_id: string | null;
   bill_payer_id: string | null;
   family_enquiry_id: string | null;
   recipient_name: string | null;
@@ -856,6 +913,41 @@ export interface Database {
         Update: Partial<StaffQualificationsRow>;
         Relationships: [];
       };
+      staff_availability: {
+        Row: StaffAvailabilityRow;
+        Insert: Partial<StaffAvailabilityRow> & {
+          staff_id: string;
+        };
+        Update: Partial<StaffAvailabilityRow>;
+        Relationships: [];
+      };
+      staff_notes: {
+        Row: StaffNotesRow;
+        Insert: Partial<StaffNotesRow> & {
+          staff_id: string;
+          body: string;
+        };
+        Update: Partial<StaffNotesRow>;
+        Relationships: [];
+      };
+      staff_growth_cycles: {
+        Row: StaffGrowthCyclesRow;
+        Insert: Partial<StaffGrowthCyclesRow> & {
+          staff_id: string;
+          title: string;
+        };
+        Update: Partial<StaffGrowthCyclesRow>;
+        Relationships: [];
+      };
+      staff_growth_goals: {
+        Row: StaffGrowthGoalsRow;
+        Insert: Partial<StaffGrowthGoalsRow> & {
+          cycle_id: string;
+          description: string;
+        };
+        Update: Partial<StaffGrowthGoalsRow>;
+        Relationships: [];
+      };
       staff_checklist_areas: {
         Row: StaffChecklistAreasRow;
         Insert: Partial<StaffChecklistAreasRow> & {
@@ -1212,6 +1304,7 @@ export interface Database {
       hazard_check_category: HazardCheckCategory;
       hazard_risk_level: HazardRiskLevel;
       staff_leave_type: StaffLeaveType;
+      staff_growth_cycle_status: StaffGrowthCycleStatus;
     };
     CompositeTypes: { [_ in never]: never };
   };
