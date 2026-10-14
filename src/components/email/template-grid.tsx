@@ -10,7 +10,7 @@ import { EMAIL_TEMPLATE_CATEGORIES, EMAIL_TEMPLATE_CATEGORY_LABEL } from "@/lib/
  * Enrolment" (the ones a brand-new family is most likely to need) leads.
  * Clicking a card starts the compose wizard already pointed at that
  * template; which child/recipient it's for is still to be chosen there. */
-export function TemplateGrid({ templates }: { templates: EmailTemplate[] }) {
+export function TemplateGrid({ templates, childId }: { templates: EmailTemplate[]; childId?: string }) {
   return (
     <div className="flex flex-col gap-6">
       {EMAIL_TEMPLATE_CATEGORIES.map((category) => {
@@ -25,7 +25,10 @@ export function TemplateGrid({ templates }: { templates: EmailTemplate[] }) {
               {items.map((t) => (
                 <div key={t.key} className="card group relative p-4 transition-colors hover:border-charcoal/20 hover:shadow-cardHover">
                   <EditTemplateButton template={t} />
-                  <Link href={`/email/compose?template=${t.key}`} className="flex flex-col items-start gap-2">
+                  <Link
+                    href={`/email/compose?template=${t.key}${childId ? `&childId=${childId}` : ""}`}
+                    className="flex flex-col items-start gap-2"
+                  >
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-lilac-100 text-charcoal/70">
                       <TemplateIcon icon={t.icon} className="h-[18px] w-[18px]" />
                     </span>

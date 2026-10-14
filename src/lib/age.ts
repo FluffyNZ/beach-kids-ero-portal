@@ -1,24 +1,28 @@
-// There's no date of birth stored for any child — only the periodic age
-// snapshot (age_years/age_months as of age_as_of) transcribed from the
-// centre's own reports. This module projects that snapshot forward to
-// classify a child as under or over 2, which is the boundary that sets
-// NZ's minimum adult:child ratio (Schedule 2, Education (Early Childhood
-// Services) Regulations 2008 — 1:5 under 2, 1:10 aged 2 and over).
+// Age classification for NZ ECE ratio compliance (Schedule 2, Education
+// (Early Childhood Services) Regulations 2008 — 1:5 under 2, 1:10 aged 2
+// and over) and for display elsewhere in the app.
 //
-// Because it's a projection rather than an exact birth date, it can drift
-// by a few weeks between snapshot refreshes. Anyone within a month of the
-// boundary either way is flagged `borderline` so staff know to check the
-// child's actual record before relying on the count for a ratio decision.
+// Most active children now have an exact `date_of_birth` on file (backfilled
+// from Ethan's own attendance/age reports — see migration 0038). When it's
+// available, `getCurrentAge` and `classifyAgeGroup` use it directly, which
+// is exact and never drifts. For the small number of children who still
+// don't have a date of birth recorded, both functions fall back to the
+// older periodic age snapshot (age_years/age_months as of age_as_of)
+// projected forward — which can drift by a few weeks between snapshot
+// refreshes, so anyone within a month of the 24-month ratio boundary either
+// way is flagged `borderline` so staff know to check the child's actual
+// record before relying on the count for a ratio decision.
 
 export type AgeGroup = "under2" | "over2" | "unknown";
 
 export type AgeClassification = {
   group: AgeGroup;
-  /** Projected age in whole months as of the target date, or null when
-   * there's no snapshot to project from at all. */
+  /** Age in whole months as of the target date, or null when there's
+   * nothing to compute it from at all. */
   ageInMonths: number | null;
-  /** True when the projection lands within a month of the 24-month
-   * boundary on either side. */
+  /** True when the age lands within a month of the 24-month boundary on
+   * either side AND it was computed from the (less precise) snapshot
+   * projection rather than an exact date of birth. */
   borderline: boolean;
 };
 
@@ -31,12 +35,38 @@ function calendarMonthsElapsed(from: Date, to: Date): number {
   return Math.max(0, months);
 }
 
+/** Exact age in whole years + remainder months as of `asOfDate`, computed
+ * directly from a `date_of_birth` ("YYYY-MM-DD") string. Returns null if
+ * `dateOfBirth` isn't a parseable date. */
+export function getCurrentAge(
+  dateOfBirth: string | null,
+  asOfDate: Date = new Date()
+): { years: number; months: number; totalMonths: number } | null {
+  if (!dateOfBirth) return null;
+  const dob = new Date(`${dateOfBirth}T00:00:00Z`);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const target = new Date(Date.UTC(asOfDate.getUTCFullYear(), asOfDate.getUTCMonth(), asOfDate.getUTCDate()));
+  const totalMonths = calendarMonthsElapsed(dob, target);
+  return { years: Math.floor(totalMonths / 12), months: totalMonths % 12, totalMonths };
+}
+
+/** Classifies a child as under or over 2 for ratio purposes. Prefers an
+ * exact `dateOfBirth` when given; otherwise falls back to projecting the
+ * `ageYears`/`ageMonths` snapshot forward from `ageAsOf`. */
 export function classifyAgeGroup(
+  dateOfBirth: string | null,
   ageYears: number | null,
   ageMonths: number | null,
   ageAsOf: string | null,
   asOfDate: Date = new Date()
 ): AgeClassification {
+  const exact = getCurrentAge(dateOfBirth, asOfDate);
+  if (exact) {
+    const group: AgeGroup = exact.totalMonths < 24 ? "under2" : "over2";
+    return { group, ageInMonths: exact.totalMonths, borderline: false };
+  }
+
   if (ageYears === null || !ageAsOf) {
     return { group: "unknown", ageInMonths: null, borderline: false };
   }

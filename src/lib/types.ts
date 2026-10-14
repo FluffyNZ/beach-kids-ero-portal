@@ -364,9 +364,15 @@ export type ChildMember = {
   id: string;
   full_name: string;
   gender: string | null;
+  // age_years/age_months/age_as_of reflect the child's CURRENT age as of
+  // today whenever date_of_birth is on file (age_is_exact: true) — computed
+  // fresh on every read, never stale. Only for the few children with no
+  // date_of_birth recorded do these fall back to the older manually-entered
+  // snapshot (age_is_exact: false), which can drift between updates.
   age_years: number | null;
   age_months: number | null;
   age_as_of: string | null;
+  age_is_exact: boolean;
   date_of_birth: string | null;
   residential_address: string | null;
   // The report's "PC 1" contact — the family's primary contact, which is

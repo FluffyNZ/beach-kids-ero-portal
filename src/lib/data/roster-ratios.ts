@@ -50,6 +50,7 @@ type ChildRow = {
   age_years: number | null;
   age_months: number | null;
   age_as_of: string | null;
+  date_of_birth: string | null;
 };
 
 type ScheduleRow = { child_id: string; start: string | null; end: string | null };
@@ -123,7 +124,7 @@ export async function getWeekdayRoomRoll(weekday: Weekday, asOfDate: Date = new 
   const [{ data: childRows }, { data: scheduleRows }, rooms] = await Promise.all([
     supabase
       .from("children")
-      .select("id, full_name, room_id, age_years, age_months, age_as_of")
+      .select("id, full_name, room_id, age_years, age_months, age_as_of, date_of_birth")
       .eq("status", "active"),
     supabase.from("child_enrolled_schedule").select(`child_id, ${startCol}, ${endCol}`),
     getRosterRooms(),
@@ -142,7 +143,7 @@ export async function getWeekdayRoomRoll(weekday: Weekday, asOfDate: Date = new 
     const endMin = timeToMinutes(sched?.end);
     if (startMin === null || endMin === null || endMin <= startMin) continue; // not enrolled this weekday
 
-    const { group, borderline } = classifyAgeGroup(c.age_years, c.age_months, c.age_as_of, asOfDate);
+    const { group, borderline } = classifyAgeGroup(c.date_of_birth, c.age_years, c.age_months, c.age_as_of, asOfDate);
     const bucketKey = c.room_id ?? null;
     const list = enrichedByRoom.get(bucketKey) ?? [];
     list.push({ id: c.id, full_name: c.full_name, startMin, endMin, group, borderline });

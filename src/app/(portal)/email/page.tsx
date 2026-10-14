@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getEmailTemplates, getUpcomingFamilyReminders, getFamilyEnquiries } from "@/lib/data/email";
+import { getChildById } from "@/lib/data/children";
 import { getRosterRooms } from "@/lib/data/roster";
 import { ReminderPanel } from "@/components/email/reminder-panel";
 import { TemplateGrid } from "@/components/email/template-grid";
@@ -9,12 +10,13 @@ import { GiftIcon, HeartIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmailPage() {
-  const [templates, reminders, enquiries, rooms] = await Promise.all([
+export default async function EmailPage({ searchParams }: { searchParams: { childId?: string } }) {
+  const [templates, reminders, enquiries, rooms, childForEmail] = await Promise.all([
     getEmailTemplates(),
     getUpcomingFamilyReminders(7),
     getFamilyEnquiries("enquiry"),
     getRosterRooms(),
+    searchParams.childId ? getChildById(searchParams.childId) : Promise.resolve(null),
   ]);
 
   const birthdayReminders = reminders.filter((r) => r.kind === "birthday");
@@ -26,10 +28,17 @@ export default async function EmailPage() {
         <div>
           <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Email</h1>
           <p className="mt-1 text-sm text-charcoal/60">
-            Birthdays, welcomes and farewells coming up, plus every template for emailing families.
+            {childForEmail
+              ? `Pick a template below to email ${childForEmail.full_name}'s whānau.`
+              : "Birthdays, welcomes and farewells coming up, plus every template for emailing families."}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {childForEmail && (
+            <Link href={`/children/${childForEmail.id}`} className="btn-ghost">
+              Back to {childForEmail.full_name}
+            </Link>
+          )}
           <NewEnquiryButton rooms={rooms} />
           <Link href="/email/history" className="btn-ghost">
             History
@@ -37,29 +46,33 @@ export default async function EmailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ReminderPanel
-          icon={<GiftIcon className="h-7 w-7" />}
-          title="Birthdays — next 7 days"
-          reminders={birthdayReminders}
-          emptyMessage="No birthdays in the next week."
-        />
-        <ReminderPanel
-          icon={<HeartIcon className="h-7 w-7" />}
-          title="Welcomes & Farewells — next 7 days"
-          reminders={welcomeFarewellReminders}
-          emptyMessage="No confirmed starts or leaving dates in the next week."
-        />
-      </div>
+      {!childForEmail && (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ReminderPanel
+              icon={<GiftIcon className="h-7 w-7" />}
+              title="Birthdays — next 7 days"
+              reminders={birthdayReminders}
+              emptyMessage="No birthdays in the next week."
+            />
+            <ReminderPanel
+              icon={<HeartIcon className="h-7 w-7" />}
+              title="Welcomes & Farewells — next 7 days"
+              reminders={welcomeFarewellReminders}
+              emptyMessage="No confirmed starts or leaving dates in the next week."
+            />
+          </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">Open enquiries</h2>
-        <EnquiryPanel enquiries={enquiries} />
-      </section>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">Open enquiries</h2>
+            <EnquiryPanel enquiries={enquiries} />
+          </section>
+        </>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">Templates</h2>
-        <TemplateGrid templates={templates} />
+        <TemplateGrid templates={templates} childId={childForEmail?.id} />
       </section>
     </div>
   );

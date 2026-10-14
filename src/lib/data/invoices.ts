@@ -74,6 +74,19 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
   return invoices.find((i) => i.id === id) ?? null;
 }
 
+/** Every invoice that has at least one line item for this child (most
+ * recently issued first) — for the child profile's Invoices tab. Reuses
+ * getInvoicesList rather than a separate query, since invoices are
+ * bill-payer-level (one invoice can cover several siblings) and the
+ * dataset is small enough that filtering in JS is simplest and keeps this
+ * in lockstep with the one real invoices query path. */
+export async function getInvoicesForChild(childId: string): Promise<Invoice[]> {
+  const invoices = await getInvoicesList();
+  return invoices
+    .filter((invoice) => invoice.line_items.some((item) => item.child_id === childId))
+    .sort((a, b) => (a.issued_date < b.issued_date ? 1 : a.issued_date > b.issued_date ? -1 : 0));
+}
+
 /** True when this bill payer has had some OTHER invoice actually sent
  * (sent or paid) before — drafts and voids don't count. Used to decide
  * whether an invoice email gets the full first-time "how to pay"

@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentAge } from "@/lib/age";
 import type { BillPayer, ChildMember, ChildSibling, ChildWinzSubsidy, ChildWithDetails } from "@/lib/types";
 
 const PHOTO_BUCKET = process.env.NEXT_PUBLIC_CHILD_PHOTOS_BUCKET || "child-photos";
@@ -53,6 +54,35 @@ function mapBillPayer(row: {
     notes: row.notes,
     created_at: row.created_at,
     updated_at: row.updated_at,
+  };
+}
+
+/** Most active children have an exact date_of_birth on file (backfilled
+ * from Ethan's own reports — migration 0038); for them this computes the
+ * CURRENT age fresh on every read, so it can never go stale the way the
+ * old manually-entered age_years/age_months/age_as_of snapshot could. Only
+ * the few children with no date_of_birth recorded fall back to that
+ * snapshot as-is (age_is_exact: false), unchanged from before. */
+function deriveDisplayAge(row: {
+  age_years: number | null;
+  age_months: number | null;
+  age_as_of: string | null;
+  date_of_birth: string | null;
+}): { age_years: number | null; age_months: number | null; age_as_of: string | null; age_is_exact: boolean } {
+  const exact = getCurrentAge(row.date_of_birth);
+  if (exact) {
+    return {
+      age_years: exact.years,
+      age_months: exact.months,
+      age_as_of: new Date().toISOString().slice(0, 10),
+      age_is_exact: true,
+    };
+  }
+  return {
+    age_years: row.age_years,
+    age_months: row.age_months,
+    age_as_of: row.age_as_of,
+    age_is_exact: false,
   };
 }
 
@@ -146,14 +176,16 @@ export async function getChildrenList(options?: {
     const siblingsIncludingSelf = r.bill_payer_id ? siblingsByBillPayer.get(r.bill_payer_id) ?? [] : [];
     const siblings = siblingsIncludingSelf.filter((s) => s.id !== r.id);
     const siblingCount = r.bill_payer_id ? activeCountByBillPayer.get(r.bill_payer_id) ?? 0 : 0;
+    const displayAge = deriveDisplayAge(r);
 
     return {
       id: r.id,
       full_name: r.full_name,
       gender: r.gender,
-      age_years: r.age_years,
-      age_months: r.age_months,
-      age_as_of: r.age_as_of,
+      age_years: displayAge.age_years,
+      age_months: displayAge.age_months,
+      age_as_of: displayAge.age_as_of,
+      age_is_exact: displayAge.age_is_exact,
       date_of_birth: r.date_of_birth,
       residential_address: r.residential_address,
       primary_contact_email: r.primary_contact_email,
@@ -216,6 +248,7 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
   const activeSiblingCount = siblings.length + (childRow.status === "active" ? 1 : 0);
 
   const billPayer = billPayerRow ? mapBillPayer(billPayerRow) : null;
+  const displayAge = deriveDisplayAge(childRow);
 
   let photoUrl: string | null = null;
   if (childRow.photo_storage_path) {
@@ -229,9 +262,10 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
     id: childRow.id,
     full_name: childRow.full_name,
     gender: childRow.gender,
-    age_years: childRow.age_years,
-    age_months: childRow.age_months,
-    age_as_of: childRow.age_as_of,
+    age_years: displayAge.age_years,
+    age_months: displayAge.age_months,
+    age_as_of: displayAge.age_as_of,
+    age_is_exact: displayAge.age_is_exact,
     date_of_birth: childRow.date_of_birth,
     residential_address: childRow.residential_address,
     primary_contact_email: childRow.primary_contact_email,
