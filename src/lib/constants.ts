@@ -30,7 +30,7 @@ export const NAV_ITEMS = [
   { href: "/learning/stories", label: "Learning Stories", icon: "learning" },
   { href: "/staff", label: "Staff", icon: "staff" },
   { href: "/roster", label: "Roster", icon: "roster" },
-  { href: "/children", label: "Children & Fees", icon: "children" },
+  { href: "/children", label: "Children", icon: "children" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/email", label: "Email", icon: "email" },
   { href: "/stock-orders", label: "Stock Orders", icon: "stock" },

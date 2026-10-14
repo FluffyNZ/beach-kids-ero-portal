@@ -43,7 +43,7 @@ export default async function AttendanceRollPage({
         <div>
           <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Weekly Booked Sessions</h1>
           <p className="mt-1 text-sm text-charcoal/60">
-            Each room&apos;s regular booked days and times, straight from Children &amp; Fees — this is a{" "}
+            Each room&apos;s regular booked days and times, straight from Children — this is a{" "}
             <strong>booked sessions roll for staff planning</strong>, not a record of who actually attended. Real
             attendance is still recorded separately.
           </p>

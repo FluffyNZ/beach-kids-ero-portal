@@ -79,7 +79,7 @@ export function ChildPhotoUpload({
 
         <p className="text-xs text-charcoal/40">
           JPG, PNG or WEBP. Only upload a real photo of this child, with parental/caregiver consent on file — it
-          also appears on the Children &amp; Fees dashboard.
+          also appears on the Children page.
         </p>
       </div>
     </div>

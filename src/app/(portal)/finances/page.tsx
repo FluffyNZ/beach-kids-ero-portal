@@ -23,7 +23,7 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
           <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Finances</h1>
           <p className="mt-1 text-sm text-charcoal/60">
             Overheads, outgoings and income in one place, alongside the parent fee revenue already calculated in
-            Children &amp; Fees.
+            Fees.
           </p>
         </div>
         <div className="card flex flex-wrap gap-1 p-1">
@@ -59,7 +59,7 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
         </h2>
         <div className="flex flex-col gap-2 text-sm text-charcoal/70">
           <p>
-            Parent fees + WINZ (from Children &amp; Fees): <span className="font-medium text-charcoal">{formatCurrency(overview.feeRevenue.total)}</span>
+            Parent fees + WINZ (from Fees): <span className="font-medium text-charcoal">{formatCurrency(overview.feeRevenue.total)}</span>
             {" — "}
             {overview.feeRevenue.confirmedWeeks} of {overview.feeRevenue.totalWeeks} week
             {overview.feeRevenue.totalWeeks === 1 ? "" : "s"} confirmed
@@ -76,7 +76,7 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
             marked paid yet. Weeks are grouped Monday–Sunday, so a week straddling the start or end of a period
             counts fully wherever its Monday falls, not split by exact day.
           </p>
-          <Link href="/children/fees-by-family" className="mt-1 text-sm font-medium text-burgundy-600 hover:underline">
+          <Link href="/finances/fees" className="mt-1 text-sm font-medium text-burgundy-600 hover:underline">
             See this week&apos;s fees rolled up by family →
           </Link>
         </div>
@@ -99,6 +99,13 @@ export default async function FinancesPage({ searchParams }: { searchParams: { p
               ? `${overview.outstandingIncomeCount} pending (${formatCurrency(overview.outstandingIncomeAmount)})`
               : "nothing pending"}
             .
+          </p>
+        </Link>
+        <Link href="/finances/fees" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
+          <h2 className="font-display text-lg font-semibold text-charcoal">Fees</h2>
+          <p className="mt-1 text-sm text-charcoal/60">
+            Each child&apos;s weekly fee rolled up by family, plus confirming actual hours — the numbers invoices
+            are drafted from.
           </p>
         </Link>
         <Link href="/finances/clients" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>

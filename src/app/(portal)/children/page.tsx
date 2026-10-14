@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { getChildrenList, getBillPayerOptions } from "@/lib/data/children";
 import { getRosterRooms } from "@/lib/data/roster";
-import { getWeeklyFeesSummary } from "@/lib/data/fees";
-import { mondayOf, formatCurrency } from "@/lib/utils";
 import { ChildrenSearchBar } from "@/components/children/children-search-bar";
 import { ChildrenGrid } from "@/components/children/children-grid";
 import { NewChildButton } from "@/components/children/new-child-button";
@@ -21,13 +19,10 @@ export default async function ChildrenPage({
   const showLeft = searchParams.status === "all";
   const statusFilter = showLeft ? undefined : "active";
 
-  const thisWeekStartDate = mondayOf(new Date());
-
-  const [children, rooms, billPayerOptions, weeklyFees] = await Promise.all([
+  const [children, rooms, billPayerOptions] = await Promise.all([
     getChildrenList({ search: searchParams.q, status: statusFilter, roomId: searchParams.room }),
     getRosterRooms(),
     getBillPayerOptions(),
-    getWeeklyFeesSummary(thisWeekStartDate),
   ]);
 
   const activeCount = children.filter((c) => c.status === "active").length;
@@ -39,33 +34,23 @@ export default async function ChildrenPage({
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Children &amp; Fees</h1>
+          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Children</h1>
           <p className="mt-1 text-sm text-charcoal/60">
-            Child profiles, their bill payer and the fee settings each child&apos;s fees will be calculated from.
+            Every child&apos;s profile, room and bill payer. Weekly fees and invoicing now live under{" "}
+            <Link href="/finances/fees" className="font-medium underline">
+              Finance → Fees
+            </Link>
+            .
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/children/fees-by-family" className="btn-secondary">
-            Fees by family
-          </Link>
-          <Link href="/children/hours" className="btn-secondary">
-            Enter weekly hours
-          </Link>
-          <NewChildButton rooms={rooms} billPayerOptions={billPayerOptions} />
-        </div>
+        <NewChildButton rooms={rooms} billPayerOptions={billPayerOptions} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Active children" value={activeCount} tone="neutral" />
         <StatTile label="Missing a bill payer" value={needsBillPayer} tone={needsBillPayer > 0 ? "attention" : "neutral"} />
         <StatTile label="Sibling discount applies" value={siblingDiscounts} tone="neutral" />
         <StatTile label="On a WINZ subsidy" value={winzCount} tone="neutral" />
-        <StatTile
-          label={weeklyFees.hasAnyHoursEntered ? "Earned this week (total fees)" : "Earned this week (estimated from enrolled schedules)"}
-          value={formatCurrency(weeklyFees.totalFees)}
-          tone="ready"
-        />
-        <StatTile label="Parent-paid this week" value={formatCurrency(weeklyFees.totalParentPays)} tone="neutral" />
       </div>
 
       <ChildrenSearchBar rooms={rooms} showLeft={showLeft} />

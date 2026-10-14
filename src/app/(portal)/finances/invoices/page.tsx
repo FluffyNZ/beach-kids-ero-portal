@@ -39,8 +39,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
         <div>
           <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Invoices</h1>
           <p className="mt-1 text-sm text-charcoal/60">
-            Invoices drafted from Fees by family — each one is a frozen snapshot, so editing a week&apos;s hours
-            later never changes what was already sent.
+            Invoices drafted from Fees — each one is a frozen snapshot, so editing a week&apos;s hours later never
+            changes what was already sent.
           </p>
         </div>
         <div className="flex gap-2">
@@ -52,8 +52,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
           </Link>
           <ExportInvoicesButton invoices={invoices} />
           <Link
-            href="/children/fees-by-family"
-            title="Draft a new invoice from Fees by family — invoices are always created from one week's real fee numbers, never typed in freehand."
+            href="/finances/fees"
+            title="Draft a new invoice from Fees — invoices are always created from one week's real fee numbers, never typed in freehand."
             className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-charcoal px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-charcoal/90"
           >
             <PlusIcon />

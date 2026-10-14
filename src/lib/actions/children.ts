@@ -222,6 +222,7 @@ export async function updateChildFeeSettings(
   }
   revalidatePath(`/children/${childId}`);
   revalidatePath("/children");
+  revalidatePath("/finances/fees");
 }
 
 export async function updateChildWinzSubsidy(
@@ -256,6 +257,7 @@ export async function updateChildWinzSubsidy(
 
   revalidatePath(`/children/${childId}`);
   revalidatePath("/children");
+  revalidatePath("/finances/fees");
 }
 
 export async function updateChildEnrolledSchedule(
@@ -287,6 +289,7 @@ export async function updateChildEnrolledSchedule(
   revalidatePath(`/children/${childId}`);
   revalidatePath("/children");
   revalidatePath("/children/hours");
+  revalidatePath("/finances/fees");
 }
 
 /** Flags (or un-flags) a child's enrolled schedule as "to be confirmed" —
@@ -311,6 +314,7 @@ export async function setChildScheduleTbc(childId: string, tbc: boolean) {
   revalidatePath(`/children/${childId}`);
   revalidatePath("/children");
   revalidatePath("/children/hours");
+  revalidatePath("/finances/fees");
   revalidatePath("/roster/attendance-roll");
 }
 

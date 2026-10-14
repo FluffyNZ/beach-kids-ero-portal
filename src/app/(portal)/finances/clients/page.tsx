@@ -53,8 +53,8 @@ export default async function ClientsPage() {
       {clients.length === 0 ? (
         <div className="card p-6 text-center text-sm text-charcoal/50">
           No families currently billed — a client only shows up here once they have at least one active child
-          linked to them. Add one above, then set them as that child&apos;s bill payer from Children &amp; Fees
-          (typing their exact name there links the two).
+          linked to them. Add one above, then set them as that child&apos;s bill payer from the child&apos;s
+          profile under Children (typing their exact name there links the two).
         </div>
       ) : (
         <div className="flex flex-col gap-3">

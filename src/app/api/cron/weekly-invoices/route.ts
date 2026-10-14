@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await createWeeklyDraftInvoices();
     revalidatePath("/finances/invoices");
-    revalidatePath("/children/fees-by-family");
+    revalidatePath("/finances/fees");
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

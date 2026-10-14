@@ -27,7 +27,7 @@ export default async function WeeklyHoursPage({
           </p>
         </div>
         <Link href="/children" className="btn-ghost">
-          ← Children &amp; Fees
+          ← Children
         </Link>
       </div>
 

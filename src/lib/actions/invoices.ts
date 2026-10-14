@@ -76,7 +76,7 @@ export async function createDraftInvoice(billPayerId: string, weekStartDate: str
 
   revalidatePath("/finances/invoices");
   revalidatePath("/finances/statements");
-  revalidatePath("/children/fees-by-family");
+  revalidatePath("/finances/fees");
   return { id: invoiceRow.id };
 }
 

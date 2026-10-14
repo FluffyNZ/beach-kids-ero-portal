@@ -74,6 +74,7 @@ export async function saveWeeklyHours(input: SaveWeeklyHoursInput) {
 
   revalidatePath("/children");
   revalidatePath("/children/hours");
+  revalidatePath("/finances/fees");
 }
 
 export type UpdateFeeSettingsInput = {
@@ -108,4 +109,5 @@ export async function updateFeeSettings(input: UpdateFeeSettingsInput) {
   revalidatePath("/settings");
   revalidatePath("/children");
   revalidatePath("/children/hours");
+  revalidatePath("/finances/fees");
 }

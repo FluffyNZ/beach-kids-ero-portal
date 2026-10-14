@@ -42,7 +42,7 @@ export default async function ChildDetailPage({ params }: { params: { id: string
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <nav className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/50">
         <Link href="/children" className="hover:text-charcoal">
-          Children &amp; Fees
+          Children
         </Link>
         <ChevronRightIcon className="h-3.5 w-3.5" />
         <span className="font-medium text-charcoal">{child.full_name}</span>

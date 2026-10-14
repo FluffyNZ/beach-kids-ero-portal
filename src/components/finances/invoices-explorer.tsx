@@ -216,8 +216,8 @@ export function InvoicesExplorer({ invoices, initialStatus }: { invoices: Invoic
             {invoices.length === 0 ? (
               <>
                 No invoices yet. Draft one from{" "}
-                <a href="/children/fees-by-family" className="font-medium text-charcoal underline">
-                  Fees by family
+                <a href="/finances/fees" className="font-medium text-charcoal underline">
+                  Fees
                 </a>
                 .
               </>
