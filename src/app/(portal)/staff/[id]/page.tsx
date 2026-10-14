@@ -38,9 +38,14 @@ export default async function StaffDetailPage({ params }: { params: { id: string
   const checklistPercent = percentage(staffMember.required_docs_completed, staffMember.required_docs_total);
   const requiredDocumentSlots = getRequiredDocumentSlots(
     staffMember.qualification.qualification_status,
-    staffMember.documents
+    staffMember.documents,
+    staffMember.contract_type
   );
-  const otherDocuments = getOtherDocuments(staffMember.qualification.qualification_status, staffMember.documents);
+  const otherDocuments = getOtherDocuments(
+    staffMember.qualification.qualification_status,
+    staffMember.documents,
+    staffMember.contract_type
+  );
   const induction = await getStaffInduction(staffMember.id);
   const inductionTotal = getStaffInductionTotalItemCount();
   const inductionChecked = induction.checkedItemKeys.size;

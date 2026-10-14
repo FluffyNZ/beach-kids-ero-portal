@@ -411,6 +411,11 @@ export const EMERGENCY_DRILL_TYPE_LABEL: Record<EmergencyDrillType, string> = {
 // The fixed set of documents every staff profile needs on file — this is
 // what the Required Documents ring on each profile is built from. Order
 // here is the display order on the profile.
+// "induction" used to be in this list — it's now tracked by the dedicated
+// Induction Pack section on the profile instead, so it's no longer counted
+// as a required document for anyone (moved down to STAFF_DOCUMENT_CATEGORIES
+// below, so any file already on file for it stays visible under "Other
+// documents").
 export const REQUIRED_STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "contract",
   "police_vet",
@@ -418,7 +423,6 @@ export const REQUIRED_STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "staff_profile_form",
   "identification",
   "secondary_identification",
-  "induction",
   "tax_kiwisaver",
   "cv_interview",
   "job_description",
@@ -431,16 +435,32 @@ export const REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "pay_parity_agreement",
 ];
 
+// Directors aren't kaiako on the floor day-to-day, so this classroom-staff
+// paperwork doesn't apply to them — excluded from their required set below.
+export const DIRECTOR_EXEMPT_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "staff_profile_form",
+  "tax_kiwisaver",
+  "contract",
+  "job_description",
+];
+
 export function getRequiredStaffDocumentCategories(
-  qualificationStatus: StaffQualificationStatus
+  qualificationStatus: StaffQualificationStatus,
+  contractType?: StaffContractType | null
 ): StaffDocumentCategory[] {
+  let categories = REQUIRED_STAFF_DOCUMENT_CATEGORIES;
+
   if (qualificationStatus === "qualified") {
     // Qualified staff aren't required to have a Police Verification on
     // file here — swap in the 2 qualified-only documents instead.
-    const base = REQUIRED_STAFF_DOCUMENT_CATEGORIES.filter((c) => c !== "police_vet");
-    return [...base, ...REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES];
+    categories = [...categories.filter((c) => c !== "police_vet"), ...REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES];
   }
-  return REQUIRED_STAFF_DOCUMENT_CATEGORIES;
+
+  if (contractType === "director") {
+    categories = categories.filter((c) => !DIRECTOR_EXEMPT_DOCUMENT_CATEGORIES.includes(c));
+  }
+
+  return categories;
 }
 
 // Everything else — optional extras, offered in the "Other documents"
@@ -449,6 +469,7 @@ export function getRequiredStaffDocumentCategories(
 // by the combined "CV & Interview" required category above — deliberately
 // left out of this list, same as before (see migration 0009).
 export const STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "induction",
   "first_aid",
   "visa_work_entitlement",
   "child_protection",

@@ -1,6 +1,6 @@
 import { getRequiredStaffDocumentCategories } from "@/lib/constants";
 import type { StaffDocument } from "@/lib/types";
-import type { StaffDocumentCategory, StaffQualificationStatus } from "@/lib/supabase/database.types";
+import type { StaffContractType, StaffDocumentCategory, StaffQualificationStatus } from "@/lib/supabase/database.types";
 
 export type RequiredDocumentSlot = {
   category: StaffDocumentCategory;
@@ -29,10 +29,11 @@ function groupByCategory(documents: StaffDocument[]): Map<StaffDocumentCategory,
  * currently on hand for it (which may be more than one, or none). */
 export function getRequiredDocumentSlots(
   qualificationStatus: StaffQualificationStatus,
-  documents: StaffDocument[]
+  documents: StaffDocument[],
+  contractType?: StaffContractType | null
 ): RequiredDocumentSlot[] {
   const grouped = groupByCategory(documents);
-  return getRequiredStaffDocumentCategories(qualificationStatus).map((category) => ({
+  return getRequiredStaffDocumentCategories(qualificationStatus, contractType).map((category) => ({
     category,
     documents: grouped.get(category) ?? [],
   }));
@@ -42,9 +43,10 @@ export function getRequiredDocumentSlots(
  * ring on the profile page and the "Profile X%" figure shown elsewhere. */
 export function countRequiredDocuments(
   qualificationStatus: StaffQualificationStatus,
-  documents: StaffDocument[]
+  documents: StaffDocument[],
+  contractType?: StaffContractType | null
 ): { completed: number; total: number } {
-  const required = getRequiredStaffDocumentCategories(qualificationStatus);
+  const required = getRequiredStaffDocumentCategories(qualificationStatus, contractType);
   const present = new Set(documents.map((d) => d.category));
   return { completed: required.filter((c) => present.has(c)).length, total: required.length };
 }
@@ -54,8 +56,9 @@ export function countRequiredDocuments(
  * from view just because it's not part of the required set. */
 export function getOtherDocuments(
   qualificationStatus: StaffQualificationStatus,
-  documents: StaffDocument[]
+  documents: StaffDocument[],
+  contractType?: StaffContractType | null
 ): StaffDocument[] {
-  const required = new Set(getRequiredStaffDocumentCategories(qualificationStatus));
+  const required = new Set(getRequiredStaffDocumentCategories(qualificationStatus, contractType));
   return documents.filter((d) => !required.has(d.category));
 }

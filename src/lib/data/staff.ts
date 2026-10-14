@@ -142,7 +142,7 @@ export async function getStaffList(options?: {
 
   return rows.map((r) => {
     const qualification = mapQualification(qualByStaff.get(r.id));
-    const required = getRequiredStaffDocumentCategories(qualification.qualification_status);
+    const required = getRequiredStaffDocumentCategories(qualification.qualification_status, r.contract_type);
     const present = categoriesByStaff.get(r.id) ?? new Set<string>();
     const photoStoragePath = (r as { photo_storage_path: string | null }).photo_storage_path;
     return {
@@ -194,7 +194,7 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
     .maybeSingle();
 
   const qualification = mapQualification(qualRow);
-  const required = getRequiredStaffDocumentCategories(qualification.qualification_status);
+  const required = getRequiredStaffDocumentCategories(qualification.qualification_status, row.contract_type);
   const present = new Set(documents.map((d) => d.category));
 
   const photoStoragePath = (row as { photo_storage_path: string | null }).photo_storage_path;
