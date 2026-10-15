@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { getProfilesMap } from "@/lib/data/profiles";
 import type { RosterRoom, RosterShift, RosterWeekDetail, RosterWeekSummary } from "@/lib/types";
 
 export async function getRosterRooms(): Promise<RosterRoom[]> {
@@ -38,6 +39,7 @@ export async function listRosterWeeks(limit = 12): Promise<RosterWeekSummary[]> 
     week_start_date: w.week_start_date,
     notes: w.notes,
     shift_count: countByWeek.get(w.id) ?? 0,
+    status: w.status,
   }));
 }
 
@@ -46,11 +48,10 @@ export async function listRosterWeeks(limit = 12): Promise<RosterWeekSummary[]> 
  * for it). The roster page creates the week on first save, not on view. */
 export async function getRosterWeekByStartDate(weekStartDate: string): Promise<RosterWeekDetail | null> {
   const supabase = createClient();
-  const { data: week } = await supabase
-    .from("roster_weeks")
-    .select("*")
-    .eq("week_start_date", weekStartDate)
-    .maybeSingle();
+  const [{ data: week }, profiles] = await Promise.all([
+    supabase.from("roster_weeks").select("*").eq("week_start_date", weekStartDate).maybeSingle(),
+    getProfilesMap(),
+  ]);
 
   if (!week) return null;
 
@@ -75,5 +76,10 @@ export async function getRosterWeekByStartDate(weekStartDate: string): Promise<R
     week_start_date: week.week_start_date,
     notes: week.notes,
     shifts,
+    status: week.status,
+    approved_by_name: week.approved_by ? profiles.get(week.approved_by)?.full_name ?? null : null,
+    approved_at: week.approved_at,
+    needs_review: week.needs_review,
+    last_modified_at: week.last_modified_at,
   };
 }

@@ -364,12 +364,20 @@ type RosterRoomsRow = {
   sort_order: number;
 };
 
+export type RosterWeekStatus = "draft" | "approved";
+
 type RosterWeeksRow = {
   id: string;
   week_start_date: string;
   notes: string | null;
   created_at: string;
   created_by: string | null;
+  // See migration 0059.
+  status: RosterWeekStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  needs_review: boolean;
+  last_modified_at: string | null;
 };
 
 type RosterShiftsRow = {

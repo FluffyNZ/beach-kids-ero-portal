@@ -22,6 +22,7 @@ import type {
   HazardCheckCategory,
   HazardRiskLevel,
   StaffLeaveType,
+  RosterWeekStatus,
 } from "@/lib/supabase/database.types";
 
 // Re-exported so other modules can `import type { HazardCheckCategory }
@@ -409,6 +410,7 @@ export type RosterWeekSummary = {
   week_start_date: string;
   notes: string | null;
   shift_count: number;
+  status: RosterWeekStatus;
 };
 
 export type RosterWeekDetail = {
@@ -416,6 +418,13 @@ export type RosterWeekDetail = {
   week_start_date: string;
   notes: string | null;
   shifts: RosterShift[];
+  status: RosterWeekStatus;
+  approved_by_name: string | null;
+  approved_at: string | null;
+  // True when a shift in this week was added/changed/removed after it was
+  // approved — cleared by approving again. See markWeekTouchedIfApproved.
+  needs_review: boolean;
+  last_modified_at: string | null;
 };
 
 export type BillPayer = {

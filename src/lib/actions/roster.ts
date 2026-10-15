@@ -11,6 +11,21 @@ async function currentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
+/** If this week has already been approved, editing a shift in it shouldn't
+ * silently stay "Approved" as if nothing changed — flag it so whoever
+ * approved it (or anyone else) can see it needs a fresh look. Approving the
+ * week again (see approveRosterWeek) clears the flag. A draft week is
+ * untouched by this — only an approved week can need review. */
+async function markWeekTouchedIfApproved(weekId: string) {
+  const supabase = createClient();
+  const { data: week } = await supabase.from("roster_weeks").select("status").eq("id", weekId).maybeSingle();
+  if (week?.status === "approved") {
+    await (supabase.from("roster_weeks") as any)
+      .update({ needs_review: true, last_modified_at: new Date().toISOString() })
+      .eq("id", weekId);
+  }
+}
+
 /** Gets the roster_weeks row for this Monday, creating an empty one the
  * first time it's needed (e.g. the first shift ever saved for that week).
  * Viewing an empty week never creates a row — only saving a shift does. */
@@ -69,15 +84,18 @@ export async function saveRosterShift(input: SaveShiftInput) {
   if (error) {
     throw new Error(`Could not save the shift: ${error.message}`);
   }
+  await markWeekTouchedIfApproved(weekId);
   revalidatePath("/roster");
 }
 
 export async function deleteRosterShift(shiftId: string) {
   const supabase = createClient();
+  const { data: shift } = await supabase.from("roster_shifts").select("week_id").eq("id", shiftId).maybeSingle();
   const { error } = await supabase.from("roster_shifts").delete().eq("id", shiftId);
   if (error) {
     throw new Error(`Could not remove the shift: ${error.message}`);
   }
+  if (shift?.week_id) await markWeekTouchedIfApproved(shift.week_id);
   revalidatePath("/roster");
 }
 
@@ -133,6 +151,48 @@ export async function duplicateRosterWeek(
     );
   }
 
+  await markWeekTouchedIfApproved(targetWeekId);
   revalidatePath("/roster");
   return { weekId: targetWeekId, weekStartDate: targetWeekStartDate };
+}
+
+// ---------------------------------------------------------------------------
+// Draft / Approved status (see migration 0059). "Approve" just records who
+// and when and clears any review flag — it doesn't lock the week from
+// further edits (the brief asks for changes after approval to be tracked
+// and flagged for review, not blocked).
+// ---------------------------------------------------------------------------
+
+export type RosterWeekStatusResult = { success: true } | { success: false; error: string };
+
+export async function approveRosterWeek(weekId: string): Promise<RosterWeekStatusResult> {
+  const supabase = createClient();
+  const userId = await currentUserId();
+  const { error } = await (supabase.from("roster_weeks") as any)
+    .update({
+      status: "approved",
+      approved_by: userId,
+      approved_at: new Date().toISOString(),
+      needs_review: false,
+    })
+    .eq("id", weekId);
+
+  if (error) return { success: false, error: `Could not approve the roster: ${error.message}` };
+  revalidatePath("/roster");
+  return { success: true };
+}
+
+/** Lets a mistaken approval be undone, or a week be reopened for a bigger
+ * rework than a quick edit — distinct from needs_review, which is the app
+ * flagging an already-approved week as touched rather than someone
+ * deliberately reopening it. */
+export async function revertRosterWeekToDraft(weekId: string): Promise<RosterWeekStatusResult> {
+  const supabase = createClient();
+  const { error } = await (supabase.from("roster_weeks") as any)
+    .update({ status: "draft", approved_by: null, approved_at: null, needs_review: false })
+    .eq("id", weekId);
+
+  if (error) return { success: false, error: `Could not revert the roster to draft: ${error.message}` };
+  revalidatePath("/roster");
+  return { success: true };
 }
