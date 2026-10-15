@@ -233,6 +233,12 @@ type StaffNotesRow = {
   body: string;
   created_at: string;
   created_by: string | null;
+  // Optional single attachment (see migration 0058) — reuses the
+  // staff-documents bucket, so these mirror staff_documents' own columns.
+  storage_path: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
+  file_size_bytes: number | null;
 };
 
 export type StaffGrowthCycleStatus = "open" | "closed";

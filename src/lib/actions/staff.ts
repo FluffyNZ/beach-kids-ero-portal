@@ -543,7 +543,22 @@ export async function updateStaffAvailability(staffId: string, fields: UpdateSta
 
 export type StaffNoteActionResult = { success: true } | { success: false; error: string };
 
-export async function addStaffNote(staffId: string, body: string): Promise<StaffNoteActionResult> {
+/** A note's optional single attachment — already uploaded straight to the
+ * staff-documents bucket from the browser (see AddStaffDocumentModal's
+ * identical pattern) before this action is called, so only the small
+ * metadata fields pass through the server action. */
+export type StaffNoteAttachmentFields = {
+  storage_path: string;
+  original_filename: string;
+  mime_type: string | null;
+  file_size_bytes: number;
+};
+
+export async function addStaffNote(
+  staffId: string,
+  body: string,
+  attachment?: StaffNoteAttachmentFields | null
+): Promise<StaffNoteActionResult> {
   if (!(await isAuthorisedManagement())) {
     return { success: false, error: "Notes are restricted to authorised management." };
   }
@@ -552,20 +567,44 @@ export async function addStaffNote(staffId: string, body: string): Promise<Staff
 
   const supabase = createClient();
   const userId = await currentUserId();
-  const { error } = await supabase.from("staff_notes").insert({ staff_id: staffId, body: trimmed, created_by: userId } as any);
+  const { error } = await supabase.from("staff_notes").insert({
+    staff_id: staffId,
+    body: trimmed,
+    created_by: userId,
+    storage_path: attachment?.storage_path ?? null,
+    original_filename: attachment?.original_filename ?? null,
+    mime_type: attachment?.mime_type ?? null,
+    file_size_bytes: attachment?.file_size_bytes ?? null,
+  } as any);
   if (error) return { success: false, error: `Could not save this note: ${error.message}` };
 
   revalidatePath(`/staff/${staffId}`);
   return { success: true };
 }
 
+/** Removes a note and, if it had one, the attached file from the
+ * staff-documents bucket too — mirrors deleteStaffDocument's own
+ * fetch-then-delete-then-remove-from-storage order so nothing orphaned is
+ * left behind in the bucket. */
 export async function deleteStaffNote(staffId: string, noteId: string): Promise<StaffNoteActionResult> {
   if (!(await isAuthorisedManagement())) {
     return { success: false, error: "Notes are restricted to authorised management." };
   }
   const supabase = createClient();
+
+  const { data: note } = await supabase
+    .from("staff_notes")
+    .select("storage_path")
+    .eq("id", noteId)
+    .eq("staff_id", staffId)
+    .maybeSingle();
+
   const { error } = await supabase.from("staff_notes").delete().eq("id", noteId).eq("staff_id", staffId);
   if (error) return { success: false, error: `Could not remove this note: ${error.message}` };
+
+  if (note?.storage_path) {
+    await supabase.storage.from(BUCKET).remove([note.storage_path]);
+  }
 
   revalidatePath(`/staff/${staffId}`);
   return { success: true };

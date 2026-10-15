@@ -249,7 +249,19 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
       // bug downstream could accidentally render what was fetched.
       accessLevelFull
         ? supabase.from("staff_notes").select("*").eq("staff_id", id).order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as { id: string; staff_id: string; body: string; created_at: string; created_by: string | null }[] }),
+        : Promise.resolve({
+            data: [] as {
+              id: string;
+              staff_id: string;
+              body: string;
+              created_at: string;
+              created_by: string | null;
+              storage_path: string | null;
+              original_filename: string | null;
+              mime_type: string | null;
+              file_size_bytes: number | null;
+            }[],
+          }),
       supabase.from("staff_growth_cycles").select("*").eq("staff_id", id).order("created_at", { ascending: false }),
       (row as { room_id: string | null }).room_id
         ? supabase.from("roster_rooms").select("id, name, color").eq("id", (row as { room_id: string }).room_id).maybeSingle()
@@ -297,6 +309,10 @@ export async function getStaffById(id: string): Promise<StaffWithDetails | null>
     body: n.body,
     created_at: n.created_at,
     created_by_name: n.created_by ? profiles.get(n.created_by)?.full_name ?? null : null,
+    storage_path: n.storage_path,
+    original_filename: n.original_filename,
+    mime_type: n.mime_type,
+    file_size_bytes: n.file_size_bytes,
   }));
 
   const availability: StaffAvailability | null = availRow

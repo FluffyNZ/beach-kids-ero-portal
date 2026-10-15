@@ -306,6 +306,12 @@ export type StaffNote = {
   body: string;
   created_at: string;
   created_by_name: string | null;
+  // Optional single attachment (e.g. a PDF the note refers to) — reuses the
+  // same staff-documents bucket and signed-URL action as the Documents tab.
+  storage_path: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
+  file_size_bytes: number | null;
 };
 
 export type StaffGrowthGoal = {
