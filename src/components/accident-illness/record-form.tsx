@@ -180,6 +180,7 @@ export function RecordForm({
       notes: "Profile created automatically from an Accident & Illness photo import — no other details were supplied.",
       can_publish_learning_stories: false,
       room_id: null,
+      is_relief: false,
       room_name: null,
       room_color: null,
       email: null,
