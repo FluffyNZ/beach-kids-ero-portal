@@ -451,29 +451,34 @@ export const REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "pay_parity_agreement",
 ];
 
-// Directors aren't kaiako on the floor day-to-day, so this classroom-staff
-// paperwork doesn't apply to them — excluded from their required set below.
-export const DIRECTOR_EXEMPT_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
-  "staff_profile_form",
-  "tax_kiwisaver",
-  "contract",
-  "job_description",
+// Directors aren't kaiako on the floor day-to-day and run a much lighter
+// paperwork trail than classroom staff — per Ethan (2026-10-15), a
+// director's required documents are exactly these three, full stop. This
+// is deliberately a short, fixed list rather than "everything minus a few
+// exemptions": it doesn't grow if REQUIRED_STAFF_DOCUMENT_CATEGORIES gains
+// a new category later, and it applies regardless of qualification status
+// (a qualified director still only needs these three, not the
+// qualification/pay-parity documents too).
+export const DIRECTOR_REQUIRED_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "safety_check",
+  "identification",
+  "secondary_identification",
 ];
 
 export function getRequiredStaffDocumentCategories(
   qualificationStatus: StaffQualificationStatus,
   contractType?: StaffContractType | null
 ): StaffDocumentCategory[] {
+  if (contractType === "director") {
+    return DIRECTOR_REQUIRED_DOCUMENT_CATEGORIES;
+  }
+
   let categories = REQUIRED_STAFF_DOCUMENT_CATEGORIES;
 
   if (qualificationStatus === "qualified") {
     // Qualified staff aren't required to have a Police Verification on
     // file here — swap in the 2 qualified-only documents instead.
     categories = [...categories.filter((c) => c !== "police_vet"), ...REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES];
-  }
-
-  if (contractType === "director") {
-    categories = categories.filter((c) => !DIRECTOR_EXEMPT_DOCUMENT_CATEGORIES.includes(c));
   }
 
   return categories;
