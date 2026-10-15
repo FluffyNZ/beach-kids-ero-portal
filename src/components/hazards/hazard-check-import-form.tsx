@@ -147,6 +147,14 @@ export function HazardCheckImportForm({
       min_hours: null,
       notes: "Profile created automatically from a Daily Hazard Checklist photo import — no other details were supplied.",
       can_publish_learning_stories: false,
+      room_id: null,
+      room_name: null,
+      room_color: null,
+      email: null,
+      mobile_phone: null,
+      emergency_contact_name: null,
+      emergency_contact_phone: null,
+      emergency_contact_relationship: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       document_count: 0,
@@ -154,6 +162,10 @@ export function HazardCheckImportForm({
       qualification: DEFAULT_STAFF_QUALIFICATION,
       required_docs_completed: 0,
       required_docs_total: 0,
+      // Locally-fabricated placeholder, not from the real access-level
+      // check — fails closed, same reasoning as record-form.tsx's identical
+      // pattern. Nothing here reads a restricted field off it.
+      accessLevel: "restricted",
     };
     setLocalStaff((prev) => [...prev, created]);
     setStaffId(result.staffId);
