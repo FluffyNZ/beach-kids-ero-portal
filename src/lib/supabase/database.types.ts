@@ -201,6 +201,10 @@ type StaffRow = {
   notes: string | null;
   can_publish_learning_stories: boolean;
   room_id: string | null;
+  // Flags a Float-grouped staff member (no fixed home room) to show under
+  // "Relief" instead of "Float" on the Weekly roster -- a display grouping
+  // only, not a room. See migration 0061.
+  is_relief: boolean;
   email: string | null;
   mobile_phone: string | null;
   emergency_contact_name: string | null;

@@ -129,6 +129,7 @@ export type UpdateStaffDetailsFields = {
   min_hours?: number | null;
   notes?: string | null;
   room_id?: string | null;
+  is_relief?: boolean;
   email?: string | null;
   mobile_phone?: string | null;
   emergency_contact_name?: string | null;

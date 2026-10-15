@@ -14,6 +14,7 @@ export function StaffEmploymentForm({
   payRate: initialPayRate,
   minHours: initialMinHours,
   roomId: initialRoomId,
+  isRelief: initialIsRelief,
   rooms,
   accessLevel,
   onSave,
@@ -26,6 +27,7 @@ export function StaffEmploymentForm({
   payRate: number | null;
   minHours: number | null;
   roomId: string | null;
+  isRelief: boolean;
   rooms: RosterRoom[];
   accessLevel: StaffAccessLevel;
   onSave: (fields: {
@@ -37,6 +39,7 @@ export function StaffEmploymentForm({
     pay_rate?: number | null;
     min_hours?: number | null;
     room_id?: string | null;
+    is_relief?: boolean;
   }) => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
@@ -51,6 +54,7 @@ export function StaffEmploymentForm({
   const [payRate, setPayRate] = useState(initialPayRate !== null ? String(initialPayRate) : "");
   const [minHours, setMinHours] = useState(initialMinHours !== null ? String(initialMinHours) : "");
   const [roomId, setRoomId] = useState(initialRoomId ?? "");
+  const [isRelief, setIsRelief] = useState(initialIsRelief);
 
   function markDirty() {
     setSaved(false);
@@ -101,6 +105,25 @@ export function StaffEmploymentForm({
           </select>
         </div>
       </div>
+
+      <label className="flex items-start gap-2 text-sm text-charcoal">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={isRelief}
+          onChange={(e) => {
+            setIsRelief(e.target.checked);
+            markDirty();
+          }}
+        />
+        <span>
+          Relief / casual
+          <span className="block text-xs font-normal text-charcoal/50">
+            Shows under &quot;Relief&quot; instead of &quot;Float&quot; on the Weekly roster when they have no room
+            set above. Doesn&apos;t change which room they&apos;re actually rostered to on any given shift.
+          </span>
+        </span>
+      </label>
 
       <div>
         <label className="label">Employment type</label>
@@ -208,6 +231,7 @@ export function StaffEmploymentForm({
                   contract_type: contractType || null,
                   min_hours: minHours !== "" ? Number(minHours) : null,
                   room_id: roomId || null,
+                  is_relief: isRelief,
                   ...(accessLevel === "full" ? { pay_rate: payRate !== "" ? Number(payRate) : null } : {}),
                 });
                 setSaved(true);

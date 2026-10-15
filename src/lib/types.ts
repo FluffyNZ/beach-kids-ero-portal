@@ -266,6 +266,10 @@ export type StaffMember = {
   room_id: string | null;
   room_name: string | null;
   room_color: string | null;
+  // Shows this person under "Relief" instead of "Float" on the Weekly
+  // roster when they have no fixed home room -- a display grouping only,
+  // not a room of its own. See migration 0061.
+  is_relief: boolean;
   email: string | null;
   mobile_phone: string | null;
   emergency_contact_name: string | null;

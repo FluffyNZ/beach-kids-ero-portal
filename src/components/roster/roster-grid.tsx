@@ -25,7 +25,7 @@ const LEAVE_TONE: Record<string, string> = {
   day_off: "bg-charcoal/5 text-charcoal/50",
 };
 
-type StaffOption = { id: string; full_name: string; room_id: string | null };
+type StaffOption = { id: string; full_name: string; room_id: string | null; is_relief: boolean };
 
 function timeToMinutes(value: string): number {
   const [h, m] = value.split(":").map(Number);
@@ -87,6 +87,15 @@ export function RosterGrid({
     shift: RosterShift | null;
   } | null>(null);
 
+  // Staff someone has deliberately brought into view this week via "+ Add to
+  // roster" even though they don't have a shift (or leave) yet — purely a
+  // display thing, not persisted. Once they're given a real shift they stay
+  // visible on their own (see hasEngagementThisWeek below), so this is only
+  // needed for the gap between clicking "Add" and saving their first shift.
+  const [pinnedStaffIds, setPinnedStaffIds] = useState<Set<string>>(new Set());
+  const [addingSectionId, setAddingSectionId] = useState<string | null>(null);
+  const [addPickerValue, setAddPickerValue] = useState("");
+
   const days = Array.from({ length: 5 }, (_, i) => addDays(weekStartDate, i));
 
   const shiftByStaffAndDate = new Map<string, RosterShift>();
@@ -94,17 +103,64 @@ export function RosterGrid({
 
   const ratioByRoomId = new Map(ratioRows.filter((r) => r.room).map((r) => [r.room!.id, r]));
 
+  function hasEngagementThisWeek(staffId: string): boolean {
+    const hasShift = days.some((d) => shiftByStaffAndDate.has(`${staffId}__${d}`));
+    if (hasShift) return true;
+    // Any leave touching this week — not just Approved — keeps someone
+    // visible too, since a Requested day still shows its pill on the grid
+    // and shouldn't vanish along with the row it's attached to.
+    return days.some((d) => dayLeaveFor(leave, staffId, d) !== null);
+  }
+
   // Grouped by each staff member's home room (set on their profile), not by
   // where they happen to be rostered this particular week — a day they're
   // covering a different room still shows under their usual section, with
   // that room named on the cell itself (see roomLabelForCell below).
   // Nobody with no home room set is grouped under Float, same as the room's
   // existing "not tied to one room" meaning elsewhere in the app.
+  //
+  // Float is further split into "Float" and "Relief" sub-sections, going by
+  // each person's is_relief flag (set on their profile) — Relief only shows
+  // up at all once someone's actually flagged that way. This is a display
+  // split only: it isn't a real room, so it never changes which room a
+  // Relief person is actually rostered to on a given day (still the normal
+  // Tainui/Pukewa/Ohinemuri/Float choice, same as everyone else) — see
+  // migration 0061 for why this lives on staff rather than roster_rooms.
+  //
+  // Within a section, only staff actually rostered on this week (a shift or
+  // booked leave) show by default — someone not working this particular
+  // week shouldn't clutter the grid every week regardless. "+ Add to
+  // roster" below brings anyone else in that section into view (pinned
+  // client-side via pinnedStaffIds) so their day cells can be clicked to
+  // give them a first shift; once saved they show up normally on their own.
   const floatRoom = rooms.find((r) => r.name === "Float") ?? null;
-  const sections = rooms.map((room) => ({
-    room,
-    people: staff.filter((s) => (s.room_id ?? floatRoom?.id ?? null) === room.id),
-  }));
+  const sections = rooms.flatMap((room) => {
+    const everyoneInRoom = staff.filter((s) => (s.room_id ?? floatRoom?.id ?? null) === room.id);
+    const isFloat = room.id === floatRoom?.id;
+    const everyoneInSection = isFloat ? everyoneInRoom.filter((s) => !s.is_relief) : everyoneInRoom;
+    const floatGroup = {
+      key: room.id,
+      room,
+      headerLabel: room.name,
+      isRelief: false,
+      everyoneInSection,
+      people: everyoneInSection.filter((s) => hasEngagementThisWeek(s.id) || pinnedStaffIds.has(s.id)),
+    };
+    if (!isFloat) return [floatGroup];
+
+    const reliefEveryone = everyoneInRoom.filter((s) => s.is_relief);
+    if (reliefEveryone.length === 0) return [floatGroup];
+
+    const reliefGroup = {
+      key: `${room.id}-relief`,
+      room,
+      headerLabel: "Relief",
+      isRelief: true,
+      everyoneInSection: reliefEveryone,
+      people: reliefEveryone.filter((s) => hasEngagementThisWeek(s.id) || pinnedStaffIds.has(s.id)),
+    };
+    return [floatGroup, reliefGroup];
+  });
 
   if (staff.length === 0) {
     return (
@@ -132,21 +188,30 @@ export function RosterGrid({
               ))}
             </tr>
           </thead>
-          {sections.map(({ room, people }) => {
-              const colors = getRoomColorClasses(room.color);
+          {sections.map(({ key, room, headerLabel, isRelief, people, everyoneInSection }) => {
+              // Relief isn't a real room, so it gets a neutral header
+              // instead of borrowing Float's colour — the app's colour
+              // discipline reserves colour for actual room identification.
+              const colors = isRelief
+                ? { bg: "bg-sand-100", text: "text-charcoal/70", chip: "bg-charcoal/30" }
+                : getRoomColorClasses(room.color);
               const ratioRow = ratioByRoomId.get(room.id);
+              const visibleIds = new Set(people.map((p) => p.id));
+              const hiddenCandidates = everyoneInSection.filter((s) => !visibleIds.has(s.id));
               return (
-                <tbody key={room.id}>
+                <tbody key={key}>
                   <tr className={`border-b border-charcoal/10 ${colors.bg}`}>
                     <th
                       scope="colgroup"
                       className={`sticky left-0 z-10 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide ${colors.text} ${colors.bg}`}
                     >
-                      {room.name}
-                      <span className="block text-[11px] font-normal normal-case opacity-70">Booked children</span>
+                      {headerLabel}
+                      {!isRelief && (
+                        <span className="block text-[11px] font-normal normal-case opacity-70">Booked children</span>
+                      )}
                     </th>
                     {WEEKDAY_KEYS.map((wd) => {
-                      const cell = ratioRow?.cells[wd];
+                      const cell = isRelief ? undefined : ratioRow?.cells[wd];
                       return (
                         <td key={wd} className={`px-3 py-2 text-sm font-semibold ${colors.text}`}>
                           {cell && cell.enrolledTotal > 0 ? cell.enrolledTotal : <span className="opacity-40">—</span>}
@@ -155,10 +220,16 @@ export function RosterGrid({
                     })}
                   </tr>
 
-                  {people.length === 0 ? (
+                  {people.length === 0 && everyoneInSection.length === 0 ? (
                     <tr className="border-b border-charcoal/5">
                       <td colSpan={6} className="px-4 py-2.5 text-xs text-charcoal/40">
-                        Nobody&apos;s home room is set to {room.name} — set it on a staff profile&apos;s Overview tab.
+                        Nobody&apos;s home room is set to {headerLabel} — set it on a staff profile&apos;s Overview tab.
+                      </td>
+                    </tr>
+                  ) : people.length === 0 ? (
+                    <tr className="border-b border-charcoal/5">
+                      <td colSpan={6} className="px-4 py-2.5 text-xs text-charcoal/40">
+                        Nobody from {headerLabel} is rostered on this week.
                       </td>
                     </tr>
                   ) : (
@@ -239,6 +310,62 @@ export function RosterGrid({
                       );
                     })
                   )}
+
+                  {hiddenCandidates.length > 0 && (
+                    <tr className="border-b border-charcoal/5">
+                      <td colSpan={6} className="px-4 py-2 align-top">
+                        {addingSectionId === key ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={addPickerValue}
+                              onChange={(e) => setAddPickerValue(e.target.value)}
+                              className="input w-auto min-w-[180px] py-1 text-xs"
+                              autoFocus
+                            >
+                              <option value="">Choose a staff member…</option>
+                              {hiddenCandidates.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.full_name}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              disabled={!addPickerValue}
+                              className="btn-secondary px-2.5 py-1 text-xs disabled:opacity-40"
+                              onClick={() => {
+                                if (!addPickerValue) return;
+                                setPinnedStaffIds((prev) => new Set(prev).add(addPickerValue));
+                                setAddingSectionId(null);
+                                setAddPickerValue("");
+                              }}
+                            >
+                              Add
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost px-2.5 py-1 text-xs"
+                              onClick={() => {
+                                setAddingSectionId(null);
+                                setAddPickerValue("");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 text-xs font-medium text-charcoal/50 hover:text-charcoal"
+                            onClick={() => setAddingSectionId(key)}
+                          >
+                            <PlusIcon className="h-3.5 w-3.5" />
+                            Add someone from {headerLabel} to this week
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               );
             })}
@@ -256,6 +383,12 @@ export function RosterGrid({
               </span>
             );
           })}
+          {staff.some((s) => s.is_relief) && (
+            <span className="badge bg-sand-100 text-charcoal/70">
+              <span className="h-2 w-2 rounded-full bg-charcoal/30" />
+              Relief
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap gap-3 border-l border-charcoal/10 pl-4">
           {STAFF_LEAVE_TYPES.map((t) => (

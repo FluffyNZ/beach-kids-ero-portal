@@ -81,7 +81,7 @@ export default async function RosterPage({
       <RosterGrid
         weekStartDate={weekStartDate}
         shifts={week?.shifts ?? []}
-        staff={staff.map((s) => ({ id: s.id, full_name: s.full_name, room_id: s.room_id }))}
+        staff={staff.map((s) => ({ id: s.id, full_name: s.full_name, room_id: s.room_id, is_relief: s.is_relief }))}
         rooms={rooms}
         leave={leave}
         ratioRows={ratioSummary.rows}
