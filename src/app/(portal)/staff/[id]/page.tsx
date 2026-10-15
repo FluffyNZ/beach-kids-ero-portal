@@ -14,9 +14,11 @@ import {
 } from "@/lib/actions/staff";
 import { StaffAvatar } from "@/components/staff/staff-avatar";
 import { StaffPhotoUpload } from "@/components/staff/staff-photo-upload";
-import { StaffContactForm } from "@/components/staff/staff-contact-form";
-import { StaffProfileForm } from "@/components/staff/staff-profile-form";
-import { StaffAvailabilityForm } from "@/components/staff/staff-availability-form";
+import { StaffContactSection } from "@/components/staff/staff-contact-section";
+import { StaffAvailabilitySection } from "@/components/staff/staff-availability-section";
+import { StaffDocumentsSummary } from "@/components/staff/staff-documents-summary";
+import { StaffQualificationsSummary } from "@/components/staff/staff-qualifications-summary";
+import { StaffGrowthSummary } from "@/components/staff/staff-growth-summary";
 import { StaffEmploymentForm } from "@/components/staff/staff-employment-form";
 import { StaffQualificationForm } from "@/components/staff/staff-qualification-form";
 import { RequiredDocumentsPanel } from "@/components/staff/required-documents-panel";
@@ -111,31 +113,34 @@ export default async function StaffDetailPage({
       }).length
     : 0;
 
+  // Compact summary strip + two-column dashboard layout, per the Overview
+  // redesign brief: Room/Employment/Available days/Contracted hours up top,
+  // then Left = Personal & contact / Weekly availability / Recent
+  // documents, Right = Qualifications & checks / Upcoming renewals /
+  // Professional growth. Every card here either reads real saved data
+  // straight off staffMember (showing "Not recorded" when it's missing) or
+  // links through to the full tab — nothing here is a second source of
+  // truth for anything editable.
   const overviewContent = (
     <div className="flex flex-col gap-5">
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Photo</h2>
-        <StaffPhotoUpload staffId={staffMember.id} fullName={staffMember.full_name} photoUrl={staffMember.photo_url} />
-      </section>
-
-      <section className="card grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
-        <div>
+      <section className="card grid grid-cols-2 divide-charcoal/5 p-5 sm:grid-cols-4 sm:divide-x">
+        <div className="pr-4 sm:pl-0">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Room</p>
           <p className="mt-0.5 text-sm font-medium text-charcoal">{staffMember.room_name ?? "Not recorded"}</p>
         </div>
-        <div>
+        <div className="pl-4 pr-4 sm:pl-6">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Employment</p>
           <p className="mt-0.5 text-sm font-medium text-charcoal">
             {staffMember.contract_type ? STAFF_CONTRACT_TYPE_LABEL[staffMember.contract_type] : "Not recorded"}
           </p>
         </div>
-        <div>
+        <div className="pr-4 pt-4 sm:pl-6 sm:pt-0">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Available days</p>
           <p className="mt-0.5 text-sm font-medium text-charcoal">
             {availabilityDaysCount > 0 ? `${availabilityDaysCount} day${availabilityDaysCount === 1 ? "" : "s"}/week` : "Not recorded"}
           </p>
         </div>
-        <div>
+        <div className="pl-4 pt-4 sm:pl-6 sm:pt-0">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Contracted hours</p>
           <p className="mt-0.5 text-sm font-medium text-charcoal">
             {staffMember.min_hours !== null ? `${staffMember.min_hours} hrs/week` : "Not recorded"}
@@ -143,57 +148,58 @@ export default async function StaffDetailPage({
         </div>
       </section>
 
-      <section className="card p-5">
-        <StaffContactForm
-          email={staffMember.email}
-          mobilePhone={staffMember.mobile_phone}
-          dateOfBirth={staffMember.date_of_birth}
-          emergencyContactName={staffMember.emergency_contact_name}
-          emergencyContactPhone={staffMember.emergency_contact_phone}
-          emergencyContactRelationship={staffMember.emergency_contact_relationship}
-          onSave={updateStaffDetails.bind(null, staffMember.id)}
-        />
-      </section>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="flex flex-col gap-5">
+          <StaffContactSection
+            staffId={staffMember.id}
+            email={staffMember.email}
+            mobilePhone={staffMember.mobile_phone}
+            dateOfBirth={staffMember.date_of_birth}
+            emergencyContactName={staffMember.emergency_contact_name}
+            emergencyContactPhone={staffMember.emergency_contact_phone}
+            emergencyContactRelationship={staffMember.emergency_contact_relationship}
+            notes={staffMember.notes}
+            onSave={updateStaffDetails.bind(null, staffMember.id)}
+          />
+          <StaffAvailabilitySection
+            availability={staffMember.availability}
+            onSave={updateStaffAvailability.bind(null, staffMember.id)}
+          />
+          <StaffDocumentsSummary staffId={staffMember.id} documents={staffMember.documents} />
+        </div>
 
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Weekly availability</h2>
-        <p className="mb-3 text-sm text-charcoal/50">
-          When this person is generally available to work — separate from their contracted hours above and from
-          actual rostered shifts in Roster, which never overwrite each other.
-        </p>
-        <StaffAvailabilityForm
-          availability={staffMember.availability}
-          onSave={updateStaffAvailability.bind(null, staffMember.id)}
-        />
-      </section>
+        <div className="flex flex-col gap-5">
+          <StaffQualificationsSummary staffId={staffMember.id} slots={qualificationSlots} />
 
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Other notes <span className="text-charcoal/40">(general — see the Notes tab for dated management notes)</span>
-        </h2>
-        <StaffProfileForm notes={staffMember.notes} onSave={updateStaffDetails.bind(null, staffMember.id)} />
-      </section>
+          <section className="card p-5">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Upcoming renewals</h2>
+            {renewalItems.length === 0 ? (
+              <p className="text-sm text-charcoal/50">Nothing due for renewal right now.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {renewalItems.map((item, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-charcoal/10 px-3 py-2">
+                    <span className="text-sm text-charcoal">{item.label}</span>
+                    <StatusBadge tone={item.alert.tone}>{item.alert.label}</StatusBadge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Upcoming renewals</h2>
-        {renewalItems.length === 0 ? (
-          <p className="text-sm text-charcoal/50">Nothing due for renewal right now.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {renewalItems.map((item, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-charcoal/10 px-3 py-2">
-                <span className="text-sm text-charcoal">{item.label}</span>
-                <StatusBadge tone={item.alert.tone}>{item.alert.label}</StatusBadge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <StaffGrowthSummary staffId={staffMember.id} cycles={staffMember.growthCycles} />
+        </div>
+      </div>
     </div>
   );
 
   const employmentContent = (
     <div className="flex flex-col gap-5">
+      <section className="card p-5">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Photo</h2>
+        <StaffPhotoUpload staffId={staffMember.id} fullName={staffMember.full_name} photoUrl={staffMember.photo_url} />
+      </section>
+
       <section className="card p-5">
         <StaffEmploymentForm
           fullName={staffMember.full_name}
