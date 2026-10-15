@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   createStaffGrowthCycle,
   updateStaffGrowthCycle,
+  deleteStaffGrowthCycle,
   addStaffGrowthGoal,
   toggleStaffGrowthGoal,
   deleteStaffGrowthGoal,
@@ -61,6 +62,21 @@ function CycleCard({ staffId, cycle }: { staffId: string; cycle: StaffGrowthCycl
   const [reviewDate, setReviewDate] = useState(cycle.review_date ?? "");
   const [saved, setSaved] = useState(false);
   const [newGoal, setNewGoal] = useState("");
+  // Inline confirm, same pattern as the staff-leave list's delete control —
+  // no browser confirm() popup, just a second click to be sure. A cycle can
+  // hold goals/reflections someone cares about, so this isn't a single-click
+  // action, but it also isn't the whole-profile DeleteStaffButton's
+  // type-the-name flow — that's for deleting a person's entire record
+  // (documents, qualifications, safety checklist and all), this is just one
+  // growth cycle.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  function handleDeleteCycle() {
+    startTransition(async () => {
+      await deleteStaffGrowthCycle(staffId, cycle.id);
+      router.refresh();
+    });
+  }
 
   return (
     <div className="card flex flex-col gap-4 p-5">
@@ -74,34 +90,67 @@ function CycleCard({ staffId, cycle }: { staffId: string; cycle: StaffGrowthCycl
             {cycle.start_date ? `Started ${formatDate(cycle.start_date)}` : "Start date not recorded"}
           </p>
         </div>
-        {cycle.status === "open" ? (
-          <button
-            type="button"
-            disabled={pending}
-            className="btn-ghost"
-            onClick={() =>
-              startTransition(async () => {
-                await updateStaffGrowthCycle(staffId, cycle.id, { status: "closed" });
-                router.refresh();
-              })
-            }
-          >
-            Close cycle
-          </button>
+
+        {confirmingDelete ? (
+          <div className="flex shrink-0 items-center gap-2 text-xs">
+            <span className="text-charcoal/60">Delete this cycle?</span>
+            <button
+              type="button"
+              disabled={pending}
+              className="btn-danger px-2.5 py-1 text-xs"
+              onClick={handleDeleteCycle}
+            >
+              {pending ? "Deleting…" : "Delete"}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost px-2.5 py-1 text-xs"
+              onClick={() => setConfirmingDelete(false)}
+            >
+              Cancel
+            </button>
+          </div>
         ) : (
-          <button
-            type="button"
-            disabled={pending}
-            className="btn-ghost"
-            onClick={() =>
-              startTransition(async () => {
-                await updateStaffGrowthCycle(staffId, cycle.id, { status: "open" });
-                router.refresh();
-              })
-            }
-          >
-            Reopen cycle
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {cycle.status === "open" ? (
+              <button
+                type="button"
+                disabled={pending}
+                className="btn-ghost"
+                onClick={() =>
+                  startTransition(async () => {
+                    await updateStaffGrowthCycle(staffId, cycle.id, { status: "closed" });
+                    router.refresh();
+                  })
+                }
+              >
+                Close cycle
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={pending}
+                className="btn-ghost"
+                onClick={() =>
+                  startTransition(async () => {
+                    await updateStaffGrowthCycle(staffId, cycle.id, { status: "open" });
+                    router.refresh();
+                  })
+                }
+              >
+                Reopen cycle
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={pending}
+              className="rounded-lg p-1.5 text-charcoal/30 hover:bg-status-actionBg hover:text-status-action"
+              aria-label="Delete cycle"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
 

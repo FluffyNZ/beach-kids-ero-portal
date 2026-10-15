@@ -103,6 +103,20 @@ export function mondayOfDateString(dateStr: string): string {
   return utc.toISOString().slice(0, 10);
 }
 
+/** The `child_enrolled_schedule` weekday key ("mon".."fri") for a plain
+ * "YYYY-MM-DD" date string, UTC-safe like `addDays`/`mondayOfDateString` —
+ * or `null` for a Saturday/Sunday, since the centre (and that schedule
+ * table) only has columns for weekdays. Used by the Sunblock checklist to
+ * turn "which day is this" into "which of a child's five schedule columns
+ * do we read". */
+export function weekdayKeyOfDateString(dateStr: string): "mon" | "tue" | "wed" | "thu" | "fri" | null {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  const keys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+  const key = keys[utc.getUTCDay()];
+  return key === "sun" || key === "sat" ? null : key;
+}
+
 /** A full date label for things like the dashboard greeting, e.g.
  * "Monday, 24 August 2026". Takes a real `Date` (not a plain date string)
  * since it's only ever used with "now". */

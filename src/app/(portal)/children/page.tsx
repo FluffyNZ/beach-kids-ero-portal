@@ -43,7 +43,12 @@ export default async function ChildrenPage({
             .
           </p>
         </div>
-        <NewChildButton rooms={rooms} billPayerOptions={billPayerOptions} />
+        <div className="flex items-center gap-2">
+          <Link href="/children/sunblock" className="btn-ghost">
+            Sunblock checklist
+          </Link>
+          <NewChildButton rooms={rooms} billPayerOptions={billPayerOptions} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
