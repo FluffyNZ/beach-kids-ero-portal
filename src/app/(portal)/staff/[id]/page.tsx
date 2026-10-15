@@ -305,7 +305,7 @@ export default async function StaffDetailPage({
 
       <section className="card p-5">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Teaching qualification, practising certificate, first aid &amp; safety-check records
+          Teaching qualification, practising certificate &amp; first aid records
         </h2>
         <RequiredDocumentsPanel
           slots={qualificationSlots}

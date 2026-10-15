@@ -516,16 +516,16 @@ export const STAFF_DOCUMENT_CATEGORY_LABEL: Record<StaffDocumentCategory, string
 };
 
 // Which document categories belong on the Qualifications tab (teaching
-// qualification, practising certificate/registration, first aid and
-// safety-check records) vs the general Documents tab (contracts,
-// certificates and everything else) — per the brief's split between the
-// two tabs. Built from the existing category lists above rather than a
-// fresh fixed list, so a category never silently goes missing from both
-// tabs if the categories list itself changes later.
+// qualification/registration, police verification and first aid) vs the
+// general Documents tab (contracts, certificates, safety checking and
+// everything else) — per the brief's split between the two tabs. Safety
+// checking moved to the Documents tab on 2026-10-15: it's compliance
+// paperwork, not a qualification. Built from the existing category lists
+// above rather than a fresh fixed list, so a category never silently goes
+// missing from both tabs if the categories list itself changes later.
 export const STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "qualification",
   "police_vet",
-  "safety_check",
   "first_aid",
 ];
 
