@@ -169,7 +169,11 @@ export default async function StaffDetailPage({
         </div>
 
         <div className="flex flex-col gap-5">
-          <StaffQualificationsSummary staffId={staffMember.id} slots={qualificationSlots} />
+          <StaffQualificationsSummary
+            staffId={staffMember.id}
+            slots={qualificationSlots}
+            otherDocuments={qualificationOtherDocs}
+          />
 
           <section className="card p-5">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Upcoming renewals</h2>

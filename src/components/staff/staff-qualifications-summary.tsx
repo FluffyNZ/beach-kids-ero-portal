@@ -1,18 +1,55 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
-import { STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES, STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
+import { STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
 import { getDeadlineAlert } from "@/lib/evidence-deadline";
 import type { RequiredDocumentSlot } from "@/lib/staff-required-documents";
+import type { StaffDocument } from "@/lib/types";
+import type { StaffDocumentCategory } from "@/lib/supabase/database.types";
 
-/** Overview's read-only "Qualifications & checks" card — one row per
- * qualification-tab document category (teaching qualification/registration,
- * police verification, safety checking, first aid), using the real category
- * labels already used on the Qualifications tab rather than inventing new
- * ones. Status is "Not recorded" when nothing is on file, the same renewal
- * alert as the Qualifications tab when the newest file on file has an
- * expiry date approaching, or a plain "On file" otherwise. */
-export function StaffQualificationsSummary({ staffId, slots }: { staffId: string; slots: RequiredDocumentSlot[] }) {
-  const byCategory = new Map(slots.map((s) => [s.category, s] as const));
+/** Overview's read-only "Qualifications & checks" card.
+ *
+ * Which categories are actually required already depends on qualification
+ * status elsewhere (getRequiredStaffDocumentCategories, used to build
+ * `slots`): a qualified staff member doesn't require Police Verification,
+ * and an unqualified one doesn't require the teaching
+ * qualification/registration. This card must follow that, not show a fixed
+ * list of categories regardless of status — otherwise it flags a category
+ * as "Not recorded" for someone who was never required to have it, which
+ * is a false alarm, not a gap.
+ *
+ * `slots` (the already status-aware required categories, filtered to the
+ * Qualifications tab by the caller) always get a row, "Not recorded" or
+ * otherwise, since those genuinely are required for this person right now.
+ * `otherDocuments` covers the optional ones on this tab (first aid) — those
+ * only get a row when something's actually on file, since an optional
+ * document being missing isn't something to flag at all. */
+export function StaffQualificationsSummary({
+  staffId,
+  slots,
+  otherDocuments,
+}: {
+  staffId: string;
+  slots: RequiredDocumentSlot[];
+  otherDocuments: StaffDocument[];
+}) {
+  const requiredRows = slots.map((slot) => ({
+    category: slot.category,
+    newest: slot.documents[0] ?? null,
+  }));
+
+  // otherDocuments is already newest-first per category (see
+  // staff-required-documents.ts), so the first match per category is the
+  // newest one on file.
+  const optionalByCategory = new Map<StaffDocumentCategory, StaffDocument>();
+  otherDocuments.forEach((d) => {
+    if (!optionalByCategory.has(d.category)) optionalByCategory.set(d.category, d);
+  });
+  const optionalRows = Array.from(optionalByCategory.entries()).map(([category, doc]) => ({
+    category,
+    newest: doc as StaffDocument | null,
+  }));
+
+  const rows = [...requiredRows, ...optionalRows];
 
   return (
     <section className="card p-5">
@@ -23,26 +60,28 @@ export function StaffQualificationsSummary({ staffId, slots }: { staffId: string
         </Link>
       </div>
 
-      <ul className="flex flex-col divide-y divide-charcoal/5">
-        {STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES.map((category) => {
-          const slot = byCategory.get(category);
-          const newest = slot?.documents[0] ?? null;
-          const alert = newest ? getDeadlineAlert(null, newest.expiry_date) : null;
+      {rows.length === 0 ? (
+        <p className="text-sm text-charcoal/40">Nothing required or on file here yet.</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-charcoal/5">
+          {rows.map(({ category, newest }) => {
+            const alert = newest ? getDeadlineAlert(null, newest.expiry_date) : null;
 
-          return (
-            <li key={category} className="flex items-center justify-between gap-3 py-2">
-              <span className="text-sm text-charcoal">{STAFF_DOCUMENT_CATEGORY_LABEL[category]}</span>
-              {!newest ? (
-                <StatusBadge tone="action">Not recorded</StatusBadge>
-              ) : alert ? (
-                <StatusBadge tone={alert.tone}>{alert.label}</StatusBadge>
-              ) : (
-                <StatusBadge tone="ready">On file</StatusBadge>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+            return (
+              <li key={category} className="flex items-center justify-between gap-3 py-2">
+                <span className="text-sm text-charcoal">{STAFF_DOCUMENT_CATEGORY_LABEL[category]}</span>
+                {!newest ? (
+                  <StatusBadge tone="action">Not recorded</StatusBadge>
+                ) : alert ? (
+                  <StatusBadge tone={alert.tone}>{alert.label}</StatusBadge>
+                ) : (
+                  <StatusBadge tone="ready">On file</StatusBadge>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }
