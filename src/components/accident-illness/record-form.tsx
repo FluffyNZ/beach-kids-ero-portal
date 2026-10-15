@@ -179,6 +179,14 @@ export function RecordForm({
       min_hours: null,
       notes: "Profile created automatically from an Accident & Illness photo import — no other details were supplied.",
       can_publish_learning_stories: false,
+      room_id: null,
+      room_name: null,
+      room_color: null,
+      email: null,
+      mobile_phone: null,
+      emergency_contact_name: null,
+      emergency_contact_phone: null,
+      emergency_contact_relationship: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       document_count: 0,
@@ -186,6 +194,14 @@ export function RecordForm({
       qualification: DEFAULT_STAFF_QUALIFICATION,
       required_docs_completed: 0,
       required_docs_total: 0,
+      // This is a locally-fabricated placeholder for a just-created minimal
+      // profile, not something that went through getStaffList/getStaffById's
+      // real access-level check — fails closed to "restricted" rather than
+      // assuming "full", same reasoning as isAuthorisedManagement's own
+      // fallback. Nothing in this form reads a restricted field off it
+      // (only full_name/status, for the staff-signature dropdown), so this
+      // only matters if this object is ever passed somewhere that does.
+      accessLevel: "restricted",
     };
     setLocalStaff((prev) => [...prev, created]);
     setStaffId(result.staffId);
