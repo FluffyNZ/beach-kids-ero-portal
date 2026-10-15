@@ -21,6 +21,14 @@ const LOW_CONFIDENCE_LABELS: Record<string, string> = {
   expiry_date_guess: "Next due / expiry",
 };
 
+// Default the dropdown to "Other" rather than whatever happens to be first
+// in the categories list (that order drives display order elsewhere on the
+// profile, so it's not changed here) — falls back to the first category on
+// the rare chance a caller passes a list that doesn't include "other".
+function defaultCategoryFor(categories: StaffDocumentCategory[]): StaffDocumentCategory {
+  return categories.includes("other") ? "other" : categories[0] ?? "other";
+}
+
 export function AddStaffDocumentModal({
   open,
   onClose,
@@ -44,7 +52,7 @@ export function AddStaffDocumentModal({
 
   // Category and the two dates are controlled so a photo read can pre-fill
   // them, while staying exactly as editable as if typed in by hand.
-  const [category, setCategory] = useState<StaffDocumentCategory>(fixedCategory ?? categories[0] ?? "other");
+  const [category, setCategory] = useState<StaffDocumentCategory>(fixedCategory ?? defaultCategoryFor(categories));
   const [documentDate, setDocumentDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
 
@@ -59,7 +67,7 @@ export function AddStaffDocumentModal({
   // whatever the previous upload left behind.
   useEffect(() => {
     if (!open) return;
-    setCategory(fixedCategory ?? categories[0] ?? "other");
+    setCategory(fixedCategory ?? defaultCategoryFor(categories));
     setDocumentDate("");
     setExpiryDate("");
     setSelectedFile(null);
