@@ -11,6 +11,7 @@ import type {
   StaffContractType,
   EmergencyDrillType,
   StaffQualificationStatus,
+  StaffGrowthCycleStatus,
   ChildStatus,
   StockSupplier,
   FinanceIncomeSource,
@@ -18,7 +19,9 @@ import type {
   HazardCheckCategory,
   HazardRiskLevel,
   StaffLeaveType,
+  StaffLeaveStatus,
 } from "@/lib/supabase/database.types";
+import type { EmailTemplateCategory, EmailMessageStatus, EmailReminderKind } from "@/lib/types";
 
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -29,8 +32,9 @@ export const NAV_ITEMS = [
   { href: "/learning/stories", label: "Learning Stories", icon: "learning" },
   { href: "/staff", label: "Staff", icon: "staff" },
   { href: "/roster", label: "Roster", icon: "roster" },
-  { href: "/children", label: "Children & Fees", icon: "children" },
+  { href: "/children", label: "Children", icon: "children" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
+  { href: "/email", label: "Email", icon: "email" },
   { href: "/stock-orders", label: "Stock Orders", icon: "stock" },
   { href: "/finances", label: "Finances", icon: "finances" },
   { href: "/actions", label: "Actions", icon: "actions" },
@@ -38,59 +42,193 @@ export const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ] as const;
 
-// Sidebar-only grouping for the Contra-style grouped nav (small uppercase
-// section labels above clusters of related links). Deliberately kept
-// separate from the flat NAV_ITEMS above rather than deriving one from the
-// other, so mobile-nav's primary/more split (and anything else already
-// relying on the flat list) is untouched by this.
-export const NAV_GROUPS = [
-  {
-    label: "Overview",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
-      { href: "/actions", label: "Actions", icon: "actions" },
-    ],
-  },
-  {
-    label: "ERO Compliance",
-    items: [
-      { href: "/checklist", label: "ERO Checklist", icon: "checklist" },
-      { href: "/evidence", label: "Evidence Library", icon: "library" },
-      { href: "/policies", label: "Policies", icon: "policies" },
-      { href: "/records", label: "Records & Compliance", icon: "records" },
-      { href: "/audit-pack", label: "Audit Pack", icon: "pack" },
-    ],
-  },
-  {
-    label: "Day To Day",
-    items: [
-      { href: "/staff", label: "Staff", icon: "staff" },
-      { href: "/roster", label: "Roster", icon: "roster" },
-      { href: "/children", label: "Children & Fees", icon: "children" },
-      { href: "/calendar", label: "Calendar", icon: "calendar" },
-      { href: "/learning/stories", label: "Learning Stories", icon: "learning" },
-    ],
-  },
-  {
-    label: "Business",
-    items: [
-      { href: "/stock-orders", label: "Stock Orders", icon: "stock" },
-      { href: "/finances", label: "Finances", icon: "finances" },
-    ],
-  },
-  {
-    label: "General",
-    items: [{ href: "/settings", label: "Settings", icon: "settings" }],
-  },
-] as const;
+// ---------------------------------------------------------------------------
+// Application shell navigation (Phase 1 -- CRM-direction IA)
+// ---------------------------------------------------------------------------
+//
+// This is the sidebar's information architecture, distinct from the flat
+// NAV_ITEMS above (which mobile-nav.tsx still uses as-is -- untouched by
+// this pass). Every item here maps to a route that already exists and
+// already works; nothing new was built to fill a gap. Two kinds of items
+// don't have their own dedicated page yet:
+//
+//   - status: "soon"  -- no existing implementation at all (e.g. Reports).
+//     Rendered disabled, never a real link, so nothing fake is exposed.
+//     ("Messages" used to be one of these -- it's now the real, built
+//     "Email" page below, linking to /email.)
+//   - children        -- an existing feature (e.g. Evidence Library, Audit
+//     Pack) that's real and built, but doesn't have its "final" combined
+//     section yet, so it's nested under the closest existing page instead
+//     of being dropped from the nav.
+//
+// A few labels intentionally point at an existing page whose current name
+// doesn't match the new label ("Tasks" -> /actions, "Attendance" ->
+// /children/hours, "Health & Safety" -> /records) -- see DESIGN_SYSTEM.md
+// for the reasoning behind each of those. ("Rooms" -> /roster used to be
+// one of these too, but Ethan asked for the nav label to just say "Roster"
+// since that's what the page actually is.)
 
-export const STAFF_LEAVE_TYPES: StaffLeaveType[] = ["annual", "sick", "unpaid", "other"];
+export type ShellNavStatus = "active" | "soon";
+
+export type ShellNavChild = {
+  href: string;
+  label: string;
+};
+
+export type ShellNavItem = {
+  label: string;
+  icon: string;
+  status: ShellNavStatus;
+  href?: string; // set when status is "active"
+  children?: ShellNavChild[];
+  // Set on exactly the Email nav item — tells the sidebar to look up a live
+  // count (outstanding birthday/welcome/farewell reminders) in the
+  // `badgeCounts` map passed in from the layout, rather than baking a
+  // number into this static list.
+  badgeKey?: "emailReminders";
+};
+
+export type ShellNavGroup = {
+  label: string;
+  items: ShellNavItem[];
+};
+
+export const NAV_GROUPS: ShellNavGroup[] = [
+  {
+    label: "Home",
+    items: [{ href: "/dashboard", label: "Home", icon: "home", status: "active" }],
+  },
+  {
+    label: "Centre",
+    items: [
+      { href: "/children", label: "Children", icon: "children", status: "active" },
+      { href: "/staff", label: "Staff", icon: "staff", status: "active" },
+      { href: "/roster", label: "Roster", icon: "rooms", status: "active" },
+      { href: "/children/hours", label: "Attendance", icon: "attendance", status: "active" },
+    ],
+  },
+  {
+    label: "Engage",
+    items: [
+      { href: "/learning/stories", label: "Learning", icon: "learning", status: "active" },
+      { href: "/email", label: "Email", icon: "email", status: "active", badgeKey: "emailReminders" },
+      { href: "/calendar", label: "Calendar", icon: "calendar", status: "active" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/actions", label: "Tasks", icon: "actions", status: "active" },
+      { label: "Records", icon: "recordsFolder", status: "soon" },
+      { href: "/finances", label: "Finance", icon: "finances", status: "active" },
+      // Not in the brief's list, but a real, already-built feature that
+      // needs a home somewhere so it isn't dropped from the nav entirely --
+      // flagged in DESIGN_SYSTEM.md, easy to move once you tell me where.
+      { href: "/stock-orders", label: "Stock Orders", icon: "stock", status: "active" },
+    ],
+  },
+  {
+    label: "Compliance",
+    items: [
+      {
+        href: "/checklist",
+        label: "ERO & Compliance",
+        icon: "checklist",
+        status: "active",
+        children: [
+          { href: "/checklist", label: "ERO Checklist" },
+          { href: "/evidence", label: "Evidence Library" },
+          { href: "/audit-pack", label: "Audit Pack" },
+        ],
+      },
+      { href: "/policies", label: "Policies", icon: "policies", status: "active" },
+      { href: "/records", label: "Health & Safety", icon: "records", status: "active" },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [{ label: "Reports", icon: "reports", status: "soon" }],
+  },
+];
+
+// Rendered as their own unlabelled group at the very bottom of the sidebar,
+// above the account footer.
+export const NAV_BOTTOM_ITEMS: ShellNavItem[] = [
+  { label: "Help", icon: "help", status: "soon" },
+  { href: "/settings", label: "Settings", icon: "settings", status: "active" },
+];
+
+type PageTitleEntry = { href: string; label: string };
+
+const PAGE_TITLE_ENTRIES: PageTitleEntry[] = (() => {
+  const entries: PageTitleEntry[] = [];
+  NAV_GROUPS.forEach((group) => {
+    group.items.forEach((item) => {
+      if (item.href) entries.push({ href: item.href, label: item.label });
+      item.children?.forEach((child) => entries.push({ href: child.href, label: child.label }));
+    });
+  });
+  NAV_BOTTOM_ITEMS.forEach((item) => {
+    if (item.href) entries.push({ href: item.href, label: item.label });
+  });
+  return entries;
+})();
+
+/** Derives the persistent top header's page title (Phase 3) from the
+ * current route, by matching it against the same NAV_GROUPS/NAV_BOTTOM_ITEMS
+ * data the sidebar already renders — so every page gets a consistent header
+ * title without each one having to declare it separately. A route nested
+ * under a nav item (e.g. "/children/123", "/roster/ratios") falls back to
+ * that item's label; among several matches, the longest (most specific)
+ * href wins. */
+export function getPageTitle(pathname: string): string {
+  const matches = PAGE_TITLE_ENTRIES.filter(
+    (entry) => pathname === entry.href || pathname.startsWith(`${entry.href}/`)
+  );
+  if (matches.length === 0) return "Beach Kids";
+  return matches.reduce((best, entry) => (entry.href.length > best.href.length ? entry : best)).label;
+}
+
+// A plain Mon-Fri weekday list with no "server-only" import attached, so it
+// can be used from client components too (e.g. StaffAvailabilityForm) —
+// lib/data/attendance-roll.ts re-exports this as ATTENDANCE_WEEKDAYS for its
+// existing server-side callers, rather than every caller needing its own
+// copy of the same 5 rows.
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri";
+
+export const WEEKDAYS: Array<{ key: Weekday; label: string }> = [
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+];
+
+export const STAFF_LEAVE_TYPES: StaffLeaveType[] = [
+  "annual",
+  "sick",
+  "unpaid",
+  "other",
+  "unavailable",
+  "day_off",
+];
 
 export const STAFF_LEAVE_TYPE_LABEL: Record<StaffLeaveType, string> = {
   annual: "Annual",
   sick: "Sick",
   unpaid: "Unpaid",
   other: "Other",
+  unavailable: "Unavailable",
+  day_off: "Day off",
+};
+
+export const STAFF_LEAVE_STATUSES: StaffLeaveStatus[] = ["requested", "approved", "declined", "cancelled"];
+
+export const STAFF_LEAVE_STATUS_LABEL: Record<StaffLeaveStatus, string> = {
+  requested: "Requested",
+  approved: "Approved",
+  declined: "Declined",
+  cancelled: "Cancelled",
 };
 
 export const STOCK_SUPPLIERS: StockSupplier[] = ["gilmours", "qizzle", "clean_boss"];
@@ -100,6 +238,62 @@ export const STOCK_SUPPLIER_LABEL: Record<StockSupplier, string> = {
   qizzle: "Qizzle",
   clean_boss: "Clean Boss",
 };
+
+// ---------------------------------------------------------------------------
+// Email feature labels/tones (see src/lib/data/email.ts, src/app/(portal)/email)
+// ---------------------------------------------------------------------------
+
+export const EMAIL_TEMPLATE_CATEGORIES: EmailTemplateCategory[] = ["enrolment", "everyday", "fees", "events"];
+
+export const EMAIL_TEMPLATE_CATEGORY_LABEL: Record<EmailTemplateCategory, string> = {
+  enrolment: "Enquiries & Enrolment",
+  everyday: "Everyday & Updates",
+  fees: "Fees & Admin",
+  events: "Events & Farewells",
+};
+
+export const EMAIL_REMINDER_KIND_LABEL: Record<EmailReminderKind, string> = {
+  birthday: "Birthday",
+  welcome: "Welcome",
+  farewell: "Farewell",
+};
+
+/** Which seeded template a reminder's "Prepare email" button starts from —
+ * see migration 0050's seed data for these three keys. */
+export const EMAIL_REMINDER_TEMPLATE_KEY: Record<EmailReminderKind, string> = {
+  birthday: "birthday_wishes",
+  welcome: "welcome",
+  farewell: "farewell",
+};
+
+export const EMAIL_MESSAGE_STATUS_LABEL: Record<EmailMessageStatus, string> = {
+  draft: "Draft",
+  sending: "Sending",
+  sent: "Sent",
+  failed: "Failed",
+};
+
+export function emailMessageStatusTone(status: EmailMessageStatus): StatusTone {
+  switch (status) {
+    case "sent":
+      return "ready";
+    case "draft":
+      return "neutral";
+    case "sending":
+      return "attention";
+    case "failed":
+      return "action";
+  }
+}
+
+/** Tone for a reminder's handled-state chip on the Email page's two "coming
+ * up" panels — `null` (nothing drafted yet) is the one that should actually
+ * catch the eye, since it's the one still needing action. */
+export function emailReminderTone(alreadyHandled: "draft" | "sent" | null): StatusTone {
+  if (alreadyHandled === "sent") return "ready";
+  if (alreadyHandled === "draft") return "neutral";
+  return "attention";
+}
 
 // Suggestions only, offered via a datalist on the outgoing form — not an
 // enforced enum, since real overhead categories vary business to business
@@ -254,13 +448,18 @@ export const EMERGENCY_DRILL_TYPE_LABEL: Record<EmergencyDrillType, string> = {
 // The fixed set of documents every staff profile needs on file — this is
 // what the Required Documents ring on each profile is built from. Order
 // here is the display order on the profile.
+// "induction" used to be in this list — it's now tracked by the dedicated
+// Induction Pack section on the profile instead, so it's no longer counted
+// as a required document for anyone (moved down to STAFF_DOCUMENT_CATEGORIES
+// below, so any file already on file for it stays visible under "Other
+// documents").
 export const REQUIRED_STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "contract",
   "police_vet",
+  "safety_check",
   "staff_profile_form",
   "identification",
   "secondary_identification",
-  "induction",
   "tax_kiwisaver",
   "cv_interview",
   "job_description",
@@ -273,16 +472,37 @@ export const REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
   "pay_parity_agreement",
 ];
 
+// Directors aren't kaiako on the floor day-to-day and run a much lighter
+// paperwork trail than classroom staff — per Ethan (2026-10-15), a
+// director's required documents are exactly these three, full stop. This
+// is deliberately a short, fixed list rather than "everything minus a few
+// exemptions": it doesn't grow if REQUIRED_STAFF_DOCUMENT_CATEGORIES gains
+// a new category later, and it applies regardless of qualification status
+// (a qualified director still only needs these three, not the
+// qualification/pay-parity documents too).
+export const DIRECTOR_REQUIRED_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "safety_check",
+  "identification",
+  "secondary_identification",
+];
+
 export function getRequiredStaffDocumentCategories(
-  qualificationStatus: StaffQualificationStatus
+  qualificationStatus: StaffQualificationStatus,
+  contractType?: StaffContractType | null
 ): StaffDocumentCategory[] {
+  if (contractType === "director") {
+    return DIRECTOR_REQUIRED_DOCUMENT_CATEGORIES;
+  }
+
+  let categories = REQUIRED_STAFF_DOCUMENT_CATEGORIES;
+
   if (qualificationStatus === "qualified") {
     // Qualified staff aren't required to have a Police Verification on
     // file here — swap in the 2 qualified-only documents instead.
-    const base = REQUIRED_STAFF_DOCUMENT_CATEGORIES.filter((c) => c !== "police_vet");
-    return [...base, ...REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES];
+    categories = [...categories.filter((c) => c !== "police_vet"), ...REQUIRED_QUALIFIED_DOCUMENT_CATEGORIES];
   }
-  return REQUIRED_STAFF_DOCUMENT_CATEGORIES;
+
+  return categories;
 }
 
 // Everything else — optional extras, offered in the "Other documents"
@@ -291,6 +511,7 @@ export function getRequiredStaffDocumentCategories(
 // by the combined "CV & Interview" required category above — deliberately
 // left out of this list, same as before (see migration 0009).
 export const STAFF_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "induction",
   "first_aid",
   "visa_work_entitlement",
   "child_protection",
@@ -302,6 +523,7 @@ export const STAFF_DOCUMENT_CATEGORY_LABEL: Record<StaffDocumentCategory, string
   contract: "Contract",
   identification: "Identification",
   police_vet: "Police Verification",
+  safety_check: "Safety Checking",
   child_protection: "Child protection",
   first_aid: "First aid certificate",
   qualification: "Qualification & Teacher Registration",
@@ -318,6 +540,46 @@ export const STAFF_DOCUMENT_CATEGORY_LABEL: Record<StaffDocumentCategory, string
   secondary_identification: "Identification (2nd form)",
   other: "Other",
 };
+
+// Which document categories belong on the Qualifications tab (teaching
+// qualification/registration and first aid) vs the general Documents tab
+// (contracts, certificates, safety checking, police verification and
+// everything else) — per the brief's split between the two tabs. Safety
+// checking moved to the Documents tab on 2026-10-15; Police Verification
+// followed on the same day, per Ethan: for staff who aren't qualified, a
+// police vet is a compliance/safety-check-style document, not a teaching
+// qualification, so it belongs alongside Safety Checking on Documents
+// rather than on Qualifications — this applies regardless of qualification
+// status, since a qualified person never has this category required in the
+// first place (see getRequiredStaffDocumentCategories above). Built from
+// the existing category lists above rather than a fresh fixed list, so a
+// category never silently goes missing from both tabs if the categories
+// list itself changes later.
+export const STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES: StaffDocumentCategory[] = [
+  "qualification",
+  "first_aid",
+];
+
+export function splitStaffDocumentCategoriesForTabs(categories: StaffDocumentCategory[]): {
+  qualificationTab: StaffDocumentCategory[];
+  documentsTab: StaffDocumentCategory[];
+} {
+  return {
+    qualificationTab: categories.filter((c) => STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES.includes(c)),
+    documentsTab: categories.filter((c) => !STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES.includes(c)),
+  };
+}
+
+export const STAFF_GROWTH_CYCLE_STATUSES: StaffGrowthCycleStatus[] = ["open", "closed"];
+
+export const STAFF_GROWTH_CYCLE_STATUS_LABEL: Record<StaffGrowthCycleStatus, string> = {
+  open: "Open",
+  closed: "Closed",
+};
+
+export function staffGrowthCycleTone(status: StaffGrowthCycleStatus): StatusTone {
+  return status === "open" ? "attention" : "ready";
+}
 
 export const SECTION_META: Record<string, { short: string; blurb: string }> = {
   C: { short: "Curriculum", blurb: "Teaching, learning and Te Whāriki." },
