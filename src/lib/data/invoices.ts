@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { isOverdue } from "@/lib/utils";
 import type { Invoice, InvoiceLineItem, InvoiceStatus, FamilyStatement } from "@/lib/types";
 
 /** Loads invoices (optionally filtered by status) together with their line
@@ -132,4 +133,48 @@ export async function getFamilyStatements(): Promise<FamilyStatement[]> {
   });
 
   return Array.from(byBillPayer.values()).sort((a, b) => b.totalOwing - a.totalOwing);
+}
+
+// One family's outstanding balance, reshaped for the Finance Overview's
+// "Outstanding family accounts" table — same source data as
+// getFamilyStatements, just with the next due date and an overdue flag
+// pulled out so the table can show them without the page re-deriving it.
+export type OutstandingFamilyAccount = {
+  bill_payer_id: string;
+  bill_payer_name: string;
+  balance: number;
+  nextDueDate: string | null;
+  overdue: boolean;
+};
+
+/** Every family with an outstanding balance (same set as
+ * getFamilyStatements), sorted overdue-first, then soonest-due, then
+ * largest balance — matching how you'd actually want to triage a list of
+ * accounts to chase. */
+export async function getOutstandingFamilyAccounts(): Promise<OutstandingFamilyAccount[]> {
+  const statements = await getFamilyStatements();
+
+  const accounts: OutstandingFamilyAccount[] = statements.map((statement) => {
+    const dueDates = statement.outstandingInvoices
+      .map((invoice) => invoice.due_date)
+      .filter((d): d is string => Boolean(d));
+    const nextDueDate = dueDates.length > 0 ? dueDates.reduce((earliest, d) => (d < earliest ? d : earliest)) : null;
+    const overdue = statement.outstandingInvoices.some((invoice) => isOverdue(invoice.due_date));
+
+    return {
+      bill_payer_id: statement.bill_payer_id,
+      bill_payer_name: statement.bill_payer_name,
+      balance: statement.totalOwing,
+      nextDueDate,
+      overdue,
+    };
+  });
+
+  return accounts.sort((a, b) => {
+    if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+    if (a.nextDueDate && b.nextDueDate) return a.nextDueDate < b.nextDueDate ? -1 : a.nextDueDate > b.nextDueDate ? 1 : 0;
+    if (a.nextDueDate) return -1;
+    if (b.nextDueDate) return 1;
+    return b.balance - a.balance;
+  });
 }

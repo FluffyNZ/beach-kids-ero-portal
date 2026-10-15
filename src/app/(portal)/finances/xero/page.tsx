@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { getXeroConnectionStatus, listXeroBankAccountOptions } from "@/lib/data/xero";
 import { formatShortDate } from "@/lib/utils";
 import { XeroBankAccountPicker } from "@/components/finances/xero-bank-account-picker";
 import { XeroSyncPanel } from "@/components/finances/xero-sync-panel";
 import { XeroDisconnectButton } from "@/components/finances/xero-disconnect-button";
+import { FinanceNav } from "@/components/finances/finance-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -12,17 +12,14 @@ export default async function XeroPage({ searchParams }: { searchParams: { error
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Xero bank sync</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Reads payments from one Xero bank account and matches them against outstanding parent fee invoices.
-            Read-only on Xero&apos;s side — nothing here ever writes back to Xero.
-          </p>
-        </div>
-        <Link href="/finances/invoices" className="btn-ghost">
-          ← Invoices
-        </Link>
+      <FinanceNav />
+
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Xero bank sync</h1>
+        <p className="mt-1 text-sm text-charcoal/60">
+          Reads payments from one Xero bank account and matches them against outstanding parent fee invoices.
+          Read-only on Xero&apos;s side — nothing here ever writes back to Xero.
+        </p>
       </div>
 
       {searchParams.error && (

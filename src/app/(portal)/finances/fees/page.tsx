@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { getWeeklyFeesByFamily, getWeeklyFeesSummary } from "@/lib/data/fees";
 import { mondayOf, formatCurrency } from "@/lib/utils";
 import { FeesWeekNav } from "@/components/children/fees-week-nav";
 import { FamilyFeesTable } from "@/components/children/family-fees-table";
 import { StatTile } from "@/components/dashboard/stat-tile";
+import { FinanceNav } from "@/components/finances/finance-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +22,14 @@ export default async function FeesByFamilyPage({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Fees</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Each active child&apos;s fee from Children, rolled up to one total per bill payer — what would
-            actually go on an invoice this week.
-          </p>
-        </div>
-        <Link href="/finances" className="btn-ghost">
-          ← Finances
-        </Link>
+      <FinanceNav />
+
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Fees</h1>
+        <p className="mt-1 text-sm text-charcoal/60">
+          Each active child&apos;s fee from Children, rolled up to one total per bill payer — what would actually
+          go on an invoice this week.
+        </p>
       </div>
 
       <FeesWeekNav weekStartDate={weekStartDate} basePath="/finances/fees" />

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { getBillPayersList } from "@/lib/data/bill-payers";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { formatCurrency } from "@/lib/utils";
 import { AddClientButton } from "@/components/finances/add-client-button";
 import { ClientRow } from "@/components/finances/client-row";
+import { FinanceNav } from "@/components/finances/finance-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -20,20 +20,17 @@ export default async function ClientsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <FinanceNav />
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Clients</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Family accounts</h1>
           <p className="mt-1 text-sm text-charcoal/60">
             Every family currently billed through Beach Kids — contact details, who they&apos;re billed for, and
             what they currently owe.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/finances" className="btn-ghost">
-            ← Finances
-          </Link>
-          <AddClientButton />
-        </div>
+        <AddClientButton />
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

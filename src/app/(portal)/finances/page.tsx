@@ -1,6 +1,15 @@
 import Link from "next/link";
-import { getFinanceOverview, type FinancePeriod } from "@/lib/data/finances";
-import { StatTile } from "@/components/dashboard/stat-tile";
+import { getFinanceDashboard, getRecentPayments, type FinancePeriod } from "@/lib/data/finances";
+import { getOutstandingFamilyAccounts } from "@/lib/data/invoices";
+import { FinanceNav } from "@/components/finances/finance-nav";
+import { FinanceStatCard } from "@/components/finances/finance-stat-card";
+import { MoneyReceivedChart } from "@/components/finances/money-received-chart";
+import { FinanceQuickActions } from "@/components/finances/finance-quick-actions";
+import { OutstandingAccountsTable } from "@/components/finances/outstanding-accounts-table";
+import { RecentPaymentsTable } from "@/components/finances/recent-payments-table";
+import { FinanceStatementsPanel } from "@/components/finances/finance-statements-panel";
+import { HowTotalsCalculated } from "@/components/finances/how-totals-calculated";
+import { CreditCardIcon, ReportsIcon, DocumentIcon, AlertIcon, PlusIcon } from "@/components/icons";
 import { formatCurrency, cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -14,126 +23,109 @@ const PERIOD_LABEL: Record<FinancePeriod, string> = {
 export default async function FinancesPage({ searchParams }: { searchParams: { period?: string } }) {
   const period: FinancePeriod =
     searchParams.period === "financial_year" || searchParams.period === "funding_round" ? searchParams.period : "month";
-  const overview = await getFinanceOverview(period);
+
+  const [dashboard, accounts, recentPayments] = await Promise.all([
+    getFinanceDashboard(period),
+    getOutstandingFamilyAccounts(),
+    getRecentPayments(6),
+  ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <FinanceNav />
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Finances</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Overheads, outgoings and income in one place, alongside the parent fee revenue already calculated in
-            Fees.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Finances</h1>
+          <p className="mt-1 text-sm text-charcoal/60">Showing {dashboard.periodLabel}.</p>
         </div>
-        <div className="card flex flex-wrap gap-1 p-1">
-          {(["month", "funding_round", "financial_year"] as FinancePeriod[]).map((p) => (
-            <Link
-              key={p}
-              href={`/finances?period=${p}`}
-              className={cn(
-                "rounded-xl px-3 py-1.5 text-sm font-medium transition-colors",
-                period === p ? "bg-burgundy-500 text-white" : "text-charcoal/60 hover:bg-sand-100"
-              )}
-            >
-              {PERIOD_LABEL[p]}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-xs text-charcoal/40">Showing {overview.periodLabel}.</p>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile label="Total income" value={formatCurrency(overview.totalIncome)} tone="ready" />
-        <StatTile label="Total outgoings" value={formatCurrency(overview.totalOutgoings)} tone="action" />
-        <StatTile label="Estimated profit before tax" value={formatCurrency(overview.estimatedProfitBeforeTax)} tone="neutral" />
-        <StatTile label="Outstanding bills" value={overview.outstandingBillsCount} tone={overview.outstandingBillsCount > 0 ? "attention" : "neutral"} />
-        <StatTile label="Outstanding income" value={overview.outstandingIncomeCount} tone={overview.outstandingIncomeCount > 0 ? "attention" : "neutral"} />
-        <StatTile label="Fee revenue (auto)" value={formatCurrency(overview.feeRevenue.total)} tone="ready" />
-      </div>
-
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Where the income figure comes from
-        </h2>
-        <div className="flex flex-col gap-2 text-sm text-charcoal/70">
-          <p>
-            Parent fees + WINZ (from Fees): <span className="font-medium text-charcoal">{formatCurrency(overview.feeRevenue.total)}</span>
-            {" — "}
-            {overview.feeRevenue.confirmedWeeks} of {overview.feeRevenue.totalWeeks} week
-            {overview.feeRevenue.totalWeeks === 1 ? "" : "s"} confirmed
-            {overview.feeRevenue.estimatedWeeks > 0
-              ? `, ${overview.feeRevenue.estimatedWeeks} estimated from enrolled schedules`
-              : ""}
-            .
-          </p>
-          <p>
-            Other income received (MOE funding, invoices, etc.): <span className="font-medium text-charcoal">{formatCurrency(overview.otherIncomeReceived)}</span>
-          </p>
-          <p className="text-xs text-charcoal/40">
-            Outgoings are counted by their expense date within this period, regardless of whether they&apos;ve been
-            marked paid yet. Weeks are grouped Monday–Sunday, so a week straddling the start or end of a period
-            counts fully wherever its Monday falls, not split by exact day.
-          </p>
-          <Link href="/finances/fees" className="mt-1 text-sm font-medium text-burgundy-600 hover:underline">
-            See this week&apos;s fees rolled up by family →
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="card flex gap-1 p-1">
+            {(["month", "funding_round", "financial_year"] as FinancePeriod[]).map((p) => (
+              <Link
+                key={p}
+                href={`/finances?period=${p}`}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  period === p ? "bg-charcoal text-white" : "text-charcoal/60 hover:bg-charcoal/5"
+                )}
+              >
+                {PERIOD_LABEL[p]}
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/finances/fees"
+            title="Draft a new invoice from Fees — invoices are always created from one week's real fee numbers, never typed in freehand."
+            className="btn-primary"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Create invoice
           </Link>
         </div>
-      </section>
-
-      <div className="flex flex-wrap gap-3">
-        <Link href="/finances/outgoings" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Outgoings</h2>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Overheads and bills — {overview.outstandingBillsCount > 0
-              ? `${overview.outstandingBillsCount} unpaid (${formatCurrency(overview.outstandingBillsAmount)})`
-              : "nothing outstanding"}
-            .
-          </p>
-        </Link>
-        <Link href="/finances/income" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Income</h2>
-          <p className="mt-1 text-sm text-charcoal/60">
-            MOE funding, parent invoices and other income — {overview.outstandingIncomeCount > 0
-              ? `${overview.outstandingIncomeCount} pending (${formatCurrency(overview.outstandingIncomeAmount)})`
-              : "nothing pending"}
-            .
-          </p>
-        </Link>
-        <Link href="/finances/fees" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Fees</h2>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Each child&apos;s weekly fee rolled up by family, plus confirming actual hours — the numbers invoices
-            are drafted from.
-          </p>
-        </Link>
-        <Link href="/finances/clients" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Clients</h2>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Every family — contact details, who they&apos;re billed for, and what they currently owe.
-          </p>
-        </Link>
-        <Link href="/finances/invoices" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Invoices</h2>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Parent fee invoices drafted from Fees by family — draft, send and mark them paid.
-          </p>
-        </Link>
-        <Link href="/finances/statements" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Statements</h2>
-          <p className="mt-1 text-sm text-charcoal/60">What every family currently owes, and a one-click statement email.</p>
-        </Link>
-        <Link href="/finances/xero" className="card flex-1 p-5 hover:shadow-cardHover" style={{ minWidth: "14rem" }}>
-          <h2 className="font-display text-lg font-semibold text-charcoal">Xero bank sync</h2>
-          <p className="mt-1 text-sm text-charcoal/60">Match real bank payments against outstanding invoices automatically.</p>
-        </Link>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <FinanceStatCard
+          label="Money received"
+          value={formatCurrency(dashboard.moneyReceived)}
+          note={`${dashboard.periodLabel}`}
+          icon={<CreditCardIcon />}
+        />
+        <FinanceStatCard
+          label="Expected fee income"
+          value={formatCurrency(dashboard.expectedFeeIncome)}
+          note={
+            dashboard.feeRevenue.estimatedWeeks > 0
+              ? `${dashboard.feeRevenue.confirmedWeeks} of ${dashboard.feeRevenue.totalWeeks} weeks confirmed`
+              : "All weeks confirmed"
+          }
+          icon={<ReportsIcon />}
+        />
+        <FinanceStatCard
+          label="Outstanding fees"
+          value={formatCurrency(dashboard.outstandingFeesAmount)}
+          note={
+            dashboard.overdueFeesAmount > 0
+              ? `Includes ${formatCurrency(dashboard.overdueFeesAmount)} overdue`
+              : "None of this is overdue"
+          }
+          icon={<DocumentIcon />}
+        />
+        <FinanceStatCard
+          label="Overdue fees"
+          value={formatCurrency(dashboard.overdueFeesAmount)}
+          note={`${dashboard.overdueFeesCount} invoice${dashboard.overdueFeesCount === 1 ? "" : "s"} — part of outstanding fees`}
+          icon={<AlertIcon />}
+          tone="attention"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="card p-5 lg:col-span-2">
+          <MoneyReceivedChart buckets={dashboard.moneyReceivedBuckets} total={dashboard.moneyReceived} />
+        </div>
+        <FinanceQuickActions />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <OutstandingAccountsTable accounts={accounts} />
+        <RecentPaymentsTable payments={recentPayments} />
+      </div>
+
+      <FinanceStatementsPanel outstandingCount={accounts.length} />
+
+      <HowTotalsCalculated dashboard={dashboard} />
+
       <p className="text-xs text-charcoal/40">
-        &ldquo;Estimated profit before tax&rdquo; is income minus outgoings for this period only — it&apos;s not a
-        tax calculation, and doesn&apos;t account for GST, depreciation, or anything else your accountant would
-        factor in. Treat it as a rough working figure, not a substitute for their numbers.
+        Figures above aren&apos;t a tax calculation and don&apos;t account for GST, depreciation, or anything else
+        your accountant would factor in — treat them as working totals, not a substitute for their numbers.
+        Outgoings (overheads/bills) is unchanged and still has all its records — it&apos;s just left out of this
+        redesign&apos;s navigation per the brief, so it&apos;s linked here instead:{" "}
+        <Link href="/finances/outgoings" className="underline">
+          Outgoings
+        </Link>
+        .
       </p>
     </div>
   );

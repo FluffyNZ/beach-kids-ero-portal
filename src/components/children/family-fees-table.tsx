@@ -22,7 +22,7 @@ export function FamilyFeesTable({ data }: { data: WeeklyFeesByFamily }) {
         <div key={family.bill_payer_id} className="card flex flex-col gap-3 p-5">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h3 className="font-display text-lg font-semibold text-charcoal">{family.bill_payer_name}</h3>
+              <h3 className="text-base font-semibold text-charcoal">{family.bill_payer_name}</h3>
               {family.bill_payer_email && <p className="text-xs text-charcoal/50">{family.bill_payer_email}</p>}
             </div>
             <div className="flex items-end gap-3">
@@ -30,7 +30,7 @@ export function FamilyFeesTable({ data }: { data: WeeklyFeesByFamily }) {
                 <p className="text-xs uppercase tracking-wide text-charcoal/50">
                   Owing this week{family.isEstimated ? " (estimated)" : ""}
                 </p>
-                <p className="font-display text-xl font-bold text-charcoal">{formatCurrency(family.totalParentPays)}</p>
+                <p className="text-xl font-bold tracking-tight text-charcoal">{formatCurrency(family.totalParentPays)}</p>
               </div>
               <DraftInvoiceButton billPayerId={family.bill_payer_id} weekStartDate={data.weekStartDate} />
             </div>
@@ -69,7 +69,7 @@ export function FamilyFeesTable({ data }: { data: WeeklyFeesByFamily }) {
       {data.unassignedChildren.length > 0 && (
         <div className="card flex flex-col gap-3 border-l-4 border-l-status-attention p-5">
           <div>
-            <h3 className="font-display text-lg font-semibold text-charcoal">No bill payer set</h3>
+            <h3 className="text-base font-semibold text-charcoal">No bill payer set</h3>
             <p className="text-xs text-charcoal/50">
               These children have fees calculated but no bill payer assigned yet, so they&apos;re not included in any
               family total above. Set a bill payer on each child&apos;s profile to include them.

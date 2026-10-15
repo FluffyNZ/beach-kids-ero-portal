@@ -38,7 +38,7 @@ export function ClientRow({ client }: { client: BillPayerSummary }) {
     <div className="card flex flex-col gap-3 p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="font-display text-lg font-semibold text-charcoal">{client.full_name}</h3>
+          <h3 className="text-base font-semibold text-charcoal">{client.full_name}</h3>
           <p className="text-xs text-charcoal/50">
             {client.activeChildrenCount > 0
               ? `Billed for ${client.childNames.join(", ")}`
@@ -46,7 +46,7 @@ export function ClientRow({ client }: { client: BillPayerSummary }) {
           </p>
         </div>
         <p
-          className={`font-display text-lg font-bold ${
+          className={`text-lg font-bold tracking-tight ${
             client.totalOwing > 0 ? "text-status-attention" : "text-charcoal"
           }`}
         >

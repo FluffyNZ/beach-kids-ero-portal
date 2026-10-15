@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getInvoicesList } from "@/lib/data/invoices";
 import { InvoicesExplorer, type TabValue } from "@/components/finances/invoices-explorer";
 import { ExportInvoicesButton } from "@/components/finances/export-invoices-button";
+import { FinanceNav } from "@/components/finances/finance-nav";
 import { formatCurrency, isOverdue, mondayOf, addDays } from "@/lib/utils";
 import { PlusIcon } from "@/components/icons";
 
@@ -35,9 +36,11 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+      <FinanceNav />
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Invoices</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Invoices</h1>
           <p className="mt-1 text-sm text-charcoal/60">
             Invoices drafted from Fees — each one is a frozen snapshot, so editing a week&apos;s hours later never
             changes what was already sent.
@@ -67,17 +70,17 @@ export default async function InvoicesPage({ searchParams }: { searchParams: { s
       <div className="flex flex-wrap divide-x divide-slate-200 rounded-xl border border-slate-200 bg-white">
         <div className="min-w-[10rem] flex-1 px-5 py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Outstanding</p>
-          <p className="mt-1 font-display text-2xl font-bold text-charcoal">{formatCurrency(totalOutstanding)}</p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-charcoal">{formatCurrency(totalOutstanding)}</p>
         </div>
         <div className="min-w-[10rem] flex-1 px-5 py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Overdue</p>
-          <p className={`mt-1 font-display text-2xl font-bold ${totalOverdue > 0 ? "text-red-700" : "text-charcoal"}`}>
+          <p className={`mt-1 text-2xl font-bold tracking-tight ${totalOverdue > 0 ? "text-red-700" : "text-charcoal"}`}>
             {formatCurrency(totalOverdue)}
           </p>
         </div>
         <div className="min-w-[10rem] flex-1 px-5 py-4">
           <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Received this week</p>
-          <p className="mt-1 font-display text-2xl font-bold text-charcoal">{formatCurrency(receivedThisWeek)}</p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-charcoal">{formatCurrency(receivedThisWeek)}</p>
         </div>
       </div>
 
