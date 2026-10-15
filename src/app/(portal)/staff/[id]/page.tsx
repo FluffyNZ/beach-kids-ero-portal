@@ -72,8 +72,8 @@ export default async function StaffDetailPage({
   );
 
   // Split the same two lists each tab needs between Qualifications
-  // (teaching qualification, practising certificate/registration, first
-  // aid, safety checking) and Documents (contracts, certificates and
+  // (teaching qualification/registration, first aid) and Documents
+  // (contracts, certificates, safety checking, police verification and
   // everything else) — see the constant's own comment for why this is
   // derived rather than a second fixed list.
   const isQualTabCategory = (c: string) => (STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES as string[]).includes(c);
