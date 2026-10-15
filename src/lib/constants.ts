@@ -19,6 +19,7 @@ import type {
   HazardCheckCategory,
   HazardRiskLevel,
   StaffLeaveType,
+  StaffLeaveStatus,
 } from "@/lib/supabase/database.types";
 import type { EmailTemplateCategory, EmailMessageStatus, EmailReminderKind } from "@/lib/types";
 
@@ -201,13 +202,31 @@ export const WEEKDAYS: Array<{ key: Weekday; label: string }> = [
   { key: "fri", label: "Fri" },
 ];
 
-export const STAFF_LEAVE_TYPES: StaffLeaveType[] = ["annual", "sick", "unpaid", "other"];
+export const STAFF_LEAVE_TYPES: StaffLeaveType[] = [
+  "annual",
+  "sick",
+  "unpaid",
+  "other",
+  "unavailable",
+  "day_off",
+];
 
 export const STAFF_LEAVE_TYPE_LABEL: Record<StaffLeaveType, string> = {
   annual: "Annual",
   sick: "Sick",
   unpaid: "Unpaid",
   other: "Other",
+  unavailable: "Unavailable",
+  day_off: "Day off",
+};
+
+export const STAFF_LEAVE_STATUSES: StaffLeaveStatus[] = ["requested", "approved", "declined", "cancelled"];
+
+export const STAFF_LEAVE_STATUS_LABEL: Record<StaffLeaveStatus, string> = {
+  requested: "Requested",
+  approved: "Approved",
+  declined: "Declined",
+  cancelled: "Cancelled",
 };
 
 export const STOCK_SUPPLIERS: StockSupplier[] = ["gilmours", "qizzle", "clean_boss"];

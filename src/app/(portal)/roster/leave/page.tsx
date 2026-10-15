@@ -11,11 +11,16 @@ export const dynamic = "force-dynamic";
  * already built for the Calendar area — booking leave here and on Calendar
  * are the same records, not a second parallel system.
  *
- * Phase 1 only: partial-day leave, a Requested/Approved/Declined/Cancelled
- * status, the Unavailable and Normal day off types, and private
- * management-only notes all need a schema change of their own (see the
- * Roster redesign report) and aren't faked here — today every booked leave
- * entry is whole-day and has no status, same as on Calendar. */
+ * Phase 2: status (Requested/Approved/Declined/Cancelled), the Unavailable
+ * and Day off types, optional partial-day times, and private
+ * management-only notes are all live here via the same StaffLeaveManager
+ * used on Calendar. Only Approved leave blocks a cell on the Weekly roster
+ * tab and switches it to "Arrange cover" — Requested shows as an
+ * informational pill but doesn't stop someone being rostered normally until
+ * it's actually decided. Still outstanding: split shifts, non-contact time,
+ * relievers/cover *assignment* tracking (today "cover" is still a free-text
+ * note on the shift), and a real date-aware coverage calculation — see the
+ * Roster redesign report for those later phases. */
 export default async function RosterLeavePage({
   searchParams,
 }: {

@@ -1,9 +1,10 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { getProfilesMap } from "@/lib/data/profiles";
 import { addDays, addMonths, mondayOfDateString } from "@/lib/utils";
 import { getNzPublicHolidaysInRange } from "@/lib/nz-public-holidays";
 import type { CalendarDay, CalendarEvent, StaffLeave } from "@/lib/types";
-import type { StaffLeaveType } from "@/lib/supabase/database.types";
+import type { StaffLeaveType, StaffLeaveStatus } from "@/lib/supabase/database.types";
 
 export type CalendarWeek = {
   weekStartDate: string;
@@ -20,10 +21,25 @@ type StaffLeaveRow = {
   leave_type: StaffLeaveType;
   start_date: string;
   end_date: string;
+  start_time: string | null;
+  end_time: string | null;
   notes: string | null;
+  private_notes: string | null;
+  status: StaffLeaveStatus;
+  decided_by: string | null;
+  decided_at: string | null;
   created_at: string;
   updated_at: string;
 };
+
+/** Declined/cancelled leave didn't happen — it's kept in the table as a
+ * record (and still shown in the editable Staff leave list so there's a
+ * history of what was asked for and what was decided), but it's excluded
+ * from anything that treats leave as a fact: the Calendar grid/list, the
+ * Home dashboard's "upcoming" list, and the Roster week grid. */
+function isVisibleLeaveStatus(status: StaffLeaveStatus): boolean {
+  return status === "requested" || status === "approved";
+}
 
 /** True when a YYYY-MM-DD date's month/day matches a stored date of birth's
  * month/day — the year is deliberately ignored, since a birthday recurs
@@ -54,7 +70,7 @@ export async function getCalendarMonth(monthKey: string): Promise<CalendarWeek[]
   const gridEnd = addDays(weekStarts[weekStarts.length - 1], 7); // exclusive end of the whole grid
 
   const supabase = createClient();
-  const [{ data: leaveRows }, { data: staffRows }, { data: childRows }] = await Promise.all([
+  const [{ data: leaveRows }, { data: staffRows }, { data: childRows }, profiles] = await Promise.all([
     supabase
       .from("staff_leave")
       .select("*")
@@ -65,6 +81,7 @@ export async function getCalendarMonth(monthKey: string): Promise<CalendarWeek[]
       .from("children")
       .select("id, full_name, date_of_birth, photo_storage_path")
       .eq("status", "active"),
+    getProfilesMap(),
   ]);
 
   const staffNameById = new Map((staffRows ?? []).map((s) => [s.id as string, s.full_name as string]));
@@ -123,17 +140,27 @@ export async function getCalendarMonth(monthKey: string): Promise<CalendarWeek[]
     holidaysByDate.set(h.date, list);
   });
 
-  const leave: StaffLeave[] = ((leaveRows ?? []) as StaffLeaveRow[]).map((r) => ({
-    id: r.id,
-    staff_id: r.staff_id,
-    staff_name: staffNameById.get(r.staff_id) ?? "Former/unknown staff member",
-    leave_type: r.leave_type,
-    start_date: r.start_date,
-    end_date: r.end_date,
-    notes: r.notes,
-    created_at: r.created_at,
-    updated_at: r.updated_at,
-  }));
+  // Declined/cancelled leave is deliberately left out of the calendar grid
+  // and event list — see isVisibleLeaveStatus above.
+  const leave: StaffLeave[] = ((leaveRows ?? []) as StaffLeaveRow[])
+    .filter((r) => isVisibleLeaveStatus(r.status))
+    .map((r) => ({
+      id: r.id,
+      staff_id: r.staff_id,
+      staff_name: staffNameById.get(r.staff_id) ?? "Former/unknown staff member",
+      leave_type: r.leave_type,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      start_time: r.start_time,
+      end_time: r.end_time,
+      notes: r.notes,
+      private_notes: r.private_notes,
+      status: r.status,
+      decided_by_name: r.decided_by ? profiles.get(r.decided_by)?.full_name ?? null : null,
+      decided_at: r.decided_at,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
 
   return weekStarts.map((weekStartDate) => {
     const days: CalendarDay[] = Array.from({ length: 7 }, (_, i) => {
@@ -177,14 +204,22 @@ export async function getCalendarMonth(monthKey: string): Promise<CalendarWeek[]
   });
 }
 
-/** Staff leave booked within [startDate, endDate) — used for the list under
- * the calendar grid so a booked block that started before this month (or
- * runs past it) still shows up while it overlaps. */
+/** Staff leave booked within [startDate, endDate) — used for the editable
+ * "Staff leave" list under the calendar grid and on Roster → Leave &
+ * availability, so a booked block that started before this month/week (or
+ * runs past it) still shows up while it overlaps.
+ *
+ * Unlike getCalendarMonth's events, this deliberately returns every status
+ * including declined/cancelled — the editable list is where Ethan manages
+ * requests, so it needs to show what's pending and what's been decided, not
+ * just what's confirmed. Callers that treat leave as a fact about the
+ * roster (the Roster week grid) filter by status themselves. */
 export async function getStaffLeaveForRange(startDate: string, endDate: string): Promise<StaffLeave[]> {
   const supabase = createClient();
-  const [{ data: leaveRows }, { data: staffRows }] = await Promise.all([
+  const [{ data: leaveRows }, { data: staffRows }, profiles] = await Promise.all([
     supabase.from("staff_leave").select("*").lt("start_date", endDate).gte("end_date", startDate),
     supabase.from("staff").select("id, full_name"),
+    getProfilesMap(),
   ]);
 
   const staffNameById = new Map((staffRows ?? []).map((s) => [s.id as string, s.full_name as string]));
@@ -197,7 +232,13 @@ export async function getStaffLeaveForRange(startDate: string, endDate: string):
       leave_type: r.leave_type,
       start_date: r.start_date,
       end_date: r.end_date,
+      start_time: r.start_time,
+      end_time: r.end_time,
       notes: r.notes,
+      private_notes: r.private_notes,
+      status: r.status,
+      decided_by_name: r.decided_by ? profiles.get(r.decided_by)?.full_name ?? null : null,
+      decided_at: r.decided_at,
       created_at: r.created_at,
       updated_at: r.updated_at,
     }))

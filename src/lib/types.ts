@@ -22,13 +22,14 @@ import type {
   HazardCheckCategory,
   HazardRiskLevel,
   StaffLeaveType,
+  StaffLeaveStatus,
   RosterWeekStatus,
 } from "@/lib/supabase/database.types";
 
 // Re-exported so other modules can `import type { HazardCheckCategory }
 // from "@/lib/types"` alongside the rest of this file's types, rather than
 // reaching into "@/lib/supabase/database.types" directly for just these two.
-export type { HazardCheckCategory, HazardRiskLevel, StaffLeaveType };
+export type { HazardCheckCategory, HazardRiskLevel, StaffLeaveType, StaffLeaveStatus };
 
 export type Section = {
   id: string;
@@ -1161,7 +1162,19 @@ export type StaffLeave = {
   leave_type: StaffLeaveType;
   start_date: string;
   end_date: string;
+  /** Set only for a single-day block (start_date === end_date) — a partial
+   * day off. Either both are set or both are null; never just one. */
+  start_time: string | null;
+  end_time: string | null;
   notes: string | null;
+  /** Office-eyes-only notes. There's no technical access boundary for this
+   * (same as everywhere else in the app) — it's just left out of the
+   * public-facing Calendar/Home/print views by the components that render
+   * those, not by the database. Only shown in the editable leave manager. */
+  private_notes: string | null;
+  status: StaffLeaveStatus;
+  decided_by_name: string | null;
+  decided_at: string | null;
   created_at: string;
   updated_at: string;
 };

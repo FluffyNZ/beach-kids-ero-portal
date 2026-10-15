@@ -197,17 +197,23 @@ export async function getUpcomingEvents(daysAhead = 14): Promise<UpcomingEvent[]
       });
     });
 
-  leave.forEach((l) => {
-    const rangeLabel =
-      l.start_date === l.end_date
-        ? ""
-        : ` (${formatShortDate(l.start_date)}–${formatShortDate(l.end_date)})`;
-    events.push({
-      date: l.start_date >= todayStr ? l.start_date : todayStr,
-      kind: "staff_leave",
-      title: `${l.staff_name} — ${STAFF_LEAVE_TYPE_LABEL[l.leave_type]} leave${rangeLabel}`,
+  // Declined/cancelled leave didn't happen, so it's left off this list —
+  // same rule as the Calendar grid and the Roster week grid. A Requested
+  // (not yet decided) entry still shows, clearly labelled as pending.
+  leave
+    .filter((l) => l.status === "requested" || l.status === "approved")
+    .forEach((l) => {
+      const rangeLabel =
+        l.start_date === l.end_date
+          ? ""
+          : ` (${formatShortDate(l.start_date)}–${formatShortDate(l.end_date)})`;
+      const pendingLabel = l.status === "requested" ? " — pending" : "";
+      events.push({
+        date: l.start_date >= todayStr ? l.start_date : todayStr,
+        kind: "staff_leave",
+        title: `${l.staff_name} — ${STAFF_LEAVE_TYPE_LABEL[l.leave_type]} leave${rangeLabel}${pendingLabel}`,
+      });
     });
-  });
 
   return events.sort((a, b) => a.date.localeCompare(b.date));
 }

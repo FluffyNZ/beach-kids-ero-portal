@@ -58,7 +58,8 @@ export type LearningStoryStatus = "draft" | "awaiting_approval" | "returned_for_
 export type HazardCheckCategory = "indoor" | "outdoor" | "allergy";
 export type HazardRiskLevel = "low" | "medium" | "high";
 export type LearningStoryMediaKind = "image" | "video" | "pdf";
-export type StaffLeaveType = "annual" | "sick" | "unpaid" | "other";
+export type StaffLeaveType = "annual" | "sick" | "unpaid" | "other" | "unavailable" | "day_off";
+export type StaffLeaveStatus = "requested" | "approved" | "declined" | "cancelled";
 
 type ProfilesRow = {
   id: string;
@@ -795,6 +796,12 @@ type StaffLeaveRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  status: StaffLeaveStatus;
+  start_time: string | null;
+  end_time: string | null;
+  private_notes: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
 };
 
 export interface Database {
@@ -1318,6 +1325,7 @@ export interface Database {
       hazard_check_category: HazardCheckCategory;
       hazard_risk_level: HazardRiskLevel;
       staff_leave_type: StaffLeaveType;
+      staff_leave_status: StaffLeaveStatus;
       staff_growth_cycle_status: StaffGrowthCycleStatus;
     };
     CompositeTypes: { [_ in never]: never };

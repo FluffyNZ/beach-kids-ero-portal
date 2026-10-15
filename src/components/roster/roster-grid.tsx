@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { addDays, formatShortDate, formatTime } from "@/lib/utils";
-import { getRoomColorClasses, STAFF_LEAVE_TYPE_LABEL } from "@/lib/constants";
+import { getRoomColorClasses, STAFF_LEAVE_TYPES, STAFF_LEAVE_TYPE_LABEL } from "@/lib/constants";
 import { PlusIcon } from "@/components/icons";
 import { RosterShiftPanel } from "@/components/roster/roster-shift-panel";
 import type { RosterRoom, RosterShift, StaffLeave } from "@/lib/types";
@@ -21,6 +21,8 @@ const LEAVE_TONE: Record<string, string> = {
   sick: "bg-status-attentionBg text-status-attention",
   unpaid: "bg-sand-200 text-charcoal/60",
   other: "bg-sand-100 text-charcoal/50",
+  unavailable: "bg-status-actionBg text-status-action",
+  day_off: "bg-charcoal/5 text-charcoal/50",
 };
 
 type StaffOption = { id: string; full_name: string; room_id: string | null };
@@ -31,16 +33,36 @@ function timeToMinutes(value: string): number {
 }
 
 /** Weekly worked hours — sum of each shift's duration this week. Leave
- * doesn't carry hours yet (staff_leave is whole-day only, see the Roster
- * redesign report), so leave is shown as a day count alongside it rather
- * than folded into the same number. */
+ * (even a partial-day one) isn't folded into this number — it's shown as
+ * its own "days leave" count alongside it instead, since a day of leave
+ * and a day of rostered work are different kinds of thing to total up. */
 function weeklyWorkedHours(shifts: RosterShift[]): number {
   const minutes = shifts.reduce((sum, s) => sum + (timeToMinutes(s.end_time) - timeToMinutes(s.start_time)), 0);
   return Math.round((minutes / 60) * 10) / 10;
 }
 
+// Declined/cancelled leave didn't happen — the roster grid ignores it
+// entirely, same as the Calendar and Home dashboard. Requested leave shows
+// as an informational pill (see dayLeaveFor below) but, unlike Approved,
+// doesn't count toward the "days leave" total or block the normal +
+// add-shift button, since nothing has been decided yet.
 function leaveDaysThisWeek(leave: StaffLeave[], staffId: string, days: string[]): number {
-  return days.filter((d) => leave.some((l) => l.staff_id === staffId && d >= l.start_date && d <= l.end_date)).length;
+  return days.filter((d) =>
+    leave.some((l) => l.staff_id === staffId && l.status === "approved" && d >= l.start_date && d <= l.end_date)
+  ).length;
+}
+
+function dayLeaveFor(leave: StaffLeave[], staffId: string, date: string): StaffLeave | null {
+  return (
+    leave.find(
+      (l) =>
+        l.staff_id === staffId &&
+        l.status !== "declined" &&
+        l.status !== "cancelled" &&
+        date >= l.start_date &&
+        date <= l.end_date
+    ) ?? null
+  );
 }
 
 export function RosterGrid({
@@ -160,7 +182,13 @@ export function RosterGrid({
                             const shift = shiftByStaffAndDate.get(`${person.id}__${d}`) ?? null;
                             const shiftRoom = shift?.room_id ? rooms.find((r) => r.id === shift.room_id) ?? null : null;
                             const shiftColors = getRoomColorClasses(shiftRoom?.color);
-                            const dayLeave = leave.find((l) => l.staff_id === person.id && d >= l.start_date && d <= l.end_date);
+                            const dayLeave = dayLeaveFor(leave, person.id, d);
+                            // Only Approved leave blocks the normal
+                            // add-shift button and switches it to "Arrange
+                            // cover" — a Requested day still shows the
+                            // pill, but is otherwise rostered normally
+                            // until it's actually approved.
+                            const approvedLeave = dayLeave?.status === "approved" ? dayLeave : null;
                             const coveringElsewhere = shift && shiftRoom && shiftRoom.id !== room.id;
 
                             return (
@@ -168,10 +196,13 @@ export function RosterGrid({
                                 <div className="flex min-w-[110px] flex-col gap-1">
                                   {dayLeave && (
                                     <span
-                                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${LEAVE_TONE[dayLeave.leave_type] ?? LEAVE_TONE.other}`}
+                                      className={`rounded-lg px-2.5 py-1.5 text-xs font-medium ${LEAVE_TONE[dayLeave.leave_type] ?? LEAVE_TONE.other} ${
+                                        dayLeave.status === "requested" ? "border border-dashed border-current opacity-70" : ""
+                                      }`}
                                       title={dayLeave.notes ?? undefined}
                                     >
-                                      {STAFF_LEAVE_TYPE_LABEL[dayLeave.leave_type]} leave
+                                      {STAFF_LEAVE_TYPE_LABEL[dayLeave.leave_type]}
+                                      {dayLeave.status === "requested" ? " (requested)" : ""}
                                     </span>
                                   )}
                                   <button
@@ -182,7 +213,7 @@ export function RosterGrid({
                                     className={
                                       shift
                                         ? `flex w-full flex-col items-start gap-0.5 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-opacity hover:opacity-75 ${shiftColors.bg} ${shiftColors.text}`
-                                        : dayLeave
+                                        : approvedLeave
                                           ? "flex w-full items-center justify-center rounded-lg border border-dashed border-charcoal/10 px-2.5 py-1.5 text-[11px] text-charcoal/30 hover:border-charcoal/30 hover:text-charcoal/50"
                                           : "flex w-full items-center justify-center rounded-lg border border-dashed border-charcoal/15 px-2.5 py-3 text-charcoal/25 hover:border-charcoal/30 hover:text-charcoal/50"
                                     }
@@ -194,7 +225,7 @@ export function RosterGrid({
                                         </span>
                                         {coveringElsewhere && <span className="font-normal opacity-80">{shiftRoom!.name} cover</span>}
                                       </>
-                                    ) : dayLeave ? (
+                                    ) : approvedLeave ? (
                                       "Arrange cover"
                                     ) : (
                                       <PlusIcon className="h-4 w-4" />
@@ -227,9 +258,9 @@ export function RosterGrid({
           })}
         </div>
         <div className="flex flex-wrap gap-3 border-l border-charcoal/10 pl-4">
-          {(["annual", "sick", "unpaid", "other"] as const).map((t) => (
+          {STAFF_LEAVE_TYPES.map((t) => (
             <span key={t} className={`badge ${LEAVE_TONE[t]}`}>
-              {STAFF_LEAVE_TYPE_LABEL[t]} leave
+              {STAFF_LEAVE_TYPE_LABEL[t]}
             </span>
           ))}
         </div>

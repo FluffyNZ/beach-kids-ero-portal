@@ -21,7 +21,7 @@ function eventLabel(event: CalendarEvent): string {
     case "public_holiday":
       return event.name;
     case "staff_leave":
-      return `${event.leave.staff_name} — leave`;
+      return `${event.leave.staff_name} — leave${event.leave.status === "requested" ? " (requested)" : ""}`;
     case "staff_birthday":
       return `${event.name} — birthday`;
     case "child_birthday":
@@ -48,10 +48,19 @@ function EventMarker({ event, size = "xs" }: { event: CalendarEvent; size?: "xs"
       </span>
     );
   }
+  // A Requested (not yet decided) leave block gets a hollow ring instead of
+  // a solid dot, so it reads as "pending" at a glance without a second
+  // legend entry — Declined/Cancelled leave never reaches here at all (see
+  // isVisibleLeaveStatus in lib/data/calendar.ts).
+  const pending = event.kind === "staff_leave" && event.leave.status === "requested";
   return (
     <span
       title={eventLabel(event)}
-      className={`h-1.5 w-1.5 shrink-0 rounded-full ${EVENT_DOT_CLASS[event.kind]}`}
+      className={
+        pending
+          ? "h-1.5 w-1.5 shrink-0 rounded-full border border-orange-500 bg-transparent"
+          : `h-1.5 w-1.5 shrink-0 rounded-full ${EVENT_DOT_CLASS[event.kind]}`
+      }
       aria-hidden="true"
     />
   );
@@ -180,6 +189,7 @@ export function CalendarEventList({ weeks }: { weeks: CalendarWeek[] }) {
                 {event.leave.start_date === date && event.leave.end_date !== date
                   ? ` (through ${new Date(`${event.leave.end_date}T00:00:00Z`).toLocaleDateString("en-NZ", { day: "numeric", month: "short", timeZone: "UTC" })})`
                   : ""}
+                {event.leave.status === "requested" ? " — pending" : ""}
               </>
             )}
             {event.kind === "staff_birthday" && (
