@@ -31,6 +31,8 @@ type ChildRow = {
   notes: string | null;
   start_date: string | null;
   leaving_date: string | null;
+  uses_own_sunblock: boolean;
+  sunblock_instructions: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -204,6 +206,8 @@ export async function getChildrenList(options?: {
       notes: r.notes,
       start_date: r.start_date,
       leaving_date: r.leaving_date,
+      uses_own_sunblock: r.uses_own_sunblock,
+      sunblock_instructions: r.sunblock_instructions,
       created_at: r.created_at,
       updated_at: r.updated_at,
       sibling_discount_eligible: r.status === "active" && siblingCount > 1,
@@ -284,6 +288,8 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
     notes: childRow.notes,
     start_date: childRow.start_date,
     leaving_date: childRow.leaving_date,
+    uses_own_sunblock: childRow.uses_own_sunblock,
+    sunblock_instructions: childRow.sunblock_instructions,
     created_at: childRow.created_at,
     updated_at: childRow.updated_at,
     sibling_discount_eligible: childRow.status === "active" && activeSiblingCount > 1,

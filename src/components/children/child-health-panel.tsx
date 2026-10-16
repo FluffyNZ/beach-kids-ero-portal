@@ -1,17 +1,40 @@
 import Link from "next/link";
 import type { AccidentIllnessRecord } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { SunblockPreferenceForm } from "@/components/children/sunblock-preference-form";
 
 /** "Health & permissions" tab content. There's no allergy/medical-condition
  * or consent-form data model anywhere in this app yet (confirmed — nothing
  * in the schema holds that beyond what's below), so this intentionally
  * doesn't invent fields for it. The one real, already-functional source of
  * per-child health data is this child's Accident & Illness record history,
- * which is what's shown here. See the note at the bottom for what's still
- * missing. */
-export function ChildHealthPanel({ records }: { records: AccidentIllnessRecord[] }) {
+ * which is what's shown here, plus the sunblock preference below (see
+ * migration 0062) — the same preference editable from the Sunblock Charts
+ * page by clicking this child's name there. See the note at the bottom for
+ * what's still missing (allergies, medical conditions, actual consent
+ * forms). */
+export function ChildHealthPanel({
+  records,
+  childId,
+  usesOwnSunblock,
+  sunblockInstructions,
+}: {
+  records: AccidentIllnessRecord[];
+  childId: string;
+  usesOwnSunblock: boolean;
+  sunblockInstructions: string | null;
+}) {
   return (
     <div className="flex flex-col gap-4">
+      <div className="card p-5">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Sunblock</h2>
+        <SunblockPreferenceForm
+          childId={childId}
+          initialUsesOwn={usesOwnSunblock}
+          initialInstructions={sunblockInstructions}
+        />
+      </div>
+
       <div className="card p-5">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
           Accident &amp; illness history

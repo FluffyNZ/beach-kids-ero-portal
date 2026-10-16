@@ -201,10 +201,6 @@ type StaffRow = {
   notes: string | null;
   can_publish_learning_stories: boolean;
   room_id: string | null;
-  // Flags a Float-grouped staff member (no fixed home room) to show under
-  // "Relief" instead of "Float" on the Weekly roster -- a display grouping
-  // only, not a room. See migration 0061.
-  is_relief: boolean;
   email: string | null;
   mobile_phone: string | null;
   emergency_contact_name: string | null;
@@ -432,6 +428,11 @@ type ChildrenRow = {
   notes: string | null;
   start_date: string | null;
   leaving_date: string | null;
+  // Which sunblock to use for this child on the Sunblock Charts page --
+  // see migration 0062. Separate from sunscreen consent, which this app
+  // has no data model for yet.
+  uses_own_sunblock: boolean;
+  sunblock_instructions: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;

@@ -266,10 +266,6 @@ export type StaffMember = {
   room_id: string | null;
   room_name: string | null;
   room_color: string | null;
-  // Shows this person under "Relief" instead of "Float" on the Weekly
-  // roster when they have no fixed home room -- a display grouping only,
-  // not a room of its own. See migration 0061.
-  is_relief: boolean;
   email: string | null;
   mobile_phone: string | null;
   emergency_contact_name: string | null;
@@ -495,6 +491,13 @@ export type ChildMember = {
   // farewells" reminders.
   start_date: string | null;
   leaving_date: string | null;
+  // Which sunblock to use for this child on the Sunblock Charts page --
+  // see migration 0062. Edited from either the chart (click the child's
+  // name) or this profile's Health & permissions tab; both read/write the
+  // same two columns. Separate from sunscreen consent, which this app has
+  // no data model for yet.
+  uses_own_sunblock: boolean;
+  sunblock_instructions: string | null;
   created_at: string;
   updated_at: string;
   // Derived, not stored: true when this child's bill payer is also billed

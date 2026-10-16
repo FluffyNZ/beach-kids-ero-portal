@@ -225,6 +225,27 @@ export async function updateChildFeeSettings(
   revalidatePath("/finances/fees");
 }
 
+/** Edited from two places -- the child's own profile (Health & permissions
+ * tab) and the Sunblock Charts page (click a child's name) -- both calling
+ * this same action against the same two columns, so neither can drift out
+ * of sync with the other. */
+export async function updateChildSunblockPreference(
+  childId: string,
+  fields: {
+    uses_own_sunblock?: boolean;
+    sunblock_instructions?: string | null;
+  }
+) {
+  const supabase = createClient();
+  const { error } = await (supabase.from("children") as any).update(fields as any).eq("id", childId);
+  if (error) {
+    throw new Error(`Could not save sunblock preference: ${error.message}`);
+  }
+  revalidatePath(`/children/${childId}`);
+  revalidatePath("/children");
+  revalidatePath("/children/sunblock");
+}
+
 export async function updateChildWinzSubsidy(
   childId: string,
   fields: {

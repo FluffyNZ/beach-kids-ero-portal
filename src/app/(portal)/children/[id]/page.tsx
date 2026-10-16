@@ -136,7 +136,14 @@ export default async function ChildDetailPage({ params }: { params: { id: string
       label: "Health & permissions",
       icon: <ShieldCheckIcon className="h-4 w-4" />,
       count: accidentIllnessRecords.length,
-      content: <ChildHealthPanel records={accidentIllnessRecords} />,
+      content: (
+        <ChildHealthPanel
+          records={accidentIllnessRecords}
+          childId={child.id}
+          usesOwnSunblock={child.uses_own_sunblock}
+          sunblockInstructions={child.sunblock_instructions}
+        />
+      ),
     },
     {
       key: "invoices",
