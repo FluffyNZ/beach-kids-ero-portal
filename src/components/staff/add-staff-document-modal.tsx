@@ -216,7 +216,7 @@ export function AddStaffDocumentModal({
             name="file"
             type="file"
             required
-            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+            accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,.pdf,.doc,.docx,.png,.jpg,.jpeg"
             onChange={handleFileChange}
             className="input file:mr-3 file:rounded-lg file:border-0 file:bg-burgundy-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-burgundy-600"
           />
