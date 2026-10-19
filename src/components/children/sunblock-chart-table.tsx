@@ -53,7 +53,7 @@ export function SunblockChartTable({
 
   return (
     <section
-      className={`card break-inside-avoid overflow-hidden p-0 print:rounded-none print:border-black ${
+      className={`card break-inside-avoid overflow-hidden p-0 print:overflow-visible print:rounded-none print:border-black ${
         pageBreakAfter ? "print:break-after-page" : ""
       }`}
     >
