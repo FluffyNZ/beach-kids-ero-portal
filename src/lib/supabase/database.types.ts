@@ -201,6 +201,8 @@ type StaffRow = {
   notes: string | null;
   can_publish_learning_stories: boolean;
   room_id: string | null;
+  // Added by migration 0061_staff_relief_flag.sql.
+  is_relief: boolean;
   email: string | null;
   mobile_phone: string | null;
   emergency_contact_name: string | null;

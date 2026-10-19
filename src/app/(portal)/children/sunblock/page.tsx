@@ -110,7 +110,11 @@ export default async function SunblockChartsPage({
       {/* Scoped landscape print CSS, same pattern as the Roster page — each
           printed room-week sheet is A4 landscape, one per page (see the
           pageBreakAfter prop threaded through SunblockChartsView below). */}
-      <style>{`@media print { @page { size: landscape; } }`}</style>
+      {/* An explicit, tight page margin — rather than leaving it to whatever
+          the browser/printer's own default happens to be (often a lot more
+          than you'd expect, especially with "Headers and footers" switched
+          on in the print dialog, which eats real space on top of this). */}
+      <style>{`@media print { @page { size: landscape; margin: 8mm; } }`}</style>
 
       {searchParams.autoprint === "1" && <AutoPrint />}
 

@@ -264,6 +264,11 @@ export type StaffMember = {
   notes: string | null;
   can_publish_learning_stories: boolean;
   room_id: string | null;
+  // Set on the person's own profile (see migration 0061) -- used by the
+  // Roster grid to split the "Float" column into a separate "Relief"
+  // sub-section, and nowhere else. Doesn't change which room someone's
+  // actually rostered to on a given day.
+  is_relief: boolean;
   room_name: string | null;
   room_color: string | null;
   email: string | null;

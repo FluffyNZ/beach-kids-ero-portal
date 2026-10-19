@@ -21,7 +21,9 @@ const WEEKDAY_LABELS: Record<Weekday, string> = {
  * (native shadows/shapes) across browsers. This is paper, not an on-screen
  * form. */
 function TickBox() {
-  return <span aria-hidden className="mx-auto block h-4 w-4 border-2 border-charcoal/50 print:border-black" />;
+  return (
+    <span aria-hidden className="mx-auto block h-4 w-4 border-2 border-charcoal/50 print:h-3 print:w-3 print:border print:border-black" />
+  );
 }
 
 export type SunblockChartTableProps = {
@@ -59,14 +61,14 @@ export function SunblockChartTable({
           the one that actually shows up on paper (the on-screen one is
           print:hidden, scoped per print page so every printed sheet carries
           its own title instead of just the first one). */}
-      <div className="hidden items-start justify-between gap-2 px-4 pb-2 pt-4 print:flex">
+      <div className="hidden items-start justify-between gap-2 px-3 pb-1 pt-2 print:flex">
         <div>
-          <p className="text-lg font-bold uppercase tracking-wide text-black">Beach Kids Waihi</p>
-          <p className="text-sm text-black">Weekly sunblock chart</p>
+          <p className="text-base font-bold uppercase tracking-wide text-black">Beach Kids Waihi</p>
+          <p className="text-xs text-black">Weekly sunblock chart</p>
         </div>
         <div className="text-right">
-          <p className="text-base font-bold uppercase text-black">{room.name}</p>
-          <p className="text-sm text-black">
+          <p className="text-sm font-bold uppercase text-black">{room.name}</p>
+          <p className="text-xs text-black">
             {formatShortDate(weekStartDate)} – {formatShortDate(weekEndDate)}
           </p>
         </div>
@@ -93,13 +95,13 @@ export function SunblockChartTable({
           </colgroup>
           <thead>
             <tr className="border-b border-charcoal/10 text-xs uppercase tracking-wide text-charcoal/50 print:border-black print:text-black">
-              <th className="px-3 py-2 font-medium print:px-1.5 print:py-1">Child</th>
+              <th className="px-3 py-2 font-medium print:px-1.5 print:py-0.5">Child</th>
               {WEEKDAYS.map((d, i) => {
                 const date = addDays(weekStartDate, i);
                 const isClosed = closedDays.has(date);
                 return (
-                  <th key={d.key} className="px-1 py-2 font-medium print:py-1">
-                    <div className="text-center normal-case text-charcoal/70 print:text-black">
+                  <th key={d.key} className="px-1 py-2 font-medium print:py-0.5">
+                    <div className="text-center normal-case leading-tight text-charcoal/70 print:text-black">
                       {WEEKDAY_LABELS[d.key]}
                       <span className="block font-normal text-charcoal/40 print:text-black">
                         {formatShortDate(date)}
@@ -110,7 +112,7 @@ export function SunblockChartTable({
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 grid grid-cols-2 gap-x-1 text-center text-[10px] font-normal normal-case text-charcoal/40 print:text-black">
+                    <div className="mt-1 grid grid-cols-2 gap-x-1 text-center text-[10px] font-normal normal-case leading-tight text-charcoal/40 print:mt-0.5 print:text-black">
                       <span>AM</span>
                       <span>PM</span>
                     </div>
@@ -129,7 +131,7 @@ export function SunblockChartTable({
             )}
             {children.map((c) => (
               <tr key={c.id}>
-                <td className="px-3 py-2 align-top font-medium text-charcoal print:px-1.5 print:py-1 print:text-black">
+                <td className="px-3 py-2 align-top font-medium text-charcoal print:px-1.5 print:py-0.5 print:text-black">
                   <button
                     type="button"
                     onClick={() => onSelectChild(c)}
@@ -156,7 +158,7 @@ export function SunblockChartTable({
                   return (
                     <td
                       key={d.key}
-                      className={`px-1 py-2 text-center align-middle print:py-1 ${
+                      className={`px-1 py-2 text-center align-middle print:py-0.5 ${
                         booked ? "" : "bg-sand-100 print:bg-transparent"
                       }`}
                     >
@@ -175,13 +177,13 @@ export function SunblockChartTable({
             ))}
             {Array.from({ length: EXTRA_ROWS }).map((_, i) => (
               <tr key={`extra-${i}`}>
-                <td className="px-3 py-2 print:px-1.5 print:py-1">
-                  <span className="block w-full border-b border-charcoal/20 pt-4 text-xs text-charcoal/0 print:border-black">
+                <td className="px-3 py-2 print:px-1.5 print:py-0.5">
+                  <span className="block w-full border-b border-charcoal/20 pt-4 text-xs text-charcoal/0 print:pt-1 print:border-black">
                     &nbsp;
                   </span>
                 </td>
                 {WEEKDAYS.map((d) => (
-                  <td key={d.key} className="px-1 py-2 text-center align-middle print:py-1">
+                  <td key={d.key} className="px-1 py-2 text-center align-middle print:py-0.5">
                     <div className="grid grid-cols-2 gap-x-1">
                       <TickBox />
                       <TickBox />
@@ -194,7 +196,7 @@ export function SunblockChartTable({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-charcoal/10 px-3 py-2 text-xs text-charcoal/60 print:border-black print:text-black">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-charcoal/10 px-3 py-2 text-xs text-charcoal/60 print:gap-2 print:py-1 print:border-black print:text-black">
         <div className="flex flex-wrap items-center gap-3">
           <span className="flex items-center gap-1">
             <TickBox /> Applied
