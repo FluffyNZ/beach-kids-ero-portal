@@ -269,6 +269,11 @@ export type StaffMember = {
   // sub-section, and nowhere else. Doesn't change which room someone's
   // actually rostered to on a given day.
   is_relief: boolean;
+  // IRD tax code, e.g. "M", "S", "SL", "M SL" (see migration 0063) -- plain
+  // free text, not an enum, since codes combine and the set in use can
+  // change. Deliberately just the tax code: bank account and IRD numbers
+  // stay out of this app and live only in the payroll system.
+  tax_code: string | null;
   room_name: string | null;
   room_color: string | null;
   email: string | null;

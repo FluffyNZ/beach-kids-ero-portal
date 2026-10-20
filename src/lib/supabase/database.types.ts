@@ -203,6 +203,8 @@ type StaffRow = {
   room_id: string | null;
   // Added by migration 0061_staff_relief_flag.sql.
   is_relief: boolean;
+  // Added by migration 0063_staff_tax_code.sql.
+  tax_code: string | null;
   email: string | null;
   mobile_phone: string | null;
   emergency_contact_name: string | null;

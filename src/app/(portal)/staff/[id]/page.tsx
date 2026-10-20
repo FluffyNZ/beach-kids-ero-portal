@@ -215,6 +215,7 @@ export default async function StaffDetailPage({
           minHours={staffMember.min_hours}
           roomId={staffMember.room_id}
           isRelief={staffMember.is_relief}
+          taxCode={staffMember.tax_code}
           rooms={rooms}
           accessLevel={accessLevel}
           onSave={updateStaffDetails.bind(null, staffMember.id)}

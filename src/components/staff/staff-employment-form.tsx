@@ -15,6 +15,7 @@ export function StaffEmploymentForm({
   minHours: initialMinHours,
   roomId: initialRoomId,
   isRelief: initialIsRelief,
+  taxCode: initialTaxCode,
   rooms,
   accessLevel,
   onSave,
@@ -28,6 +29,7 @@ export function StaffEmploymentForm({
   minHours: number | null;
   roomId: string | null;
   isRelief: boolean;
+  taxCode: string | null;
   rooms: RosterRoom[];
   accessLevel: StaffAccessLevel;
   onSave: (fields: {
@@ -40,6 +42,7 @@ export function StaffEmploymentForm({
     min_hours?: number | null;
     room_id?: string | null;
     is_relief?: boolean;
+    tax_code?: string | null;
   }) => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
@@ -55,6 +58,7 @@ export function StaffEmploymentForm({
   const [minHours, setMinHours] = useState(initialMinHours !== null ? String(initialMinHours) : "");
   const [roomId, setRoomId] = useState(initialRoomId ?? "");
   const [isRelief, setIsRelief] = useState(initialIsRelief);
+  const [taxCode, setTaxCode] = useState(initialTaxCode ?? "");
 
   function markDirty() {
     setSaved(false);
@@ -212,6 +216,21 @@ export function StaffEmploymentForm({
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">Tax code</label>
+          <input
+            className="input"
+            placeholder="e.g. M, S, SL"
+            value={taxCode}
+            onChange={(e) => {
+              setTaxCode(e.target.value);
+              markDirty();
+            }}
+          />
+        </div>
+      </div>
+
       {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
 
       <div className="flex justify-end">
@@ -232,6 +251,7 @@ export function StaffEmploymentForm({
                   min_hours: minHours !== "" ? Number(minHours) : null,
                   room_id: roomId || null,
                   is_relief: isRelief,
+                  tax_code: taxCode.trim() || null,
                   ...(accessLevel === "full" ? { pay_rate: payRate !== "" ? Number(payRate) : null } : {}),
                 });
                 setSaved(true);

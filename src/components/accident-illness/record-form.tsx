@@ -181,6 +181,7 @@ export function RecordForm({
       can_publish_learning_stories: false,
       room_id: null,
       is_relief: false,
+      tax_code: null,
       room_name: null,
       room_color: null,
       email: null,
