@@ -35,6 +35,7 @@ export const NAV_ITEMS = [
   { href: "/children", label: "Children", icon: "children" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/email", label: "Email", icon: "email" },
+  { href: "/marketing", label: "Marketing", icon: "marketing" },
   { href: "/stock-orders", label: "Stock Orders", icon: "stock" },
   { href: "/finances", label: "Finances", icon: "finances" },
   { href: "/actions", label: "Actions", icon: "actions" },
@@ -112,6 +113,7 @@ export const NAV_GROUPS: ShellNavGroup[] = [
     items: [
       { href: "/learning/stories", label: "Learning", icon: "learning", status: "active" },
       { href: "/email", label: "Email", icon: "email", status: "active", badgeKey: "emailReminders" },
+      { href: "/marketing", label: "Marketing", icon: "marketing", status: "active" },
       { href: "/calendar", label: "Calendar", icon: "calendar", status: "active" },
     ],
   },

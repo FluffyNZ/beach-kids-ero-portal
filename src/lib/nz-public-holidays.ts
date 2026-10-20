@@ -1,6 +1,7 @@
-// New Zealand public holidays for the Auckland region, computed from the
-// Holidays Act 2003 rules (sections 44–44C) rather than stored anywhere —
-// there's nothing to seed, re-seed each year, or drift out of date.
+// New Zealand public holidays for the Auckland Anniversary Day region,
+// computed from the Holidays Act 2003 rules (sections 44–44C) rather than
+// stored anywhere — there's nothing to seed, re-seed each year, or drift
+// out of date.
 //
 // Verified against Employment New Zealand's official guidance
 // (employment.govt.nz/leave-and-holidays/public-holidays) before being
@@ -11,6 +12,20 @@
 // worked that weekend day anyway" exception the Act allows for, which only
 // matters for calculating one specific person's entitlement, not for a
 // shared centre calendar.
+//
+// Regional anniversary and Beach Kids Waihi: re-checked specifically for
+// this app's Marketing feature (post-suggestions.ts), since Waihi is a
+// Waikato/Hauraki-district address, not Auckland. Confirmed against
+// govt.nz's own public-holidays page AND an independent regional-coverage
+// source: "Auckland Anniversary Day" is explicitly the anniversary
+// observed across the old Auckland Province area, which both sources list
+// as covering Northland, Auckland, Waikato (including the Hauraki/
+// Coromandel area Waihi sits in), Bay of Plenty and Gisborne/East Coast —
+// so aucklandAnniversaryDay() below IS the correct regional anniversary
+// for Waihi, not a mislabelled Auckland-only figure. (Employment NZ's own
+// page separately notes these are 19th-century province names, not current
+// council boundaries, and suggests checking the local council if in doubt
+// — there is no separate "Hauraki" or "Waikato" anniversary day in NZ.)
 //
 // Matariki has no fixed formula — each date is set year by year against
 // the Māori lunar calendar and gazetted by the government (MBIE/Matariki

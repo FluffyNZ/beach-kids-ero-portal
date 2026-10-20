@@ -2,30 +2,45 @@ import Link from "next/link";
 import type { AccidentIllnessRecord } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { SunblockPreferenceForm } from "@/components/children/sunblock-preference-form";
+import { MarketingPhotoConsentForm } from "@/components/children/marketing-photo-consent-form";
 
 /** "Health & permissions" tab content. There's no allergy/medical-condition
- * or consent-form data model anywhere in this app yet (confirmed — nothing
- * in the schema holds that beyond what's below), so this intentionally
- * doesn't invent fields for it. The one real, already-functional source of
- * per-child health data is this child's Accident & Illness record history,
- * which is what's shown here, plus the sunblock preference below (see
- * migration 0062) — the same preference editable from the Sunblock Charts
- * page by clicking this child's name there. See the note at the bottom for
- * what's still missing (allergies, medical conditions, actual consent
- * forms). */
+ * or consent-form data model anywhere in this app, so this intentionally
+ * doesn't invent fields for those. The real, already-functional sources of
+ * per-child health/permission data are: this child's Accident & Illness
+ * record history, the sunblock preference (migration 0062, also editable
+ * from the Sunblock Charts page), and the marketing/social-media photo
+ * permission flag (migration 0064, read by the Marketing feature). See
+ * the note at the bottom for what's still missing (allergies, medical
+ * conditions, a general consent-forms record). */
 export function ChildHealthPanel({
   records,
   childId,
   usesOwnSunblock,
   sunblockInstructions,
+  marketingPhotoConsent,
+  marketingPhotoConsentNotes,
 }: {
   records: AccidentIllnessRecord[];
   childId: string;
   usesOwnSunblock: boolean;
   sunblockInstructions: string | null;
+  marketingPhotoConsent: boolean | null;
+  marketingPhotoConsentNotes: string | null;
 }) {
   return (
     <div className="flex flex-col gap-4">
+      <div className="card p-5">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
+          Marketing / social media photo permission
+        </h2>
+        <MarketingPhotoConsentForm
+          childId={childId}
+          initialConsent={marketingPhotoConsent}
+          initialNotes={marketingPhotoConsentNotes}
+        />
+      </div>
+
       <div className="card p-5">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Sunblock</h2>
         <SunblockPreferenceForm

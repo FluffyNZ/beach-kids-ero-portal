@@ -437,6 +437,13 @@ type ChildrenRow = {
   // has no data model for yet.
   uses_own_sunblock: boolean;
   sunblock_instructions: string | null;
+  // Added by migration 0064_marketing.sql. null = not yet confirmed with
+  // the family — never defaults to true, and uploading a profile photo
+  // (child-photo-upload.tsx) never sets this.
+  marketing_photo_consent: boolean | null;
+  marketing_photo_consent_notes: string | null;
+  marketing_photo_consent_updated_at: string | null;
+  marketing_photo_consent_updated_by: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -581,6 +588,121 @@ type EmailMessagesRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// Marketing feature (migration 0064) — see src/lib/data/marketing.ts /
+// src/lib/actions/marketing.ts / src/lib/marketing/*.
+// ---------------------------------------------------------------------------
+
+export type MarketingPlatformDb = "facebook" | "instagram";
+export type MarketingPostStatusDb = "draft" | "scheduled" | "publishing" | "published" | "failed";
+export type MarketingPlatformResultStatusDb = "pending" | "publishing" | "published" | "failed" | "skipped";
+export type MarketingConnectionPlatformDb = "facebook_page" | "instagram_business";
+export type MarketingConnectionStatusDb = "disconnected" | "connected" | "expired" | "error";
+export type MarketingMediaConsentSourceDb = "on_file" | "unknown" | "declined";
+
+export type MarketingSettingsRow = {
+  id: string;
+  monthly_goal: number;
+  weekly_goal_enabled: boolean;
+  weekly_goal: number | null;
+  christmas_closure_start: string | null;
+  christmas_reopening_date: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export type MarketingPostRow = {
+  id: string;
+  caption: string;
+  caption_facebook: string | null;
+  caption_instagram: string | null;
+  platforms: MarketingPlatformDb[];
+  status: MarketingPostStatusDb;
+  scheduled_at: string | null;
+  published_at: string | null;
+  suggestion_key: string | null;
+  photo_permission_reviewed: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type MarketingPostMediaRow = {
+  id: string;
+  post_id: string;
+  storage_path: string;
+  media_type: "image" | "video";
+  mime_type: string;
+  file_size: number | null;
+  width: number | null;
+  height: number | null;
+  duration_seconds: number | null;
+  sort_order: number;
+  alt_text: string | null;
+  created_at: string;
+};
+
+export type MarketingPostMediaChildRow = {
+  id: string;
+  media_id: string;
+  child_id: string | null;
+  consent_confirmed: boolean;
+  consent_source: MarketingMediaConsentSourceDb;
+  created_at: string;
+};
+
+export type MarketingPostPlatformResultRow = {
+  id: string;
+  post_id: string;
+  platform: MarketingPlatformDb;
+  status: MarketingPlatformResultStatusDb;
+  external_post_id: string | null;
+  external_permalink: string | null;
+  error_message: string | null;
+  attempt_count: number;
+  last_attempted_at: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketingConnectionRow = {
+  id: string;
+  platform: MarketingConnectionPlatformDb;
+  external_account_id: string | null;
+  external_account_name: string | null;
+  access_token_encrypted: string | null;
+  token_expires_at: string | null;
+  long_lived_token_obtained_at: string | null;
+  scopes: string[];
+  status: MarketingConnectionStatusDb;
+  last_verified_at: string | null;
+  last_error: string | null;
+  connected_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketingOauthPendingPage = {
+  id: string;
+  name: string;
+  // Encrypted (see src/lib/marketing/token-crypto.ts) — this is a Page
+  // access token sitting briefly in the pending table while Ethan picks
+  // which Page to connect; selectMetaPage() decrypts it once, then
+  // re-encrypts into marketing_connections and deletes this pending row.
+  access_token_encrypted: string;
+  instagram_business_account_id: string | null;
+  instagram_business_account_name: string | null;
+};
+
+export type MarketingOauthPendingRow = {
+  state: string;
+  user_long_lived_token_encrypted: string;
+  pages: MarketingOauthPendingPage[];
+  created_at: string;
+  expires_at: string;
 };
 
 type StockOrderItemRow = {

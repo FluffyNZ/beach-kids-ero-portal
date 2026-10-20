@@ -33,6 +33,9 @@ type ChildRow = {
   leaving_date: string | null;
   uses_own_sunblock: boolean;
   sunblock_instructions: string | null;
+  marketing_photo_consent: boolean | null;
+  marketing_photo_consent_notes: string | null;
+  marketing_photo_consent_updated_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -208,6 +211,9 @@ export async function getChildrenList(options?: {
       leaving_date: r.leaving_date,
       uses_own_sunblock: r.uses_own_sunblock,
       sunblock_instructions: r.sunblock_instructions,
+      marketing_photo_consent: r.marketing_photo_consent,
+      marketing_photo_consent_notes: r.marketing_photo_consent_notes,
+      marketing_photo_consent_updated_at: r.marketing_photo_consent_updated_at,
       created_at: r.created_at,
       updated_at: r.updated_at,
       sibling_discount_eligible: r.status === "active" && siblingCount > 1,
@@ -290,6 +296,9 @@ export async function getChildById(id: string): Promise<ChildWithDetails | null>
     leaving_date: childRow.leaving_date,
     uses_own_sunblock: childRow.uses_own_sunblock,
     sunblock_instructions: childRow.sunblock_instructions,
+    marketing_photo_consent: childRow.marketing_photo_consent,
+    marketing_photo_consent_notes: childRow.marketing_photo_consent_notes,
+    marketing_photo_consent_updated_at: childRow.marketing_photo_consent_updated_at,
     created_at: childRow.created_at,
     updated_at: childRow.updated_at,
     sibling_discount_eligible: childRow.status === "active" && activeSiblingCount > 1,

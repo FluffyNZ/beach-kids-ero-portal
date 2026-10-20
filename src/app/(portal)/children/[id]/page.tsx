@@ -142,6 +142,8 @@ export default async function ChildDetailPage({ params }: { params: { id: string
           childId={child.id}
           usesOwnSunblock={child.uses_own_sunblock}
           sunblockInstructions={child.sunblock_instructions}
+          marketingPhotoConsent={child.marketing_photo_consent}
+          marketingPhotoConsentNotes={child.marketing_photo_consent_notes}
         />
       ),
     },

@@ -1,3 +1,4 @@
+import type { NzPublicHoliday } from "@/lib/nz-public-holidays";
 import type {
   ActionPriority,
   ActionStatusValue,
@@ -508,6 +509,16 @@ export type ChildMember = {
   // no data model for yet.
   uses_own_sunblock: boolean;
   sunblock_instructions: string | null;
+  // Whether this child's photo/likeness may be used in centre marketing /
+  // social media posts (migration 0064) — null means not yet confirmed
+  // with the family. Set from the child's own profile (Health &
+  // permissions tab) and checked by the Marketing feature's photo
+  // permission review step before a post with this child tagged can be
+  // scheduled or published. Separate from, and no relation to, sunscreen
+  // consent or anything else.
+  marketing_photo_consent: boolean | null;
+  marketing_photo_consent_notes: string | null;
+  marketing_photo_consent_updated_at: string | null;
   created_at: string;
   updated_at: string;
   // Derived, not stored: true when this child's bill payer is also billed
@@ -1323,4 +1334,152 @@ export type UpcomingFamilyReminder = {
   isToday: boolean;
   alreadyHandled: "draft" | "sent" | null;
   draftEmailId: string | null; // set when alreadyHandled === "draft", to resume editing it
+};
+
+// ---------------------------------------------------------------------------
+// Marketing — social media post planning, scheduling and real Facebook/
+// Instagram publishing via the Meta Graph API (migration 0064). See
+// src/lib/data/marketing.ts, src/lib/actions/marketing.ts and
+// src/lib/marketing/*. Connections NEVER carry a raw access token out of
+// the data layer — see MarketingConnection below.
+// ---------------------------------------------------------------------------
+
+export type MarketingPlatform = "facebook" | "instagram";
+export type MarketingPostStatus = "draft" | "scheduled" | "publishing" | "published" | "failed";
+export type MarketingPlatformResultStatus = "pending" | "publishing" | "published" | "failed" | "skipped";
+export type MarketingConnectionPlatform = "facebook_page" | "instagram_business";
+export type MarketingConnectionStatus = "disconnected" | "connected" | "expired" | "error";
+export type MarketingMediaConsentSource = "on_file" | "unknown" | "declined";
+
+/** One real child identified in a piece of media, and the actual
+ * permission-review outcome recorded for them on this post. Never implies
+ * permission exists just because a photo was uploaded — consentConfirmed
+ * only becomes true when a staff member explicitly ticks it on the
+ * Create/Edit post screen, after checking consentSource (a snapshot of
+ * children.marketing_photo_consent at review time). */
+export type MarketingPostMediaChildTag = {
+  childId: string | null;
+  childName: string | null;
+  consentConfirmed: boolean;
+  consentSource: MarketingMediaConsentSource;
+};
+
+export type MarketingPostMedia = {
+  id: string;
+  url: string; // public URL into the marketing-media bucket
+  mediaType: "image" | "video";
+  mimeType: string;
+  fileSize: number | null;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+  sortOrder: number;
+  altText: string | null;
+  taggedChildren: MarketingPostMediaChildTag[];
+};
+
+export type MarketingPostPlatformResult = {
+  platform: MarketingPlatform;
+  status: MarketingPlatformResultStatus;
+  externalPostId: string | null;
+  externalPermalink: string | null;
+  errorMessage: string | null;
+  attemptCount: number;
+  lastAttemptedAt: string | null;
+  publishedAt: string | null;
+};
+
+export type MarketingPost = {
+  id: string;
+  caption: string;
+  captionFacebook: string | null; // null = falls back to `caption` for Facebook
+  captionInstagram: string | null; // null = falls back to `caption` for Instagram
+  platforms: MarketingPlatform[];
+  status: MarketingPostStatus;
+  scheduledAt: string | null; // ISO instant (UTC) — render in Pacific/Auckland, see src/lib/marketing/timezone.ts
+  publishedAt: string | null;
+  suggestionKey: string | null;
+  photoPermissionReviewed: boolean;
+  media: MarketingPostMedia[];
+  platformResults: MarketingPostPlatformResult[];
+  createdAt: string;
+  updatedAt: string;
+  // Derived: true when any tagged child on this post's media has not had
+  // consent explicitly confirmed — used to block scheduling/publishing and
+  // to show the "Needs review" badge from the reference mockup honestly
+  // (driven by real per-child state, not a fixed example).
+  needsPhotoPermissionReview: boolean;
+};
+
+/** A connection's app-facing shape — deliberately has no token field at
+ * all, encrypted or otherwise. The data layer (getMarketingConnections)
+ * never selects access_token_encrypted into this type. */
+export type MarketingConnection = {
+  platform: MarketingConnectionPlatform;
+  externalAccountId: string | null;
+  externalAccountName: string | null;
+  status: MarketingConnectionStatus;
+  scopes: string[];
+  tokenExpiresAt: string | null;
+  connectedAt: string | null; // long_lived_token_obtained_at
+  lastVerifiedAt: string | null;
+  lastError: string | null;
+};
+
+export type MarketingSettings = {
+  monthlyGoal: number;
+  weeklyGoalEnabled: boolean;
+  weeklyGoal: number | null;
+  christmasClosureStart: string | null;
+  christmasReopeningDate: string | null;
+  updatedAt: string;
+};
+
+export type MarketingOverviewStats = {
+  monthlyGoal: number;
+  weeklyGoalEnabled: boolean;
+  weeklyGoal: number | null;
+  publishedThisMonth: number; // content items (one per post, dual-platform counts once)
+  scheduledThisMonth: number;
+  draftCount: number;
+  scheduledCount: number;
+  failedCount: number; // failed-and-unresolved platform results needing attention
+};
+
+export type MarketingSuggestionCategory =
+  | "enrolment"
+  | "activity"
+  | "staff_intro"
+  | "whanau_reminder"
+  | "event"
+  | "public_holiday"
+  | "christmas_closure"
+  | "christmas_reopening";
+
+/** An editable, non-fabricated post idea. Every suggestion is generated
+ * from real data (a real public holiday date, Ethan's own entered
+ * Christmas dates, a real upcoming event already on the Calendar) — see
+ * src/lib/marketing/post-suggestions.ts. There is no "promotions" or
+ * "available spaces" category here unless real data backs it; nothing
+ * invents numbers or dates. */
+export type MarketingSuggestion = {
+  key: string;
+  category: MarketingSuggestionCategory;
+  title: string;
+  description: string;
+  suggestedCaption: string;
+  relevantDate: string | null;
+  alreadyDrafted: boolean;
+};
+
+export type MarketingCalendarDay = {
+  date: string;
+  inMonth: boolean;
+  posts: MarketingPost[];
+  publicHoliday: NzPublicHoliday | null;
+};
+
+export type MarketingCalendarWeek = {
+  weekStartDate: string;
+  days: MarketingCalendarDay[];
 };

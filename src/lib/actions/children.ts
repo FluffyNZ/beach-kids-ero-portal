@@ -246,6 +246,35 @@ export async function updateChildSunblockPreference(
   revalidatePath("/children/sunblock");
 }
 
+/** Records whether this child's photo/likeness may be used in Beach Kids
+ * marketing / social media posts (migration 0064) — see this child's
+ * Health & permissions tab. `consent` should only ever be set after a
+ * staff member has actually confirmed the position with the family; this
+ * action never infers it from anything else (a photo upload, an existing
+ * form, etc.). Passing `null` resets it back to "not yet confirmed". */
+export async function setChildMarketingPhotoConsent(
+  childId: string,
+  consent: boolean | null,
+  notes: string | null
+) {
+  const supabase = createClient();
+  const userId = await currentUserId();
+  const { error } = await (supabase.from("children") as any)
+    .update({
+      marketing_photo_consent: consent,
+      marketing_photo_consent_notes: notes,
+      marketing_photo_consent_updated_at: new Date().toISOString(),
+      marketing_photo_consent_updated_by: userId,
+    } as any)
+    .eq("id", childId);
+  if (error) {
+    throw new Error(`Could not save marketing photo permission: ${error.message}`);
+  }
+  revalidatePath(`/children/${childId}`);
+  revalidatePath("/children");
+  revalidatePath("/marketing");
+}
+
 export async function updateChildWinzSubsidy(
   childId: string,
   fields: {

@@ -24,6 +24,7 @@ import {
   MoreIcon,
   CalendarIcon,
   MailIcon,
+  MegaphoneIcon,
 } from "@/components/icons";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -38,6 +39,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   children: ChildrenIcon,
   calendar: CalendarIcon,
   email: MailIcon,
+  marketing: MegaphoneIcon,
   stock: StockIcon,
   finances: FinancesIcon,
   actions: ActionsIcon,
