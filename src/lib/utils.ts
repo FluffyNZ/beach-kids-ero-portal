@@ -179,6 +179,26 @@ export function nzTodayDateString(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland" }).format(new Date());
 }
 
+/** Builds a link to the Teaching Council's public "Find a registered
+ * teacher" search, pre-filled with this person's name, so staff/qualifications
+ * can jump straight to checking someone's registration status and expiry on
+ * the Teaching Council's own site — we don't store or claim an expiry date
+ * ourselves anywhere, since that's the Teaching Council's authoritative data,
+ * not ours to track. Splits "First Middle Last" into the "Last, First Middle"
+ * format the search expects (confirmed against a real example:
+ * https://teachingcouncil.nz/en/find-a-registered-teacher?teacherType=Teacher&name=frew%2C+nyah&regNum=
+ * for "Nyah Frew"). A single-word name (no space) is passed through as-is
+ * rather than guessed at. */
+export function teachingCouncilSearchUrl(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  const name = parts.length > 1 ? `${parts[parts.length - 1]}, ${parts.slice(0, -1).join(" ")}` : parts.join(" ");
+  const url = new URL("https://teachingcouncil.nz/en/find-a-registered-teacher");
+  url.searchParams.set("teacherType", "Teacher");
+  url.searchParams.set("name", name);
+  url.searchParams.set("regNum", "");
+  return url.toString();
+}
+
 /** "1st" / "2nd" / "3rd" / "4th" etc — used for "turning {{turning_age}}"
  * in the birthday email template. */
 export function ordinal(n: number): string {
