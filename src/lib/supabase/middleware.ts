@@ -7,7 +7,15 @@ import { NextResponse, type NextRequest } from "next/server";
 // enforces its own access control instead — a CRON_SECRET bearer token
 // checked inside the route — so this isn't a weaker version of the normal
 // login wall, it's a different, narrower one for machine-to-machine calls.
-const PUBLIC_PATHS = ["/login", "/api/cron"];
+//
+// "/staffroom" is here for a similar reason: it's the PIN-protected contacts
+// page for the staff-room tablet, which deliberately isn't signed in to the
+// portal (so nobody can wander from it into the rest of the site). It
+// enforces its own, separate PIN check on the server (see
+// src/lib/staffroom/session.ts) and shows nothing — not even the contact
+// data — until that passes. The normal login for everything else is
+// unchanged.
+const PUBLIC_PATHS = ["/login", "/api/cron", "/staffroom"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

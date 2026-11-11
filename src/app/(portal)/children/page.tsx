@@ -44,6 +44,9 @@ export default async function ChildrenPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/children/contacts" className="btn-ghost">
+            Contact numbers
+          </Link>
           <Link href="/children/sunblock" className="btn-ghost">
             Sunblock charts
           </Link>

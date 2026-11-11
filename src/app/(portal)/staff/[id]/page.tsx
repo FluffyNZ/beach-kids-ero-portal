@@ -29,7 +29,7 @@ import { EmailStaffButton } from "@/components/staff/email-staff-button";
 import { DeleteStaffButton } from "@/components/staff/delete-staff-button";
 import { StatusBadge } from "@/components/status-badge";
 import { Tabs, type TabItem } from "@/components/ui/tabs";
-import { ChevronRightIcon } from "@/components/icons";
+import { ChevronRightIcon, LinkIcon } from "@/components/icons";
 import {
   STAFF_STATUS_LABEL,
   STAFF_CONTRACT_TYPE_LABEL,
@@ -42,7 +42,7 @@ import {
 } from "@/lib/constants";
 import { getRequiredDocumentSlots, getOtherDocuments } from "@/lib/staff-required-documents";
 import { getDeadlineAlert } from "@/lib/evidence-deadline";
-import { formatDate, percentage } from "@/lib/utils";
+import { formatDate, percentage, teachingCouncilSearchUrl } from "@/lib/utils";
 import type { StaffAvailability } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -303,6 +303,21 @@ export default async function StaffDetailPage({
           accessLevel={accessLevel}
           onSave={updateStaffQualification.bind(null, staffMember.id)}
         />
+        <a
+          href={teachingCouncilSearchUrl(staffMember.full_name)}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 flex items-center gap-2 rounded-xl border border-charcoal/10 bg-sand-50 px-4 py-3 text-sm font-medium text-burgundy-600 hover:bg-sand-100"
+        >
+          <LinkIcon className="h-4 w-4 shrink-0" />
+          Check {staffMember.full_name.split(" ")[0]}&apos;s Teaching Council registration &amp; expiry
+          <span className="ml-auto text-xs font-normal text-charcoal/40">teachingcouncil.nz ↗</span>
+        </a>
+        <p className="mt-2 text-xs text-charcoal/40">
+          Opens the Teaching Council&apos;s own &quot;Find a registered teacher&quot; search, pre-filled with this
+          person&apos;s name — we don&apos;t store their registration status or expiry date ourselves, so use this to
+          check it directly with the Teaching Council whenever you need to confirm it&apos;s current.
+        </p>
       </section>
 
       <section className="card p-5">
