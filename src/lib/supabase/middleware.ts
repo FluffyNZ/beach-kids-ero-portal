@@ -15,7 +15,17 @@ import { NextResponse, type NextRequest } from "next/server";
 // src/lib/staffroom/session.ts) and shows nothing — not even the contact
 // data — until that passes. The normal login for everything else is
 // unchanged.
-const PUBLIC_PATHS = ["/login", "/api/cron", "/staffroom"];
+//
+// "/forgot-password", "/auth/confirm" and "/reset-password" are the password
+// reset flow, which by definition runs for someone who can't sign in yet:
+//   - /forgot-password only asks Supabase to email a reset link, and always
+//     shows the same reply whether or not the email has an account.
+//   - /auth/confirm swaps the emailed one-time link for a session (Supabase
+//     checks the link; nothing is granted without a valid one).
+//   - /reset-password refuses to change anything unless that session exists
+//     (it checks for itself, so an expired link gets a clear message rather
+//     than a silent bounce to /login).
+const PUBLIC_PATHS = ["/login", "/api/cron", "/staffroom", "/forgot-password", "/auth/confirm", "/reset-password"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

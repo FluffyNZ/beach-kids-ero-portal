@@ -1,26 +1,25 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasValidStaffroomSession } from "./session";
-import type { ChildContactEntry, ChildEntry, StaffEntry, StaffroomDirectory } from "./types";
+import type { ChildContactEntry, ChildEntry, RoomGroup, StaffroomDirectory } from "./types";
 
-// Reads the contact directory for the staff-room tablet.
+// Reads children's contacts for the contacts (PIN) page, grouped by room.
 //
-// This uses the service-role (admin) client on purpose: the tablet has no
+// This uses the service-role (admin) client on purpose: the PIN page has no
 // Supabase login of its own (see session.ts), so the normal RLS-governed
 // client would see nothing. That makes this file the one place that bypasses
-// RLS for this feature, so two guard rails apply:
+// RLS for this feature, so the guard rails are strict:
 //   1. It refuses to run at all unless the request carries a valid, unexpired
-//      staff-room PIN session — the page checks too, this is the backstop.
-//   2. Every query names its columns explicitly. The staff table also holds
-//      pay rates, tax codes and dates of birth — none of which belong on a
-//      staff-room screen — so this never uses `select *`.
-//
-// Children's contacts come from child_contacts (migration 0065): one list
-// per child, each person carrying their own pick-up / emergency / Forbidden
-// Access markers, because staff check this screen child by child before
-// releasing a child to someone.
+//      contacts-PIN session — the page checks too, this is the backstop.
+//   2. It only ever reads three things: active children's names and rooms,
+//      room names, and those children's contacts. Every query names its
+//      columns explicitly — no staff, fees, health or other records are read,
+//      so none of it can ever reach the PIN page.
+//   3. A Forbidden Access person's phone numbers are dropped here, before
+//      anything is sent to the browser.
 
-type ChildRow = { id: string; full_name: string };
+type ChildRow = { id: string; full_name: string; room_id: string | null };
+type RoomRow = { id: string; name: string; sort_order: number | null };
 type ChildContactRow = {
   id: string;
   child_id: string;
@@ -35,15 +34,8 @@ type ChildContactRow = {
   forbidden_access: boolean;
   notes: string | null;
 };
-type StaffRow = {
-  id: string;
-  full_name: string;
-  role: string | null;
-  mobile_phone: string | null;
-  emergency_contact_name: string | null;
-  emergency_contact_phone: string | null;
-  emergency_contact_relationship: string | null;
-};
+
+const NO_ROOM_ID = "no-room";
 
 function clean(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
@@ -63,27 +55,43 @@ function contactRank(contact: ChildContactEntry): number {
   return 3;
 }
 
+function toEntry(row: ChildContactRow): ChildContactEntry {
+  const forbidden = Boolean(row.forbidden_access);
+  return {
+    id: row.id,
+    name: row.full_name.trim(),
+    relationship: clean(row.relationship),
+    // A Forbidden Access person's number never leaves the server — the page
+    // only needs their name, to warn staff.
+    phone: forbidden ? null : clean(row.phone),
+    altPhone: forbidden ? null : clean(row.alt_phone),
+    isPrimaryCaregiver: Boolean(row.is_primary_caregiver),
+    // Forbidden always wins over the other markers, even if a row were
+    // somehow saved with both.
+    isEmergency: !forbidden && Boolean(row.is_emergency_contact),
+    canPickUp: !forbidden && Boolean(row.can_pick_up),
+    conditionalAccess: Boolean(row.conditional_access),
+    forbidden,
+    notes: clean(row.notes),
+  };
+}
+
 export async function getStaffroomDirectory(): Promise<StaffroomDirectory> {
   if (!hasValidStaffroomSession()) {
-    throw new Error("The staff room page is locked.");
+    throw new Error("The contacts page is locked.");
   }
 
   const admin = createAdminClient();
 
-  const [childResult, staffResult] = await Promise.all([
-    admin.from("children").select("id, full_name").eq("status", "active"),
-    admin
-      .from("staff")
-      .select(
-        "id, full_name, role, mobile_phone, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship"
-      )
-      .eq("status", "active"),
+  const [childResult, roomResult] = await Promise.all([
+    admin.from("children").select("id, full_name, room_id").eq("status", "active"),
+    admin.from("roster_rooms").select("id, name, sort_order"),
   ]);
   if (childResult.error) throw new Error(`Could not load children: ${childResult.error.message}`);
-  if (staffResult.error) throw new Error(`Could not load staff: ${staffResult.error.message}`);
+  if (roomResult.error) throw new Error(`Could not load rooms: ${roomResult.error.message}`);
 
   const childRows = (childResult.data ?? []) as ChildRow[];
-  const staffRows = (staffResult.data ?? []) as StaffRow[];
+  const roomRows = (roomResult.data ?? []) as RoomRow[];
 
   let contactRows: ChildContactRow[] = [];
   if (childRows.length > 0) {
@@ -102,59 +110,40 @@ export async function getStaffroomDirectory(): Promise<StaffroomDirectory> {
 
   const contactsByChild = new Map<string, ChildContactEntry[]>();
   contactRows.forEach((row) => {
-    const forbidden = Boolean(row.forbidden_access);
-    const entry: ChildContactEntry = {
-      id: row.id,
-      name: row.full_name.trim(),
-      relationship: clean(row.relationship),
-      // A Forbidden Access person's number never leaves the server — the
-      // tablet only needs their name, to warn staff.
-      phone: forbidden ? null : clean(row.phone),
-      altPhone: forbidden ? null : clean(row.alt_phone),
-      isPrimaryCaregiver: Boolean(row.is_primary_caregiver),
-      // Belt and braces: forbidden always wins over the other markers, even
-      // if a row were somehow saved with both.
-      isEmergency: !forbidden && Boolean(row.is_emergency_contact),
-      canPickUp: !forbidden && Boolean(row.can_pick_up),
-      conditionalAccess: Boolean(row.conditional_access),
-      forbidden,
-      notes: clean(row.notes),
-    };
     const list = contactsByChild.get(row.child_id) ?? [];
-    list.push(entry);
+    list.push(toEntry(row));
     contactsByChild.set(row.child_id, list);
   });
 
-  const children: ChildEntry[] = childRows
-    .map((child) => ({
+  const roomById = new Map<string, RoomRow>(roomRows.map((r): [string, RoomRow] => [r.id, r]));
+  const groups = new Map<string, RoomGroup>();
+
+  childRows.forEach((child) => {
+    const room = child.room_id ? roomById.get(child.room_id) : undefined;
+    const groupId = room ? room.id : NO_ROOM_ID;
+    const group = groups.get(groupId) ?? { id: groupId, name: room ? room.name : "No room set", children: [] };
+    const entry: ChildEntry = {
       id: child.id,
       name: child.full_name.trim(),
       contacts: (contactsByChild.get(child.id) ?? [])
         .slice()
         .sort((a, b) => contactRank(a) - contactRank(b) || byName(a.name, b.name)),
-    }))
-    .sort((a, b) => byName(a.name, b.name));
+    };
+    group.children.push(entry);
+    groups.set(groupId, group);
+  });
 
-  const staff: StaffEntry[] = staffRows
-    .map((row) => {
-      const emergencyName = clean(row.emergency_contact_name);
-      const emergencyPhone = clean(row.emergency_contact_phone);
-      return {
-        id: row.id,
-        name: row.full_name,
-        role: clean(row.role),
-        mobile: clean(row.mobile_phone),
-        emergency:
-          emergencyName || emergencyPhone
-            ? {
-                name: emergencyName ?? "Emergency contact",
-                relationship: clean(row.emergency_contact_relationship),
-                phone: emergencyPhone,
-              }
-            : null,
-      };
-    })
-    .sort((a, b) => byName(a.name, b.name));
+  const rooms = Array.from(groups.values())
+    .map((group) => ({ ...group, children: group.children.slice().sort((a, b) => byName(a.name, b.name)) }))
+    .sort((a, b) => {
+      // Rooms in the centre's own order (the roster's sort order); "No room
+      // set" always last.
+      if (a.id === NO_ROOM_ID) return 1;
+      if (b.id === NO_ROOM_ID) return -1;
+      const orderA = roomById.get(a.id)?.sort_order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = roomById.get(b.id)?.sort_order ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB || byName(a.name, b.name);
+    });
 
-  return { children, staff };
+  return { rooms };
 }

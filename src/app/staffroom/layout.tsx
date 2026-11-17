@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 
-// A separate, PIN-gated area of the site for the staff-room tablet — it sits
-// outside the (portal) route group on purpose, so none of the portal's
-// sidebar, topbar or login-only pages are reachable from here.
+// A separate, PIN-gated area of the site for checking children's contacts
+// (the staff-room tablet, or the "Contacts PIN" tab on the login page). It
+// sits outside the (portal) route group on purpose, so none of Earlydesk's
+// sidebar, navigation or login-only pages are reachable from here.
 export const metadata: Metadata = {
-  title: "Beach Kids – Staff Room",
+  title: "Children's contacts",
   robots: { index: false, follow: false },
-  appleWebApp: { capable: true, title: "Staff Room", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Contacts", statusBarStyle: "default" },
 };
 
 export default function StaffroomLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-neutral-50">{children}</div>;
+  return <div className="min-h-screen bg-canvas">{children}</div>;
 }

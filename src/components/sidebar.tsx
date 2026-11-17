@@ -7,6 +7,7 @@ import { NAV_GROUPS, NAV_BOTTOM_ITEMS, type ShellNavItem } from "@/lib/constants
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import { Avatar } from "@/components/ui/avatar";
+import { Logo } from "@/components/brand/logo";
 import { IconButton } from "@/components/ui/icon-button";
 import {
   HomeIcon,
@@ -20,7 +21,6 @@ import {
   SettingsIcon,
   StockIcon,
   FinancesIcon,
-  WaveIcon,
   ShieldCheckIcon,
   BookOpenIcon,
   CalendarIcon,
@@ -160,24 +160,24 @@ export function Sidebar({
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-charcoal/10 bg-white md:flex print:hidden">
-      {/* Phase 3 (Contra visual refit): styled as a bordered "workspace"
-          box near the top, matching Contra's proportions for that slot.
-          Beach Kids only ever has the one centre, so — unlike Contra —
-          there's nothing to switch between and no dropdown chevron here;
-          it's a real link back to Home, not a fake workspace switcher. */}
-      <div className="px-3 pb-1.5 pt-3.5">
+      {/* Earlydesk product logo (links Home), with the centre it's running
+          for underneath. Beach Kids is the centre's own name, so it stays —
+          Earlydesk is the product, Beach Kids is the centre. */}
+      <div className="px-3 pb-1.5 pt-4">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2.5 rounded-xl border border-charcoal/10 px-3 py-2 transition-colors hover:bg-charcoal/[0.03]"
+          aria-label="Earlydesk — go to Home"
+          className="block rounded-xl px-2 py-1.5 transition-colors hover:bg-charcoal/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal/40"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-charcoal text-white">
-            <WaveIcon className="h-4 w-4" />
-          </span>
+          <Logo variant="full" height={26} decorative />
+        </Link>
+        <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-charcoal/10 bg-canvas px-3 py-2">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-lilac-400" aria-hidden="true" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold leading-tight text-charcoal">Beach Kids</span>
-            <span className="block truncate text-xs leading-tight text-charcoal/45">Centre Management</span>
+            <span className="block truncate text-xs leading-tight text-charcoal/70">Waihi centre</span>
           </span>
-        </Link>
+        </div>
       </div>
 
       <nav className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-3 pb-2 pt-1">

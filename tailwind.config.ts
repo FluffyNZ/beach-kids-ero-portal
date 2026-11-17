@@ -35,12 +35,13 @@ const config: Config = {
         // of the original coastal tokens above (kept for anything not yet
         // restyled in this pass).
         cream: "#F6F1E7",
-        // Phase 3 (Contra visual refit, 2026-09-24): shifted from a warm
-        // dark taupe (#353530) to a true near-black so "text-charcoal" and
-        // every charcoal/NN opacity border/text derived from it reads as
-        // Contra's near-black-on-off-white system app-wide, without having
-        // to touch each of the many call sites individually.
-        charcoal: "#18181B",
+        // Earlydesk brand charcoal (2026-11 rebrand). Every text-charcoal /
+        // charcoal/NN border across the app derives from this one token, so
+        // the brand colour applies everywhere without touching call sites.
+        // (Was #18181B in the Phase 3 Contra refit.)
+        charcoal: "#292735",
+        // Earlydesk warm off-white page background (cards stay white).
+        canvas: "#FAF8F5",
         // Pale lilac/grey accent used ONLY for the sidebar's active-nav
         // background and a couple of quiet tag chips — Contra's stand-in
         // for a brand colour in navigation. Burgundy is deliberately not
@@ -49,7 +50,15 @@ const config: Config = {
           50: "#F7F6FC",
           100: "#EFEDF9",
           200: "#E1DDF3",
+          // Earlydesk sign-in panel background — a warmer pale lilac.
+          wash: "#EEE8F6",
+          // Earlydesk muted lilac — the brand accent used in the logo.
+          // Decorative/accent use only: white text on it fails contrast, so
+          // buttons stay charcoal.
+          400: "#A393CB",
           600: "#6D5FA6",
+          // Deep lilac for text links on white (sign-in pages).
+          700: "#4C3A91",
         },
         burgundy: {
           50: "#FBEAF0",

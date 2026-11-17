@@ -17,7 +17,7 @@ html {
 }
 
 body {
-  @apply bg-neutral-50 text-charcoal antialiased;
+  @apply bg-canvas text-charcoal antialiased;
   overflow-x: hidden;
 }
 

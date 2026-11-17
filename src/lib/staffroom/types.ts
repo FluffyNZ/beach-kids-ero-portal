@@ -1,4 +1,4 @@
-// Plain, serialisable shapes for the staff-room tablet page. Deliberately in
+// Plain, serialisable shapes for the contacts (PIN) page. Deliberately in
 // their own file (no "server-only" import) so the client components can
 // `import type` them without dragging any server code along.
 
@@ -28,19 +28,16 @@ export type ChildEntry = {
   contacts: ChildContactEntry[];
 };
 
-export type StaffEntry = {
+export type RoomGroup = {
+  /** The room's id, or "no-room" for children without a room set. */
   id: string;
   name: string;
-  role: string | null;
-  mobile: string | null;
-  emergency: {
-    name: string;
-    relationship: string | null;
-    phone: string | null;
-  } | null;
+  children: ChildEntry[];
 };
 
+/** Everything the contacts page shows: children's contacts only, grouped by
+ * room. Staff details are deliberately not part of this — the PIN view is
+ * for children's contacts and nothing else. */
 export type StaffroomDirectory = {
-  children: ChildEntry[];
-  staff: StaffEntry[];
+  rooms: RoomGroup[];
 };

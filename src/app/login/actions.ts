@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 export type LoginState = {
   error: string | null;
@@ -23,5 +24,5 @@ export async function signIn(_prevState: LoginState, formData: FormData): Promis
     return { error: "Incorrect email or password." };
   }
 
-  redirect(next.startsWith("/") ? next : "/dashboard");
+  redirect(safeNextPath(next, "/dashboard"));
 }

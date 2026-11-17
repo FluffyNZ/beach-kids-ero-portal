@@ -3,15 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepStaffroomAlive, lockStaffroom } from "@/lib/staffroom/actions";
-import type { ChildContactEntry, ChildEntry, StaffEntry, StaffroomDirectory } from "@/lib/staffroom/types";
+import { Logo } from "@/components/brand/logo";
+import type { ChildContactEntry, ChildEntry, RoomGroup, StaffroomDirectory } from "@/lib/staffroom/types";
 
-type TabKey = "children" | "staff" | "emergency";
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "children", label: "Children" },
-  { key: "staff", label: "Staff" },
-  { key: "emergency", label: "Emergency contacts" },
-];
+const ALL_ROOMS = "all";
 
 /** How often an in-use page tells the server it's still being used. */
 const KEEPALIVE_MS = 60_000;
@@ -24,6 +19,10 @@ function telHref(phone: string): string {
 
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
 /** Case-insensitive match on any of the given strings; if the search looks
@@ -44,7 +43,7 @@ function PhoneButton({ phone }: { phone: string }) {
   return (
     <a
       href={telHref(phone)}
-      className="inline-flex shrink-0 items-center rounded-xl bg-charcoal px-4 py-2.5 text-lg font-semibold tracking-wide text-white active:bg-charcoal/80"
+      className="inline-flex shrink-0 items-center rounded-xl bg-charcoal px-4 py-2.5 text-lg font-semibold tracking-wide text-white active:bg-charcoal/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal/40 focus-visible:ring-offset-2"
     >
       {phone}
     </a>
@@ -52,20 +51,23 @@ function PhoneButton({ phone }: { phone: string }) {
 }
 
 /** The red "do not release" box. Shown on a child's card at all times —
- * even when the card is collapsed — so it can't be missed by someone who
- * only glances at the list. */
+ * even when the card is closed — so it can't be missed by someone who only
+ * glances at the list. */
 function ForbiddenBanner({ childName, contacts }: { childName: string; contacts: ChildContactEntry[] }) {
   if (contacts.length === 0) return null;
   return (
     <div role="alert" className="rounded-xl border-2 border-status-action bg-status-actionBg px-4 py-3">
-      <p className="text-sm font-bold uppercase tracking-wide text-status-action">
-        Forbidden access — do not release {firstName(childName)} to:
+      <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-charcoal">
+        <span className="rounded-md bg-status-action px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
+          Forbidden access
+        </span>
+        Do not release {firstName(childName)} to:
       </p>
-      <ul className="mt-1">
+      <ul className="mt-1.5">
         {contacts.map((contact) => (
-          <li key={contact.id} className="text-lg font-semibold text-status-action">
+          <li key={contact.id} className="text-lg font-bold text-charcoal">
             {contact.name}
-            {contact.relationship && <span className="font-normal"> ({contact.relationship})</span>}
+            {contact.relationship && <span className="font-normal text-charcoal/75"> ({contact.relationship})</span>}
           </li>
         ))}
       </ul>
@@ -79,134 +81,87 @@ function ContactRow({ contact }: { contact: ChildContactEntry }) {
       <div className="min-w-0">
         <p className="text-lg font-medium text-charcoal">
           {contact.name}
-          {contact.relationship && <span className="text-base font-normal text-charcoal/55"> · {contact.relationship}</span>}
+          {contact.relationship && <span className="text-base font-normal text-charcoal/70"> · {contact.relationship}</span>}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {contact.canPickUp ? (
-            <span className="badge bg-status-readyBg text-status-ready">Can pick up</span>
+            <span className="badge bg-status-readyBg text-charcoal">
+              <span className="h-2 w-2 rounded-full bg-status-ready" aria-hidden="true" />
+              Can pick up
+            </span>
           ) : (
-            <span className="badge bg-status-neutralBg text-status-neutral">Not listed for pick-up</span>
+            <span className="badge bg-status-neutralBg text-charcoal/70">Not listed for pick-up</span>
           )}
           {contact.conditionalAccess && (
-            <span className="badge bg-status-attentionBg text-status-attention">Conditional access — check with manager</span>
+            <span className="badge bg-status-attentionBg text-charcoal">Conditional access — check with manager</span>
           )}
-          {contact.isPrimaryCaregiver && <span className="badge bg-charcoal/5 text-charcoal/70">Primary caregiver</span>}
-          {contact.isEmergency && <span className="badge bg-status-attentionBg text-status-attention">Emergency contact</span>}
+          {contact.isPrimaryCaregiver && <span className="badge bg-lilac-100 text-charcoal">Primary caregiver</span>}
+          {contact.isEmergency && <span className="badge bg-status-attentionBg text-charcoal">Emergency contact</span>}
         </div>
-        {contact.notes && <p className="mt-1 text-sm text-charcoal/50">{contact.notes}</p>}
+        {contact.notes && <p className="mt-1 text-sm text-charcoal/70">{contact.notes}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {contact.phone && <PhoneButton phone={contact.phone} />}
         {contact.altPhone && <PhoneButton phone={contact.altPhone} />}
-        {!contact.phone && !contact.altPhone && <p className="text-base text-charcoal/45">No number on file</p>}
+        {!contact.phone && !contact.altPhone && <p className="text-base text-charcoal/70">No number on file</p>}
       </div>
     </div>
   );
 }
 
-function ChildCard({
-  child,
-  open,
-  onToggle,
-  emergencyOnly = false,
-}: {
-  child: ChildEntry;
-  open: boolean;
-  onToggle: () => void;
-  emergencyOnly?: boolean;
-}) {
+function ChildCard({ child, open, onToggle }: { child: ChildEntry; open: boolean; onToggle: () => void }) {
   const forbidden = child.contacts.filter((c) => c.forbidden);
-  const allowed = child.contacts.filter((c) => !c.forbidden && (!emergencyOnly || c.isEmergency));
-  const countLabel = emergencyOnly
-    ? `${allowed.length} emergency contact${allowed.length === 1 ? "" : "s"}`
-    : `${allowed.length} contact${allowed.length === 1 ? "" : "s"}`;
+  const allowed = child.contacts.filter((c) => !c.forbidden);
+  const panelId = `child-contacts-${child.id}`;
 
   return (
     <section className="card flex flex-col gap-3 p-5">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
-      >
-        <h3 className="text-xl font-semibold text-charcoal">{child.name}</h3>
-        <span className="flex items-center gap-2 text-sm text-charcoal/50">
-          {countLabel}
-          <span aria-hidden="true" className="text-base">
-            {open ? "▲" : "▼"}
+      <h3>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal/40 focus-visible:ring-offset-4"
+        >
+          <span className="text-xl font-semibold text-charcoal">{child.name}</span>
+          <span className="flex items-center gap-2 text-sm font-normal text-charcoal/70">
+            {plural(allowed.length, "contact")}
+            <span aria-hidden="true" className="text-base">
+              {open ? "▲" : "▼"}
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      </h3>
 
       <ForbiddenBanner childName={child.name} contacts={forbidden} />
 
-      {open &&
-        (allowed.length === 0 ? (
-          <p className="text-base text-charcoal/45">
-            {emergencyOnly ? "No emergency contacts on file." : "No contacts on file yet."}
-          </p>
-        ) : (
-          <div className="divide-y divide-charcoal/5 border-t border-charcoal/5">
-            {allowed.map((contact) => (
-              <ContactRow key={contact.id} contact={contact} />
-            ))}
-          </div>
-        ))}
-    </section>
-  );
-}
-
-function StaffCard({ member, emergencyOnly = false }: { member: StaffEntry; emergencyOnly?: boolean }) {
-  return (
-    <section className="card p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-xl font-semibold text-charcoal">{member.name}</h3>
-        {member.role && <p className="text-sm text-charcoal/55">{member.role}</p>}
-      </div>
-
-      {!emergencyOnly && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium uppercase tracking-wide text-charcoal/40">Mobile</p>
-          {member.mobile ? <PhoneButton phone={member.mobile} /> : <p className="text-base text-charcoal/45">Not on file yet</p>}
-        </div>
-      )}
-
-      <div className={`${emergencyOnly ? "mt-2" : "mt-3 border-t border-charcoal/5 pt-3"} flex flex-wrap items-center justify-between gap-3`}>
-        <div className="min-w-0">
-          <p className="text-sm font-medium uppercase tracking-wide text-charcoal/40">Emergency contact</p>
-          {member.emergency ? (
-            <p className="text-lg text-charcoal">
-              {member.emergency.name}
-              {member.emergency.relationship && (
-                <span className="text-base text-charcoal/55"> · {member.emergency.relationship}</span>
-              )}
-            </p>
+      {open && (
+        <div id={panelId}>
+          {allowed.length === 0 ? (
+            <p className="text-base text-charcoal/70">No contacts on file yet.</p>
           ) : (
-            <p className="text-base text-charcoal/45">Not on file yet</p>
+            <div className="divide-y divide-charcoal/5 border-t border-charcoal/5">
+              {allowed.map((contact) => (
+                <ContactRow key={contact.id} contact={contact} />
+              ))}
+            </div>
           )}
         </div>
-        {member.emergency?.phone && <PhoneButton phone={member.emergency.phone} />}
-      </div>
+      )}
     </section>
   );
 }
 
-function EmptyNote({ children }: { children: React.ReactNode }) {
-  return <p className="card p-5 text-base text-charcoal/55">{children}</p>;
-}
-
-/** The staff-room tablet screen: three tabs (children, staff, emergency
- * contacts), one big search box, and tap-to-call numbers.
+/** The contacts (PIN) page: children's contacts only, grouped by room, with
+ * room tabs, one big search box and tap-to-call numbers. Nothing else in
+ * Earlydesk is reachable from here.
  *
- * Children are listed one card per child, each with that child's own
- * contacts and whether each person can pick up. Anyone marked Forbidden
- * Access is shown in a red box on the child's card at all times.
- *
- * Locking: this component also owns the auto-lock. After `idleMinutes`
- * without a touch/keypress/scroll it covers the screen immediately, clears
- * the server session, and refreshes back to the PIN pad. While the page IS
- * being used it pings the server about once a minute to keep the (shorter)
- * server-side session alive — see lib/staffroom/session.ts. */
+ * Locking: after `idleMinutes` without a touch/keypress/scroll the screen is
+ * covered immediately, the server session is cleared, and it refreshes back
+ * to the PIN pad. While the page IS being used it pings the server about
+ * once a minute to keep the (shorter) server-side session alive — see
+ * lib/staffroom/session.ts. */
 export function StaffroomApp({
   directory,
   idleMinutes,
@@ -215,7 +170,7 @@ export function StaffroomApp({
   idleMinutes: number;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<TabKey>("children");
+  const [roomId, setRoomId] = useState<string>(ALL_ROOMS);
   const [query, setQuery] = useState("");
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [covered, setCovered] = useState(false);
@@ -279,68 +234,77 @@ export function StaffroomApp({
   }, []);
 
   const searching = query.trim().length > 0;
+  const totalChildren = directory.rooms.reduce((sum, room) => sum + room.children.length, 0);
 
-  const children = useMemo(
-    () =>
-      directory.children.filter((child) =>
-        matches([child.name, ...child.contacts.flatMap((c) => [c.name, c.relationship, c.phone, c.altPhone])], query)
-      ),
-    [directory.children, query]
-  );
-
-  const staff = useMemo(
-    () =>
-      directory.staff.filter((s) =>
-        matches(
-          [s.name, s.role, s.mobile, s.emergency?.name, s.emergency?.relationship, s.emergency?.phone],
-          query
-        )
-      ),
-    [directory.staff, query]
-  );
-
-  const emergencyChildren = useMemo(
-    () => children.filter((child) => child.contacts.some((c) => c.isEmergency && !c.forbidden)),
-    [children]
-  );
-  const emergencyStaff = useMemo(() => staff.filter((s) => s.emergency), [staff]);
+  // Search looks across every room, so a name is never "missing" just
+  // because a different room tab is selected.
+  const visibleRooms: RoomGroup[] = useMemo(() => {
+    const rooms = searching || roomId === ALL_ROOMS ? directory.rooms : directory.rooms.filter((r) => r.id === roomId);
+    return rooms
+      .map((room) => ({
+        ...room,
+        children: room.children.filter((child) =>
+          matches([child.name, ...child.contacts.flatMap((c) => [c.name, c.relationship, c.phone, c.altPhone])], query)
+        ),
+      }))
+      .filter((room) => room.children.length > 0);
+  }, [directory.rooms, roomId, query, searching]);
 
   if (covered) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-50 text-charcoal/50">Locking…</div>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-canvas text-charcoal/70">
+        <Logo variant="icon" height={48} decorative />
+        Locking…
+      </div>
     );
   }
 
+  const tabs = [
+    { id: ALL_ROOMS, label: "All rooms", count: totalChildren },
+    ...directory.rooms.map((room) => ({ id: room.id, label: room.name, count: room.children.length })),
+  ];
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 md:px-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-charcoal">Staff room contacts</h1>
-          <p className="mt-1 text-sm text-charcoal/55">
-            Tap a child to see who can pick them up. Tap a number to call. This screen locks itself after {idleMinutes}{" "}
-            minutes without a touch.
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-4">
+          <Logo variant="icon" height={44} />
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-charcoal md:text-3xl">Children&apos;s contacts</h1>
+            <p className="mt-0.5 text-sm text-charcoal/70">
+              Tap a child to see who can pick them up. Locks after {idleMinutes} minutes without a touch.
+            </p>
+          </div>
         </div>
         <button type="button" onClick={lockNow} className="btn-secondary px-5 py-3 text-base">
           Lock now
         </button>
       </header>
 
-      <div role="tablist" aria-label="Contact lists" className="grid grid-cols-3 gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
-            className={`rounded-xl px-3 py-3.5 text-base font-semibold transition-colors ${
-              tab === t.key ? "bg-charcoal text-white" : "border border-charcoal/10 bg-white text-charcoal/70 active:bg-charcoal/5"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div
+        role="group"
+        aria-label="Show children in"
+        className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]"
+      >
+        {tabs.map((tab) => {
+          const selected = !searching && roomId === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => {
+                setRoomId(tab.id);
+                setQuery("");
+              }}
+              className={`shrink-0 rounded-xl px-4 py-3 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal/40 focus-visible:ring-offset-2 ${
+                selected ? "bg-charcoal text-white" : "border border-charcoal/10 bg-white text-charcoal active:bg-charcoal/5"
+              }`}
+            >
+              {tab.label} <span className={selected ? "text-white/75" : "text-charcoal/70"}>{tab.count}</span>
+            </button>
+          );
+        })}
       </div>
 
       <input
@@ -348,74 +312,33 @@ export function StaffroomApp({
         inputMode="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search a child, a contact's name or a number…"
-        aria-label="Search contacts"
+        placeholder="Search all rooms — a child, a contact's name or a number…"
+        aria-label="Search children's contacts"
         className="input py-3.5 text-lg"
       />
 
-      {tab === "children" && (
-        <div className="flex flex-col gap-3">
-          {children.length === 0 ? (
-            <EmptyNote>No children or contacts match that search.</EmptyNote>
-          ) : (
-            children.map((child) => (
+      {visibleRooms.length === 0 ? (
+        <p className="card p-5 text-base text-charcoal/70">
+          {searching ? "No children or contacts match that search." : "No children to show."}
+        </p>
+      ) : (
+        visibleRooms.map((room) => (
+          <section key={room.id} aria-labelledby={`room-${room.id}`} className="flex flex-col gap-3">
+            <h2 id={`room-${room.id}`} className="flex items-baseline gap-2 pt-2 text-lg font-semibold text-charcoal">
+              <span className="h-2.5 w-2.5 shrink-0 self-center rounded-full bg-lilac-400" aria-hidden="true" />
+              {room.name}
+              <span className="text-sm font-normal text-charcoal/70">{room.children.length} {room.children.length === 1 ? "child" : "children"}</span>
+            </h2>
+            {room.children.map((child) => (
               <ChildCard
                 key={child.id}
                 child={child}
                 open={searching || openIds.includes(child.id)}
                 onToggle={() => toggle(child.id)}
               />
-            ))
-          )}
-        </div>
-      )}
-
-      {tab === "staff" && (
-        <div className="flex flex-col gap-3">
-          {staff.length === 0 ? (
-            <EmptyNote>No staff match that search.</EmptyNote>
-          ) : (
-            staff.map((member) => <StaffCard key={member.id} member={member} />)
-          )}
-        </div>
-      )}
-
-      {tab === "emergency" && (
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-charcoal/50">
-              Children&apos;s emergency contacts
-            </h2>
-            {emergencyChildren.length === 0 ? (
-              <EmptyNote>
-                {searching
-                  ? "No children's emergency contacts match that search."
-                  : "No children's emergency contacts are on file yet. A manager can add them in the portal under Children → Contact numbers."}
-              </EmptyNote>
-            ) : (
-              emergencyChildren.map((child) => (
-                <ChildCard
-                  key={child.id}
-                  child={child}
-                  emergencyOnly
-                  open={searching || openIds.includes(child.id)}
-                  onToggle={() => toggle(child.id)}
-                />
-              ))
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-charcoal/50">Staff emergency contacts</h2>
-            {emergencyStaff.length === 0 ? (
-              <EmptyNote>
-                {searching ? "No staff emergency contacts match that search." : "No staff emergency contacts are on file yet."}
-              </EmptyNote>
-            ) : (
-              emergencyStaff.map((member) => <StaffCard key={member.id} member={member} emergencyOnly />)
-            )}
-          </div>
-        </div>
+            ))}
+          </section>
+        ))
       )}
     </div>
   );

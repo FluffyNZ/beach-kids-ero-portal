@@ -1,3 +1,4 @@
+import { Logo } from "@/components/brand/logo";
 import { PinScreen } from "@/components/staffroom/pin-screen";
 import { StaffroomApp } from "@/components/staffroom/staffroom-app";
 import { getStaffroomDirectory } from "@/lib/staffroom/data";
@@ -12,7 +13,8 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="card w-full max-w-md p-6">
-        <h1 className="font-display text-xl font-bold text-charcoal">{title}</h1>
+        <Logo variant="full" height={28} className="mb-5" />
+        <h1 className="text-xl font-semibold tracking-tight text-charcoal">{title}</h1>
         <div className="mt-2 text-sm leading-relaxed text-charcoal/65">{children}</div>
       </div>
     </div>
@@ -25,7 +27,7 @@ export default async function StaffroomPage() {
   // Fail closed: with no usable PIN configured, nobody gets in.
   if (config.state === "missing") {
     return (
-      <Notice title="Staff room page isn't set up yet">
+      <Notice title="Contacts page isn't set up yet">
         <p>
           A manager needs to add a <code className="rounded bg-charcoal/5 px-1">STAFFROOM_PIN</code> setting in Vercel
           (4–12 digits — 6 is recommended) and redeploy. Until then this page stays locked for everyone.
@@ -35,7 +37,7 @@ export default async function StaffroomPage() {
   }
   if (config.state === "invalid") {
     return (
-      <Notice title="Staff room PIN needs fixing">
+      <Notice title="Contacts PIN needs fixing">
         <p>
           The <code className="rounded bg-charcoal/5 px-1">STAFFROOM_PIN</code> setting in Vercel must be digits only,
           4–12 long. Until it&apos;s fixed this page stays locked for everyone.
