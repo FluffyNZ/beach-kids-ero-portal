@@ -29,7 +29,6 @@ export const NAV_ITEMS = [
   { href: "/evidence", label: "Evidence Library", icon: "library" },
   { href: "/policies", label: "Policies", icon: "policies" },
   { href: "/records", label: "Records & Compliance", icon: "records" },
-  { href: "/learning/stories", label: "Learning Stories", icon: "learning" },
   { href: "/staff", label: "Staff", icon: "staff" },
   { href: "/roster", label: "Roster", icon: "roster" },
   { href: "/children", label: "Children", icon: "children" },
@@ -111,7 +110,6 @@ export const NAV_GROUPS: ShellNavGroup[] = [
   {
     label: "Engage",
     items: [
-      { href: "/learning/stories", label: "Learning", icon: "learning", status: "active" },
       { href: "/email", label: "Email", icon: "email", status: "active", badgeKey: "emailReminders" },
       { href: "/marketing", label: "Marketing", icon: "marketing", status: "active" },
       { href: "/calendar", label: "Calendar", icon: "calendar", status: "active" },

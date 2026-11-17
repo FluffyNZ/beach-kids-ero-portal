@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { FEATURES } from "@/lib/features";
+import { ParkedFeature } from "@/components/ui/parked-feature";
 import { getLearningStoriesList, getLearningStoriesOverview, currentMonthKey } from "@/lib/data/learning-stories";
 import { getLearningTagSets } from "@/lib/data/learning-tags";
 import { getRosterRooms } from "@/lib/data/roster";
@@ -17,6 +19,15 @@ export default async function LearningStoriesHomePage({
 }: {
   searchParams: { q?: string; room?: string; child?: string; author?: string; month?: string; status?: string; tag?: string };
 }) {
+  if (!FEATURES.learningStories) {
+    return (
+      <ParkedFeature
+        title="Learning Stories is paused"
+        description="Learning Stories has been switched off for now. Existing stories, photos and records are kept safely and will be available again when the feature returns."
+      />
+    );
+  }
+
   const overviewMonth = searchParams.month || currentMonthKey();
 
   const [stories, overview, rooms, children, authors, tagSets] = await Promise.all([

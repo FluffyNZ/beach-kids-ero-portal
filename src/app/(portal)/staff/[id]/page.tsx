@@ -24,7 +24,6 @@ import { StaffQualificationForm } from "@/components/staff/staff-qualification-f
 import { RequiredDocumentsPanel } from "@/components/staff/required-documents-panel";
 import { StaffGrowthPanel } from "@/components/staff/staff-growth-panel";
 import { StaffNotesPanel } from "@/components/staff/staff-notes-panel";
-import { LearningStoryPermissionToggle } from "@/components/staff/learning-story-permission-toggle";
 import { EmailStaffButton } from "@/components/staff/email-staff-button";
 import { DeleteStaffButton } from "@/components/staff/delete-staff-button";
 import { StatusBadge } from "@/components/status-badge";
@@ -269,14 +268,6 @@ export default async function StaffDetailPage({
             {inductionChecked > 0 ? "Continue induction" : "Start induction"}
           </Link>
         </div>
-      </section>
-
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Learning Stories</h2>
-        <LearningStoryPermissionToggle
-          staffId={staffMember.id}
-          canPublishDirectly={staffMember.can_publish_learning_stories}
-        />
       </section>
 
       <section className="card border-status-action/20 p-5">

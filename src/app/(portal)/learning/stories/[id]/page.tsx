@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { FEATURES } from "@/lib/features";
+import { ParkedFeature } from "@/components/ui/parked-feature";
 import { getLearningStoryById } from "@/lib/data/learning-stories";
 import { getLearningTagSets } from "@/lib/data/learning-tags";
 import { getChildrenList } from "@/lib/data/children";
@@ -9,6 +11,15 @@ import { StoryEditor } from "@/components/learning-stories/story-editor";
 export const dynamic = "force-dynamic";
 
 export default async function LearningStoryDetailPage({ params }: { params: { id: string } }) {
+  if (!FEATURES.learningStories) {
+    return (
+      <ParkedFeature
+        title="Learning Stories is paused"
+        description="Learning Stories has been switched off for now. Existing stories, photos and records are kept safely and will be available again when the feature returns."
+      />
+    );
+  }
+
   const [story, allChildren, rooms, tagSets, authors] = await Promise.all([
     getLearningStoryById(params.id),
     getChildrenList(),

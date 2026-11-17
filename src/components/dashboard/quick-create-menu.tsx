@@ -12,7 +12,6 @@ import {
   CalendarIcon,
   MailIcon,
   AlertIcon,
-  BookOpenIcon,
   UploadIcon,
 } from "@/components/icons";
 
@@ -47,7 +46,6 @@ const ITEMS: QuickCreateItem[] = [
     icon: AlertIcon,
     href: "/records/accidents-illness/new",
   },
-  { label: "Learning story", description: "Start a new story", icon: BookOpenIcon, href: "/learning/stories" },
   { label: "Document", description: "Upload to the Evidence Library", icon: UploadIcon, href: "/evidence" },
   { label: "Email", description: "Draft a new email", icon: MailIcon, href: "/email" },
 ];

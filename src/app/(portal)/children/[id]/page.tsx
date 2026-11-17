@@ -2,11 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getChildById, getBillPayerOptions } from "@/lib/data/children";
 import { getRosterRooms } from "@/lib/data/roster";
-import { getPublishedStoriesForChild } from "@/lib/data/learning-stories";
 import { getAccidentIllnessRecordsForChild } from "@/lib/data/accident-illness";
 import { getInvoicesForChild } from "@/lib/data/invoices";
 import { getEmailHistoryForChild } from "@/lib/data/email";
-import { ChildLearningStoriesPanel } from "@/components/learning-stories/child-learning-stories-panel";
 import {
   updateChildDetails,
   updateChildFeeSettings,
@@ -42,8 +40,7 @@ export default async function ChildDetailPage({ params }: { params: { id: string
   ]);
   if (!child) notFound();
 
-  const [learningStories, accidentIllnessRecords, invoicesForChild, emailHistory] = await Promise.all([
-    getPublishedStoriesForChild(child.id),
+  const [accidentIllnessRecords, invoicesForChild, emailHistory] = await Promise.all([
     getAccidentIllnessRecordsForChild(child.id),
     getInvoicesForChild(child.id),
     getEmailHistoryForChild(child.id),
@@ -89,11 +86,6 @@ export default async function ChildDetailPage({ params }: { params: { id: string
               leavingDate={child.leaving_date}
               onSave={updateChildDetails.bind(null, child.id)}
             />
-          </section>
-
-          <section id="learning-stories" className="card p-5">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Learning Stories</h2>
-            <ChildLearningStoriesPanel stories={learningStories} />
           </section>
 
           <section className="card border-status-action/20 p-5">

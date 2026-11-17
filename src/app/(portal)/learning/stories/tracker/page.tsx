@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { FEATURES } from "@/lib/features";
+import { ParkedFeature } from "@/components/ui/parked-feature";
 import { getMonthlyTracker, currentMonthKey, monthLabel as monthLabelFor } from "@/lib/data/learning-stories";
 import { MonthNav } from "@/components/learning-stories/month-nav";
 import { StatusBadge } from "@/components/status-badge";
@@ -11,6 +13,15 @@ export default async function LearningStoriesTrackerPage({
 }: {
   searchParams: { month?: string };
 }) {
+  if (!FEATURES.learningStories) {
+    return (
+      <ParkedFeature
+        title="Learning Stories is paused"
+        description="Learning Stories has been switched off for now. Existing stories, photos and records are kept safely and will be available again when the feature returns."
+      />
+    );
+  }
+
   const monthKey = searchParams.month || currentMonthKey();
   const rows = await getMonthlyTracker(monthKey);
 
