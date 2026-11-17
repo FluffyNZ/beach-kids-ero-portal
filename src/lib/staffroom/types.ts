@@ -2,26 +2,30 @@
 // their own file (no "server-only" import) so the client components can
 // `import type` them without dragging any server code along.
 
-export type DirectoryContact = {
+export type ChildContactEntry = {
+  id: string;
   name: string;
-  /** Free text from the family contact's "relationship" field (or "Bill
-   * payer" for the family's bill payer). */
   relationship: string | null;
-  phone: string;
-  /** True when the relationship text mentions "emergency" — that's the only
-   * convention used to tell an emergency contact from a parent/guardian,
-   * since the database has no separate flag for it. */
+  /** Main number. Always null for a Forbidden Access person — their number
+   * is never sent to the tablet. */
+  phone: string | null;
+  /** A second number for the same person (landline / daytime), if any. */
+  altPhone: string | null;
+  isPrimaryCaregiver: boolean;
   isEmergency: boolean;
+  canPickUp: boolean;
+  conditionalAccess: boolean;
+  /** Must NOT be given access to this child. */
+  forbidden: boolean;
+  notes: string | null;
 };
 
-export type FamilyEntry = {
-  /** Stable key: the bill payer's id, or "child:<id>" for a child with no
-   * family linked yet. */
-  key: string;
-  /** Every active child in this family, alphabetical — siblings share one
-   * card rather than repeating the same numbers. */
-  children: string[];
-  contacts: DirectoryContact[];
+export type ChildEntry = {
+  id: string;
+  name: string;
+  /** Every contact on file for THIS child (not shared with siblings), with
+   * Forbidden Access people first. */
+  contacts: ChildContactEntry[];
 };
 
 export type StaffEntry = {
@@ -37,6 +41,6 @@ export type StaffEntry = {
 };
 
 export type StaffroomDirectory = {
-  families: FamilyEntry[];
+  children: ChildEntry[];
   staff: StaffEntry[];
 };

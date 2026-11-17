@@ -1,24 +1,31 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { FamilyContact } from "@/lib/types";
 
 // Data for the portal's "Contact numbers" management page (the screen where
-// a manager fills in the numbers the staff-room tablet shows). Unlike the
-// tablet's own data (lib/staffroom/data.ts), this runs as the logged-in
-// manager through the normal RLS-governed client.
+// a manager maintains what the staff-room tablet shows). Unlike the tablet's
+// own data (lib/staffroom/data.ts), this runs as the logged-in manager
+// through the normal RLS-governed client.
 
-export type ManagedFamily = {
-  /** The bill payer's id — a "family" here is a bill payer plus the active
-   * children billed to them. */
-  key: string;
-  billPayerId: string;
-  billPayerName: string;
-  billPayerPhone: string | null;
-  children: { id: string; name: string }[];
-  contacts: FamilyContact[];
+export type ManagedChildContact = {
+  id: string;
+  child_id: string;
+  full_name: string;
+  relationship: string | null;
+  phone: string | null;
+  alt_phone: string | null;
+  is_primary_caregiver: boolean;
+  is_emergency_contact: boolean;
+  can_pick_up: boolean;
+  conditional_access: boolean;
+  forbidden_access: boolean;
+  notes: string | null;
 };
 
-export type UnlinkedChild = { id: string; name: string };
+export type ManagedChild = {
+  id: string;
+  name: string;
+  contacts: ManagedChildContact[];
+};
 
 export type StaffContactGap = {
   id: string;
@@ -28,8 +35,7 @@ export type StaffContactGap = {
 };
 
 export type ContactDirectoryForManagement = {
-  families: ManagedFamily[];
-  unlinkedChildren: UnlinkedChild[];
+  children: ManagedChild[];
   staffGaps: StaffContactGap[];
   staffTotal: number;
 };
@@ -42,11 +48,18 @@ function hasText(value: string | null | undefined): boolean {
   return Boolean(value && value.trim());
 }
 
+function contactRank(contact: ManagedChildContact): number {
+  if (contact.forbidden_access) return 0;
+  if (contact.is_primary_caregiver) return 1;
+  if (contact.is_emergency_contact) return 2;
+  return 3;
+}
+
 export async function getContactDirectoryForManagement(): Promise<ContactDirectoryForManagement> {
   const supabase = createClient();
 
   const [childResult, staffResult] = await Promise.all([
-    supabase.from("children").select("id, full_name, bill_payer_id").eq("status", "active"),
+    supabase.from("children").select("id, full_name").eq("status", "active"),
     supabase
       .from("staff")
       .select("id, full_name, mobile_phone, emergency_contact_phone")
@@ -55,7 +68,7 @@ export async function getContactDirectoryForManagement(): Promise<ContactDirecto
   if (childResult.error) throw new Error(`Could not load children: ${childResult.error.message}`);
   if (staffResult.error) throw new Error(`Could not load staff: ${staffResult.error.message}`);
 
-  const childRows = (childResult.data ?? []) as { id: string; full_name: string; bill_payer_id: string | null }[];
+  const childRows = (childResult.data ?? []) as { id: string; full_name: string }[];
   const staffRows = (staffResult.data ?? []) as {
     id: string;
     full_name: string;
@@ -63,57 +76,41 @@ export async function getContactDirectoryForManagement(): Promise<ContactDirecto
     emergency_contact_phone: string | null;
   }[];
 
-  const billPayerIds = Array.from(
-    new Set(childRows.map((c) => c.bill_payer_id).filter((id): id is string => Boolean(id)))
-  );
-
-  let billPayerRows: { id: string; full_name: string; phone: string | null }[] = [];
-  let contactRows: FamilyContact[] = [];
-  if (billPayerIds.length > 0) {
-    const [billPayerResult, contactResult] = await Promise.all([
-      supabase.from("bill_payers").select("id, full_name, phone").in("id", billPayerIds),
-      supabase
-        .from("family_contacts")
-        .select("id, bill_payer_id, full_name, relationship, email, phone, is_primary")
-        .in("bill_payer_id", billPayerIds)
-        .order("is_primary", { ascending: false })
-        .order("full_name", { ascending: true }),
-    ]);
-    if (billPayerResult.error) throw new Error(`Could not load families: ${billPayerResult.error.message}`);
-    if (contactResult.error) throw new Error(`Could not load family contacts: ${contactResult.error.message}`);
-    billPayerRows = (billPayerResult.data ?? []) as typeof billPayerRows;
-    contactRows = (contactResult.data ?? []) as FamilyContact[];
+  let contactRows: ManagedChildContact[] = [];
+  if (childRows.length > 0) {
+    const contactResult = await supabase
+      .from("child_contacts")
+      .select(
+        "id, child_id, full_name, relationship, phone, alt_phone, is_primary_caregiver, is_emergency_contact, can_pick_up, conditional_access, forbidden_access, notes"
+      )
+      .in(
+        "child_id",
+        childRows.map((c) => c.id)
+      );
+    if (contactResult.error) {
+      throw new Error(
+        `Could not load children's contacts: ${contactResult.error.message}. If this mentions a missing table, migration 0065_child_contacts.sql hasn't been run in Supabase yet.`
+      );
+    }
+    contactRows = (contactResult.data ?? []) as ManagedChildContact[];
   }
 
-  const childrenByBillPayer = new Map<string, { id: string; name: string }[]>();
-  const unlinkedChildren: UnlinkedChild[] = [];
-  childRows.forEach((child) => {
-    if (!child.bill_payer_id) {
-      unlinkedChildren.push({ id: child.id, name: child.full_name });
-      return;
-    }
-    const list = childrenByBillPayer.get(child.bill_payer_id) ?? [];
-    list.push({ id: child.id, name: child.full_name });
-    childrenByBillPayer.set(child.bill_payer_id, list);
-  });
-
-  const contactsByBillPayer = new Map<string, FamilyContact[]>();
+  const contactsByChild = new Map<string, ManagedChildContact[]>();
   contactRows.forEach((contact) => {
-    const list = contactsByBillPayer.get(contact.bill_payer_id) ?? [];
+    const list = contactsByChild.get(contact.child_id) ?? [];
     list.push(contact);
-    contactsByBillPayer.set(contact.bill_payer_id, list);
+    contactsByChild.set(contact.child_id, list);
   });
 
-  const families: ManagedFamily[] = billPayerRows
-    .map((billPayer) => ({
-      key: billPayer.id,
-      billPayerId: billPayer.id,
-      billPayerName: billPayer.full_name,
-      billPayerPhone: billPayer.phone,
-      children: (childrenByBillPayer.get(billPayer.id) ?? []).slice().sort((a, b) => byName(a.name, b.name)),
-      contacts: contactsByBillPayer.get(billPayer.id) ?? [],
+  const children: ManagedChild[] = childRows
+    .map((child) => ({
+      id: child.id,
+      name: child.full_name.trim(),
+      contacts: (contactsByChild.get(child.id) ?? [])
+        .slice()
+        .sort((a, b) => contactRank(a) - contactRank(b) || byName(a.full_name, b.full_name)),
     }))
-    .sort((a, b) => byName(a.children[0]?.name ?? a.billPayerName, b.children[0]?.name ?? b.billPayerName));
+    .sort((a, b) => byName(a.name, b.name));
 
   const staffGaps: StaffContactGap[] = staffRows
     .map((s) => ({
@@ -125,10 +122,5 @@ export async function getContactDirectoryForManagement(): Promise<ContactDirecto
     .filter((s) => s.missingMobile || s.missingEmergencyNumber)
     .sort((a, b) => byName(a.name, b.name));
 
-  return {
-    families,
-    unlinkedChildren: unlinkedChildren.sort((a, b) => byName(a.name, b.name)),
-    staffGaps,
-    staffTotal: staffRows.length,
-  };
+  return { children, staffGaps, staffTotal: staffRows.length };
 }

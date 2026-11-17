@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasValidStaffroomSession } from "./session";
-import type { DirectoryContact, FamilyEntry, StaffEntry, StaffroomDirectory } from "./types";
+import type { ChildContactEntry, ChildEntry, StaffEntry, StaffroomDirectory } from "./types";
 
 // Reads the contact directory for the staff-room tablet.
 //
@@ -14,15 +14,26 @@ import type { DirectoryContact, FamilyEntry, StaffEntry, StaffroomDirectory } fr
 //   2. Every query names its columns explicitly. The staff table also holds
 //      pay rates, tax codes and dates of birth — none of which belong on a
 //      staff-room screen — so this never uses `select *`.
+//
+// Children's contacts come from child_contacts (migration 0065): one list
+// per child, each person carrying their own pick-up / emergency / Forbidden
+// Access markers, because staff check this screen child by child before
+// releasing a child to someone.
 
-type ChildRow = { id: string; full_name: string; bill_payer_id: string | null };
-type BillPayerRow = { id: string; full_name: string; phone: string | null };
-type FamilyContactRow = {
-  bill_payer_id: string;
+type ChildRow = { id: string; full_name: string };
+type ChildContactRow = {
+  id: string;
+  child_id: string;
   full_name: string;
   relationship: string | null;
   phone: string | null;
-  is_primary: boolean;
+  alt_phone: string | null;
+  is_primary_caregiver: boolean;
+  is_emergency_contact: boolean;
+  can_pick_up: boolean;
+  conditional_access: boolean;
+  forbidden_access: boolean;
+  notes: string | null;
 };
 type StaffRow = {
   id: string;
@@ -39,16 +50,17 @@ function clean(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-/** Digits-only comparison key, with NZ "+64 21…" and "021…" treated as the
- * same number — used so the same phone number is never listed twice for one
- * family (e.g. the bill payer also entered as an extra contact). */
-function phoneKey(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return digits.startsWith("64") && digits.length > 9 ? `0${digits.slice(2)}` : digits;
-}
-
 function byName(a: string, b: string): number {
   return a.localeCompare(b, "en-NZ", { sensitivity: "base" });
+}
+
+/** Forbidden Access people first (so the warning is the first thing read),
+ * then primary caregivers, then emergency contacts, then everyone else. */
+function contactRank(contact: ChildContactEntry): number {
+  if (contact.forbidden) return 0;
+  if (contact.isPrimaryCaregiver) return 1;
+  if (contact.isEmergency) return 2;
+  return 3;
 }
 
 export async function getStaffroomDirectory(): Promise<StaffroomDirectory> {
@@ -59,7 +71,7 @@ export async function getStaffroomDirectory(): Promise<StaffroomDirectory> {
   const admin = createAdminClient();
 
   const [childResult, staffResult] = await Promise.all([
-    admin.from("children").select("id, full_name, bill_payer_id").eq("status", "active"),
+    admin.from("children").select("id, full_name").eq("status", "active"),
     admin
       .from("staff")
       .select(
@@ -73,77 +85,55 @@ export async function getStaffroomDirectory(): Promise<StaffroomDirectory> {
   const childRows = (childResult.data ?? []) as ChildRow[];
   const staffRows = (staffResult.data ?? []) as StaffRow[];
 
-  const billPayerIds = Array.from(
-    new Set(childRows.map((c) => c.bill_payer_id).filter((id): id is string => Boolean(id)))
-  );
-
-  let billPayerRows: BillPayerRow[] = [];
-  let contactRows: FamilyContactRow[] = [];
-  if (billPayerIds.length > 0) {
-    const [billPayerResult, contactResult] = await Promise.all([
-      admin.from("bill_payers").select("id, full_name, phone").in("id", billPayerIds),
-      admin
-        .from("family_contacts")
-        .select("bill_payer_id, full_name, relationship, phone, is_primary")
-        .in("bill_payer_id", billPayerIds),
-    ]);
-    if (billPayerResult.error) throw new Error(`Could not load families: ${billPayerResult.error.message}`);
-    if (contactResult.error) throw new Error(`Could not load family contacts: ${contactResult.error.message}`);
-    billPayerRows = (billPayerResult.data ?? []) as BillPayerRow[];
-    contactRows = (contactResult.data ?? []) as FamilyContactRow[];
+  let contactRows: ChildContactRow[] = [];
+  if (childRows.length > 0) {
+    const contactResult = await admin
+      .from("child_contacts")
+      .select(
+        "id, child_id, full_name, relationship, phone, alt_phone, is_primary_caregiver, is_emergency_contact, can_pick_up, conditional_access, forbidden_access, notes"
+      )
+      .in(
+        "child_id",
+        childRows.map((c) => c.id)
+      );
+    if (contactResult.error) throw new Error(`Could not load children's contacts: ${contactResult.error.message}`);
+    contactRows = (contactResult.data ?? []) as ChildContactRow[];
   }
 
-  const billPayerById = new Map(billPayerRows.map((b) => [b.id, b]));
-  const contactsByBillPayer = new Map<string, FamilyContactRow[]>();
+  const contactsByChild = new Map<string, ChildContactEntry[]>();
   contactRows.forEach((row) => {
-    const list = contactsByBillPayer.get(row.bill_payer_id) ?? [];
-    list.push(row);
-    contactsByBillPayer.set(row.bill_payer_id, list);
+    const forbidden = Boolean(row.forbidden_access);
+    const entry: ChildContactEntry = {
+      id: row.id,
+      name: row.full_name.trim(),
+      relationship: clean(row.relationship),
+      // A Forbidden Access person's number never leaves the server — the
+      // tablet only needs their name, to warn staff.
+      phone: forbidden ? null : clean(row.phone),
+      altPhone: forbidden ? null : clean(row.alt_phone),
+      isPrimaryCaregiver: Boolean(row.is_primary_caregiver),
+      // Belt and braces: forbidden always wins over the other markers, even
+      // if a row were somehow saved with both.
+      isEmergency: !forbidden && Boolean(row.is_emergency_contact),
+      canPickUp: !forbidden && Boolean(row.can_pick_up),
+      conditionalAccess: Boolean(row.conditional_access),
+      forbidden,
+      notes: clean(row.notes),
+    };
+    const list = contactsByChild.get(row.child_id) ?? [];
+    list.push(entry);
+    contactsByChild.set(row.child_id, list);
   });
 
-  // One card per family: siblings share a card instead of repeating the same
-  // numbers. A child with no family linked yet gets a card of their own, so
-  // they're still findable (and visibly have no number on file).
-  const childrenByFamily = new Map<string, string[]>();
-  childRows.forEach((child) => {
-    const key = child.bill_payer_id ?? `child:${child.id}`;
-    const list = childrenByFamily.get(key) ?? [];
-    list.push(child.full_name);
-    childrenByFamily.set(key, list);
-  });
-
-  const families: FamilyEntry[] = [];
-  childrenByFamily.forEach((childNames, key) => {
-    const contacts: DirectoryContact[] = [];
-    const seen = new Set<string>();
-
-    function add(name: string, relationship: string | null, phone: string | null) {
-      const cleanedPhone = clean(phone);
-      if (!cleanedPhone) return; // email-only contacts are no use on a phone-number screen
-      const dedupeKey = phoneKey(cleanedPhone);
-      if (seen.has(dedupeKey)) return;
-      seen.add(dedupeKey);
-      contacts.push({
-        name,
-        relationship,
-        phone: cleanedPhone,
-        isEmergency: /emergency/i.test(relationship ?? ""),
-      });
-    }
-
-    if (!key.startsWith("child:")) {
-      const billPayer = billPayerById.get(key);
-      if (billPayer) add(billPayer.full_name, "Bill payer", billPayer.phone);
-
-      (contactsByBillPayer.get(key) ?? [])
+  const children: ChildEntry[] = childRows
+    .map((child) => ({
+      id: child.id,
+      name: child.full_name.trim(),
+      contacts: (contactsByChild.get(child.id) ?? [])
         .slice()
-        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || byName(a.full_name, b.full_name))
-        .forEach((contact) => add(contact.full_name, clean(contact.relationship), contact.phone));
-    }
-
-    families.push({ key, children: childNames.slice().sort(byName), contacts });
-  });
-  families.sort((a, b) => byName(a.children[0] ?? "", b.children[0] ?? ""));
+        .sort((a, b) => contactRank(a) - contactRank(b) || byName(a.name, b.name)),
+    }))
+    .sort((a, b) => byName(a.name, b.name));
 
   const staff: StaffEntry[] = staffRows
     .map((row) => {
@@ -166,5 +156,5 @@ export async function getStaffroomDirectory(): Promise<StaffroomDirectory> {
     })
     .sort((a, b) => byName(a.name, b.name));
 
-  return { families, staff };
+  return { children, staff };
 }
