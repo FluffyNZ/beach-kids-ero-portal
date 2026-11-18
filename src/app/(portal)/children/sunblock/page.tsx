@@ -1,25 +1,21 @@
-import Link from "next/link";
 import { getSunblockChartRooms, isEnrolledInWeek } from "@/lib/data/sunblock-charts";
-import { SunblockChartControls, type SunblockPeriodType } from "@/components/children/sunblock-chart-controls";
-import { SunblockChartsView, type SunblockChartPage } from "@/components/children/sunblock-charts-view";
+import type { SunblockPeriodType } from "@/components/children/sunblock-chart-controls";
+import { MAX_MONTH_SPAN } from "@/lib/sunblock-format";
+import { SunblockChartsWorkspace, type SunblockChartPage } from "@/components/children/sunblock-charts-view";
+import type { SunblockDetailsChild } from "@/components/children/sunblock-details-drawer";
 import { AutoPrint } from "@/components/attendance-roll/auto-print";
-import { PrintButton } from "@/components/audit-pack/print-button";
 import { addDays, addMonths, mondayOfDateString, nzTodayDateString } from "@/lib/utils";
 import { getNzPublicHolidaysInRange } from "@/lib/nz-public-holidays";
 
 export const dynamic = "force-dynamic";
 
-/** The first day of the Mon-Fri week whose Monday is >= `rangeStart`, up to
- * and including `rangeEnd` — i.e. every Monday that actually falls inside
- * the range, nothing either side of it. Walking one continuous range (a
- * single month, or the whole span of several months) rather than looping
- * month-by-month-then-concatenating is what makes "avoid duplicate weeks
- * across month boundaries" automatic: a week straddling two months has only
- * one Monday, so it's only ever generated once, and it's attributed to
- * whichever month that Monday falls in. */
-function getWeekStartsInRange(rangeStart: string, rangeEnd: string): string[] {
+/** Every Mon–Fri week that overlaps `rangeStart`…`rangeEnd`, each once.
+ * A week straddling two months is included for both ends of a range but,
+ * because the range is walked as one continuous span, only ever once. */
+function getWeekStartsOverlapping(rangeStart: string, rangeEnd: string): string[] {
   let monday = mondayOfDateString(rangeStart);
-  if (monday < rangeStart) monday = addDays(monday, 7);
+  // A range starting on a weekend doesn't overlap that week's Mon–Fri.
+  if (addDays(monday, 4) < rangeStart) monday = addDays(monday, 7);
   const weeks: string[] = [];
   while (monday <= rangeEnd) {
     weeks.push(monday);
@@ -28,8 +24,6 @@ function getWeekStartsInRange(rangeStart: string, rangeEnd: string): string[] {
   return weeks;
 }
 
-/** Last day (as "YYYY-MM-DD") of the month that `monthKey` ("YYYY-MM")
- * falls in. */
 function lastDayOfMonth(monthKey: string): string {
   return addDays(addMonths(`${monthKey}-01`, 1), -1);
 }
@@ -39,10 +33,14 @@ function isValidMonthKey(value: string | undefined): value is string {
 }
 
 function isValidDateString(value: string | undefined): value is string {
-  if (!value) return false;
-  const d = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(d.getTime());
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  return !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime());
 }
+
+const monthFmt = new Intl.DateTimeFormat("en-NZ", { month: "long", year: "numeric", timeZone: "UTC" });
+const dayFmt = new Intl.DateTimeFormat("en-NZ", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const printedFmt = new Intl.DateTimeFormat("en-NZ", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const utc = (d: string) => new Date(`${d}T00:00:00Z`);
 
 export default async function SunblockChartsPage({
   searchParams,
@@ -57,103 +55,94 @@ export default async function SunblockChartsPage({
   const month = isValidMonthKey(searchParams.month) ? searchParams.month : today.slice(0, 7);
   const from = isValidMonthKey(searchParams.from) ? searchParams.from : today.slice(0, 7);
   const toRaw = isValidMonthKey(searchParams.to) ? searchParams.to : from;
-  const to = toRaw < from ? from : toRaw;
+  const maxTo = addMonths(`${from}-01`, MAX_MONTH_SPAN - 1).slice(0, 7);
+  const to = toRaw < from ? from : toRaw > maxTo ? maxTo : toRaw;
 
-  // One query for every room and every child's regular schedule/preference —
-  // see the comment on getSunblockChartRooms for why this doesn't need to
-  // vary per week. Filtering to a single selected room happens here, in
-  // memory, rather than re-querying.
+  // One query for every room's current children, bookings and sunblock
+  // details; a single-room selection is filtered here in memory.
   const allRooms = await getSunblockChartRooms();
   const roomId = searchParams.room && allRooms.some((r) => r.id === searchParams.room) ? searchParams.room : "";
   const roomsToRender = roomId ? allRooms.filter((r) => r.id === roomId) : allRooms;
-  const roomOptions = allRooms.map((r) => ({ id: r.id, name: r.name }));
 
   let rangeStart: string;
   let rangeEnd: string;
+  let periodLabel: string;
   if (period === "week") {
     rangeStart = week;
     rangeEnd = addDays(week, 4);
+    periodLabel = "";
   } else if (period === "month") {
     rangeStart = `${month}-01`;
     rangeEnd = lastDayOfMonth(month);
+    periodLabel = monthFmt.format(utc(rangeStart));
   } else {
     rangeStart = `${from}-01`;
     rangeEnd = lastDayOfMonth(to);
+    periodLabel = from === to ? monthFmt.format(utc(rangeStart)) : `${monthFmt.format(utc(rangeStart))} to ${monthFmt.format(utc(`${to}-01`))}`;
   }
 
-  const weekStarts = period === "week" ? [week] : getWeekStartsInRange(rangeStart, rangeEnd);
+  const weekStarts = period === "week" ? [week] : getWeekStartsOverlapping(rangeStart, rangeEnd);
+  const firstDay = weekStarts[0];
+  const lastDay = addDays(weekStarts[weekStarts.length - 1], 4);
 
-  // Centre closures — public holidays — across the full printed range, in
-  // one call. No per-day attendance record exists in this app (only the
-  // regular booked schedule), so this is the one real "the centre wasn't
-  // open" signal available; see getSunblockChartRooms's own comment for the
-  // other known gaps (no room-change history, no one-off extra-day tracking).
-  const closedDays = new Set(
-    getNzPublicHolidaysInRange(rangeStart, addDays(rangeEnd, 1)).map((h) => h.date)
-  );
+  // Public holidays across every printed weekday (including the edges of
+  // weeks that spill outside the chosen months).
+  const closedDays: Record<string, string> = {};
+  for (const h of getNzPublicHolidaysInRange(firstDay, addDays(lastDay, 1))) closedDays[h.date] = h.name;
 
+  // Week-major order (all rooms for week 1, then week 2…), each room-week once.
   const pages: SunblockChartPage[] = [];
+  const seen = new Set<string>();
   for (const weekStartDate of weekStarts) {
     for (const room of roomsToRender) {
+      const key = `${room.id}-${weekStartDate}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       pages.push({
-        key: `${room.id}-${weekStartDate}`,
+        key,
         room: { id: room.id, name: room.name, color: room.color },
         weekStartDate,
         children: room.children.filter((c) => isEnrolledInWeek(c, weekStartDate)),
-        closedDays,
+        closedDays: Object.fromEntries(
+          [0, 1, 2, 3, 4].map((i) => addDays(weekStartDate, i)).filter((d) => closedDays[d]).map((d) => [d, closedDays[d]])
+        ),
       });
     }
   }
 
+  const span = `${dayFmt.format(utc(firstDay))} – ${dayFmt.format(utc(lastDay))}`;
+  const rangeLabel = periodLabel ? `${periodLabel} · weeks ${span}` : span;
+
+  const detailsChildren: SunblockDetailsChild[] = allRooms.flatMap((room) =>
+    room.children.map((c) => ({
+      id: c.id,
+      full_name: c.full_name,
+      roomId: room.id,
+      roomName: room.name,
+      roomColor: room.color,
+      uses_own_sunblock: c.uses_own_sunblock,
+      sunblock_instructions: c.sunblock_instructions,
+    }))
+  );
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 print:max-w-none">
-      {/* Scoped landscape print CSS, same pattern as the Roster page — each
-          printed room-week sheet is A4 landscape, one per page (see the
-          pageBreakAfter prop threaded through SunblockChartsView below). */}
-      {/* An explicit, tight page margin — rather than leaving it to whatever
-          the browser/printer's own default happens to be (often a lot more
-          than you'd expect, especially with "Headers and footers" switched
-          on in the print dialog, which eats real space on top of this). */}
-      <style>{`@media print { @page { size: landscape; margin: 8mm; } }`}</style>
-
+    <>
       {searchParams.autoprint === "1" && <AutoPrint />}
-
-      <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Sunblock Charts</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            One printable weekly chart per room, built from each child&apos;s regular booked schedule — staff tick
-            AM and PM by hand on paper. Booked days aren&apos;t attendance, so leave the tick boxes empty here;
-            nothing on this page is saved as a completed application.
-          </p>
-        </div>
-        <Link href="/children" className="btn-ghost">
-          ← Children
-        </Link>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 print:hidden">
-        <div className="flex-1">
-          <SunblockChartControls period={period} week={week} month={month} from={from} to={to} roomId={roomId} rooms={roomOptions} />
-        </div>
-        <PrintButton />
-      </div>
-
-      {pages.length === 0 ? (
-        <div className="card p-6 text-sm text-charcoal/60">
-          No rooms to show for this selection.
-        </div>
-      ) : (
-        <SunblockChartsView pages={pages} />
-      )}
-
-      <p className="text-xs text-charcoal/40 print:hidden">
-        Booked days come from each child&apos;s regular weekly schedule on file, the same source the Weekly Booked
-        Sessions roll uses — a one-off extra day or absence for a single week won&apos;t show here. A child&apos;s
-        room reflects their current room assignment for every week printed, since the app doesn&apos;t keep a
-        history of past room changes. Shaded days with a dash are days the child isn&apos;t booked in, or the
-        centre is closed for a public holiday.
-      </p>
-    </div>
+      <SunblockChartsWorkspace
+        pages={pages}
+        printedOn={printedFmt.format(utc(today))}
+        rangeLabel={rangeLabel}
+        detailsChildren={detailsChildren}
+        controls={{
+          period,
+          week,
+          month,
+          from,
+          to,
+          roomId,
+          rooms: allRooms.map((r) => ({ id: r.id, name: r.name })),
+        }}
+      />
+    </>
   );
 }

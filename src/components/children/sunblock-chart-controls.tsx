@@ -1,17 +1,17 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addDays, mondayOf, nzTodayDateString } from "@/lib/utils";
+import { addDays, addMonths, mondayOfDateString, nzTodayDateString } from "@/lib/utils";
+import { MAX_MONTH_SPAN } from "@/lib/sunblock-format";
 
 export type SunblockRoomOption = { id: string; name: string };
 export type SunblockPeriodType = "week" | "month" | "months";
 
-/** Builds the `/children/sunblock` URL for a given period selection — the
- * page itself derives everything (which weeks to print, from/to labels)
- * from these same params, so this is the one place that owns the URL
- * shape. `week` is used by the controls' own Prev/Next-week buttons, which
- * only make sense in "week" mode. */
-function buildUrl(params: {
+
+/** Builds the `/children/sunblock` URL for a selection. The page derives
+ * everything (which weeks, which rooms) from these same params. */
+export function buildSunblockUrl(params: {
   period: SunblockPeriodType;
   week: string;
   month: string;
@@ -31,11 +31,15 @@ function buildUrl(params: {
   return `/children/sunblock?${qs.toString()}`;
 }
 
-/** The Sunblock Charts controls: pick one week, one month, or a range of
- * months, plus an optional single-room filter. The page re-renders the
- * on-screen chart(s) straight from these — that live view *is* the
- * preview; Print / Save PDF (shown alongside this, not part of this
- * component) prints exactly what's on screen. */
+const labelCls = "mb-1.5 block text-sm font-medium text-charcoal";
+const fieldCls = "input py-1.5";
+
+function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/** Room, period and week/month pickers, a summary of what will print and
+ * the one Print charts button. */
 export function SunblockChartControls({
   period,
   week,
@@ -44,6 +48,8 @@ export function SunblockChartControls({
   to,
   roomId,
   rooms,
+  summary,
+  onPrint,
 }: {
   period: SunblockPeriodType;
   week: string;
@@ -52,123 +58,177 @@ export function SunblockChartControls({
   to: string;
   roomId: string;
   rooms: SunblockRoomOption[];
+  summary: { rooms: number; weeks: number; pages: number; rangeLabel: string };
+  onPrint: () => void;
 }) {
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
 
   function go(next: Partial<{ period: SunblockPeriodType; week: string; month: string; from: string; to: string; roomId: string }>) {
-    router.push(
-      buildUrl({
-        period: next.period ?? period,
-        week: next.week ?? week,
-        month: next.month ?? month,
-        from: next.from ?? from,
-        to: next.to ?? to,
-        roomId: next.roomId ?? roomId,
-      })
-    );
+    const url = buildSunblockUrl({
+      period: next.period ?? period,
+      week: next.week ?? week,
+      month: next.month ?? month,
+      from: next.from ?? from,
+      to: next.to ?? to,
+      roomId: next.roomId ?? roomId,
+    });
+    startTransition(() => router.push(url, { scroll: false }));
   }
 
+  const thisWeek = mondayOfDateString(nzTodayDateString());
+  const maxTo = addMonths(`${from}-01`, MAX_MONTH_SPAN - 1).slice(0, 7);
+
   return (
-    <div className="card flex flex-wrap items-center gap-3 px-4 py-3 print:hidden">
-      <div className="flex items-center gap-1.5">
-        <label htmlFor="sunblock-period" className="text-sm text-charcoal/60">
-          Show
-        </label>
-        <select
-          id="sunblock-period"
-          value={period}
-          onChange={(e) => go({ period: e.target.value as SunblockPeriodType })}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-        >
-          <option value="week">One week</option>
-          <option value="month">One month</option>
-          <option value="months">Several months</option>
-        </select>
-      </div>
-
-      {period === "week" && (
-        <>
-          <button type="button" onClick={() => go({ week: addDays(week, -7) })} className="btn-ghost px-2.5">
-            ← Prev week
-          </button>
-          <input
-            type="date"
-            value={week}
-            onChange={(e) => {
-              if (!e.target.value) return;
-              go({ week: mondayOf(new Date(`${e.target.value}T00:00:00Z`)) });
-            }}
-            className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-          />
-          <button type="button" onClick={() => go({ week: addDays(week, 7) })} className="btn-ghost px-2.5">
-            Next week →
-          </button>
-          <button
-            type="button"
-            onClick={() => go({ week: mondayOf(new Date(`${nzTodayDateString()}T00:00:00Z`)) })}
-            className="btn-ghost px-2.5 text-xs"
-          >
-            This week
-          </button>
-        </>
-      )}
-
-      {period === "month" && (
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => {
-            if (!e.target.value) return;
-            go({ month: e.target.value });
-          }}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-        />
-      )}
-
-      {period === "months" && (
-        <div className="flex items-center gap-1.5">
-          <input
-            type="month"
-            value={from}
-            onChange={(e) => {
-              if (!e.target.value) return;
-              // Keep `to` from being before the new `from`.
-              go({ from: e.target.value, to: to < e.target.value ? e.target.value : to });
-            }}
-            className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-          />
-          <span className="text-sm text-charcoal/50">to</span>
-          <input
-            type="month"
-            value={to}
-            min={from}
-            onChange={(e) => {
-              if (!e.target.value) return;
-              go({ to: e.target.value });
-            }}
-            className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-          />
+    <section aria-label="Chart options" className="card flex flex-col gap-4 p-4 print:hidden sm:p-5">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <div className="w-full min-[480px]:w-44">
+          <label htmlFor="sunblock-room" className={labelCls}>
+            Room
+          </label>
+          <select id="sunblock-room" value={roomId} onChange={(e) => go({ roomId: e.target.value })} className={fieldCls}>
+            <option value="">All rooms</option>
+            {rooms.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
 
-      <div className="ml-auto flex items-center gap-1.5">
-        <label htmlFor="sunblock-room" className="text-sm text-charcoal/60">
-          Room
-        </label>
-        <select
-          id="sunblock-room"
-          value={roomId}
-          onChange={(e) => go({ roomId: e.target.value })}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-        >
-          <option value="">All rooms</option>
-          {rooms.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+        <div className="w-full min-[480px]:w-44">
+          <label htmlFor="sunblock-period" className={labelCls}>
+            Period
+          </label>
+          <select
+            id="sunblock-period"
+            value={period}
+            onChange={(e) => go({ period: e.target.value as SunblockPeriodType })}
+            className={fieldCls}
+          >
+            <option value="week">One week</option>
+            <option value="month">One month</option>
+            <option value="months">Several months</option>
+          </select>
+        </div>
+
+        {period === "week" && (
+          <div>
+            <label htmlFor="sunblock-week" className={labelCls}>
+              Week starting
+            </label>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => go({ week: addDays(week, -7) })}
+                className="btn-secondary px-2.5 py-1.5"
+                aria-label="Previous week"
+              >
+                ←
+              </button>
+              <input
+                id="sunblock-week"
+                type="date"
+                value={week}
+                onChange={(e) => {
+                  if (e.target.value) go({ week: mondayOfDateString(e.target.value) });
+                }}
+                className={`${fieldCls} w-40`}
+              />
+              <button
+                type="button"
+                onClick={() => go({ week: addDays(week, 7) })}
+                className="btn-secondary px-2.5 py-1.5"
+                aria-label="Next week"
+              >
+                →
+              </button>
+              {week !== thisWeek && (
+                <button type="button" onClick={() => go({ week: thisWeek })} className="btn-ghost px-2.5 py-1.5">
+                  This week
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {period === "month" && (
+          <div>
+            <label htmlFor="sunblock-month" className={labelCls}>
+              Month
+            </label>
+            <input
+              id="sunblock-month"
+              type="month"
+              value={month}
+              onChange={(e) => {
+                if (e.target.value) go({ month: e.target.value });
+              }}
+              className={`${fieldCls} w-44`}
+            />
+          </div>
+        )}
+
+        {period === "months" && (
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <label htmlFor="sunblock-from" className={labelCls}>
+                From
+              </label>
+              <input
+                id="sunblock-from"
+                type="month"
+                value={from}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  const limit = addMonths(`${v}-01`, MAX_MONTH_SPAN - 1).slice(0, 7);
+                  go({ from: v, to: to < v ? v : to > limit ? limit : to });
+                }}
+                className={`${fieldCls} w-44`}
+              />
+            </div>
+            <div>
+              <label htmlFor="sunblock-to" className={labelCls}>
+                To
+              </label>
+              <input
+                id="sunblock-to"
+                type="month"
+                value={to}
+                min={from}
+                max={maxTo}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  go({ to: v < from ? from : v > maxTo ? maxTo : v });
+                }}
+                className={`${fieldCls} w-44`}
+              />
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-charcoal/10 pt-4">
+        <div aria-live="polite" className={pending ? "opacity-60" : undefined}>
+          <p className="text-base font-semibold text-charcoal">
+            {plural(summary.rooms, "room", "rooms")} · {plural(summary.weeks, "week", "weeks")} ·{" "}
+            {plural(summary.pages, "page", "pages")}
+          </p>
+          <p className="text-sm text-charcoal/70">
+            {pending ? "Updating…" : summary.rangeLabel}
+            {period === "months" && !pending && ` · up to ${MAX_MONTH_SPAN} months at a time`}
+          </p>
+        </div>
+        <button type="button" className="btn-primary" onClick={onPrint} disabled={summary.pages === 0 || pending}>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-4 w-4" aria-hidden="true">
+            <path d="M5.5 7.5V3h9v4.5M5.5 14.5h-2v-6a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v6h-2" strokeLinejoin="round" />
+            <path d="M5.5 11.5h9V17h-9z" strokeLinejoin="round" />
+          </svg>
+          Print charts
+        </button>
+      </div>
+    </section>
   );
 }

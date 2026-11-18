@@ -6,11 +6,21 @@ import { HOME_ROOM_NAMES } from "@/lib/data/home";
 import { addDays } from "@/lib/utils";
 import { WEEKDAYS, type Weekday } from "@/lib/constants";
 
+/** "booked": regular booked days on file. "tbc": the booking is marked to
+ * be confirmed. "missing": no booked days on file at all. */
+export type SunblockBookingStatus = "booked" | "tbc" | "missing";
+
 export type SunblockChartChild = {
   id: string;
   full_name: string;
   tbc: boolean;
+  bookingStatus: SunblockBookingStatus;
   bookedDays: Record<Weekday, boolean>;
+  /** Which halves of each booked day the booking covers. A session ending
+   * by 12:30 is morning only; one starting at 12:00 or later is afternoon
+   * only. Times that don't make sense (end before start) count as a full
+   * day, so a data-entry slip never hides a writing space. */
+  sessions: Record<Weekday, { am: boolean; pm: boolean }>;
   start_date: string | null;
   leaving_date: string | null;
   uses_own_sunblock: boolean;
@@ -64,6 +74,14 @@ type ScheduleRow = {
  * tracked either. Both match the existing caveat on the Booked Sessions
  * roll this is built from.
  */
+function sessionHalves(start: string | null | undefined, end: string | null | undefined) {
+  if (!start || !end) return { am: false, pm: false };
+  const s = start.slice(0, 5);
+  const e = end.slice(0, 5);
+  if (e <= s) return { am: true, pm: true };
+  return { am: s < "12:00", pm: e > "12:30" };
+}
+
 export async function getSunblockChartRooms(roomId?: string): Promise<SunblockChartRoom[]> {
   const [rooms, children] = await Promise.all([getRosterRooms(), getChildrenList({ status: "active" })]);
 
@@ -99,11 +117,24 @@ export async function getSunblockChartRooms(roomId?: string): Promise<SunblockCh
               ),
             ])
           ) as Record<Weekday, boolean>;
+          const sessions = Object.fromEntries(
+            WEEKDAYS.map((d) => [
+              d.key,
+              sessionHalves(
+                schedule?.[`${d.key}_start` as keyof ScheduleRow] as string | null | undefined,
+                schedule?.[`${d.key}_end` as keyof ScheduleRow] as string | null | undefined
+              ),
+            ])
+          ) as Record<Weekday, { am: boolean; pm: boolean }>;
+          const tbc = schedule?.tbc ?? false;
+          const anyBooked = WEEKDAYS.some((d) => bookedDays[d.key]);
           return {
             id: c.id,
             full_name: c.full_name,
-            tbc: schedule?.tbc ?? false,
+            tbc,
+            bookingStatus: (tbc ? "tbc" : anyBooked ? "booked" : "missing") as SunblockBookingStatus,
             bookedDays,
+            sessions,
             start_date: c.start_date,
             leaving_date: c.leaving_date,
             uses_own_sunblock: c.uses_own_sunblock,

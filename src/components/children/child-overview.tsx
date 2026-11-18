@@ -305,7 +305,7 @@ export function ChildOverview({
           <Row label="Sunblock">
             {child.uses_own_sunblock ? "Uses own or special sunblock" : "Centre sunblock"}
             {child.sunblock_instructions && (
-              <span className="mt-0.5 block text-xs text-charcoal/70">{child.sunblock_instructions}</span>
+              <span className="mt-0.5 block whitespace-pre-line text-xs text-charcoal/70">{child.sunblock_instructions}</span>
             )}
           </Row>
           <Row label="Accidents & illness">
