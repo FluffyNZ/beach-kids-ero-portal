@@ -28,7 +28,7 @@ export default async function StaffInductionPage({ params }: { params: { id: str
       </nav>
 
       <div>
-        <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">
           {staffMember.full_name}&apos;s Induction
         </h1>
         <p className="mt-1 text-sm text-charcoal/60">

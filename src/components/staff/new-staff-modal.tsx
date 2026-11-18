@@ -32,14 +32,14 @@ export function NewStaffModal({ open, onClose }: { open: boolean; onClose: () =>
     <Modal open={open} onClose={onClose} title="Add staff member">
       <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className="label" htmlFor="full_name">
+          <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="full_name">
             Full name
           </label>
           <input id="full_name" name="full_name" type="text" required className="input" placeholder="e.g. Jane Smith" />
         </div>
 
         <div>
-          <label className="label" htmlFor="role">
+          <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="role">
             Role
           </label>
           <input id="role" name="role" type="text" className="input" placeholder="e.g. Head Teacher" />
@@ -47,13 +47,13 @@ export function NewStaffModal({ open, onClose }: { open: boolean; onClose: () =>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label" htmlFor="start_date">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="start_date">
               Start date
             </label>
             <input id="start_date" name="start_date" type="date" className="input" />
           </div>
           <div>
-            <label className="label" htmlFor="contract_type">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="contract_type">
               Contract type
             </label>
             <select id="contract_type" name="contract_type" className="input">
@@ -69,7 +69,7 @@ export function NewStaffModal({ open, onClose }: { open: boolean; onClose: () =>
 
         {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
 
-        <p className="text-xs text-charcoal/40">
+        <p className="text-xs text-charcoal/70">
           Only add real staff members here — this creates a profile you&apos;ll then upload their real documents to.
         </p>
 

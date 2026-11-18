@@ -1,87 +1,87 @@
-import Link from "next/link";
-import { StatusBadge } from "@/components/status-badge";
-import { STAFF_DOCUMENT_CATEGORY_LABEL } from "@/lib/constants";
-import { getDeadlineAlert } from "@/lib/evidence-deadline";
+import { Panel } from "@/components/ui/panel";
+import { StatusPill } from "@/components/ui/status-pill";
+import { RecordTabLink } from "@/components/ui/record-shell";
+import { STAFF_DOCUMENT_CATEGORY_LABEL, STAFF_QUALIFICATION_STATUS_LABEL } from "@/lib/constants";
+import { documentStatus, qualificationLabel } from "@/lib/staff-format";
+import { formatDate } from "@/lib/utils";
 import type { RequiredDocumentSlot } from "@/lib/staff-required-documents";
-import type { StaffDocument } from "@/lib/types";
+import type { StaffDocument, StaffQualification } from "@/lib/types";
 import type { StaffDocumentCategory } from "@/lib/supabase/database.types";
 
-/** Overview's read-only "Qualifications & checks" card.
- *
- * Which categories are actually required already depends on qualification
- * status elsewhere (getRequiredStaffDocumentCategories, used to build
- * `slots`): a qualified staff member doesn't require Police Verification,
- * and an unqualified one doesn't require the teaching
- * qualification/registration. This card must follow that, not show a fixed
- * list of categories regardless of status — otherwise it flags a category
- * as "Not recorded" for someone who was never required to have it, which
- * is a false alarm, not a gap.
- *
- * `slots` (the already status-aware required categories, filtered to the
- * Qualifications tab by the caller) always get a row, "Not recorded" or
- * otherwise, since those genuinely are required for this person right now.
- * `otherDocuments` covers the optional ones on this tab (first aid) — those
- * only get a row when something's actually on file, since an optional
- * document being missing isn't something to flag at all. */
+/** Overview's "Qualifications and checks" panel. Required rows come from the
+ * existing, status-aware rules (`slots`) so nothing is flagged that this
+ * person was never required to have; optional ones (e.g. first aid) only
+ * appear when something is on file. */
 export function StaffQualificationsSummary({
-  staffId,
+  role,
+  qualification,
   slots,
   otherDocuments,
 }: {
-  staffId: string;
+  role: string | null;
+  qualification: StaffQualification;
   slots: RequiredDocumentSlot[];
   otherDocuments: StaffDocument[];
 }) {
-  const requiredRows = slots.map((slot) => ({
-    category: slot.category,
-    newest: slot.documents[0] ?? null,
-  }));
-
-  // otherDocuments is already newest-first per category (see
-  // staff-required-documents.ts), so the first match per category is the
-  // newest one on file.
   const optionalByCategory = new Map<StaffDocumentCategory, StaffDocument>();
   otherDocuments.forEach((d) => {
     if (!optionalByCategory.has(d.category)) optionalByCategory.set(d.category, d);
   });
-  const optionalRows = Array.from(optionalByCategory.entries()).map(([category, doc]) => ({
-    category,
-    newest: doc as StaffDocument | null,
-  }));
-
-  const rows = [...requiredRows, ...optionalRows];
+  const rows = [
+    ...slots.map((s) => ({ category: s.category, newest: s.documents[0] ?? null, required: true })),
+    ...Array.from(optionalByCategory.entries()).map(([category, doc]) => ({ category, newest: doc as StaffDocument | null, required: false })),
+  ];
+  const label = qualificationLabel(role, qualification.qualification_status);
 
   return (
-    <section className="card p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">Qualifications &amp; checks</h2>
-        <Link href={`/staff/${staffId}?tab=qualifications`} className="text-xs font-medium text-burgundy-600 hover:underline">
-          View qualifications &rarr;
-        </Link>
-      </div>
-
-      {rows.length === 0 ? (
-        <p className="text-sm text-charcoal/40">Nothing required or on file here yet.</p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-charcoal/5">
-          {rows.map(({ category, newest }) => {
-            const alert = newest ? getDeadlineAlert(null, newest.expiry_date) : null;
-
-            return (
-              <li key={category} className="flex items-center justify-between gap-3 py-2">
-                <span className="text-sm text-charcoal">{STAFF_DOCUMENT_CATEGORY_LABEL[category]}</span>
+    <Panel id="panel-qualifications" title="Qualifications and checks" headerAction={<RecordTabLink tab="qualifications">View details</RecordTabLink>}>
+      <dl className="divide-y divide-charcoal/10 border-t border-charcoal/10">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-sm">
+          <dt className="text-charcoal/70">Qualification</dt>
+          <dd className="text-right text-charcoal">
+            {STAFF_QUALIFICATION_STATUS_LABEL[qualification.qualification_status]}
+            {qualification.qualification_level && <span className="text-charcoal/70"> · {qualification.qualification_level}</span>}
+            {label?.tone === "attention" && (
+              <span className="mt-1 block">
+                <StatusPill tone="attention">{label.label}</StatusPill>
+              </span>
+            )}
+          </dd>
+        </div>
+        {qualification.qualification_status === "qualified" && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-sm">
+            <dt className="text-charcoal/70">Next review</dt>
+            <dd className="text-charcoal">{qualification.next_review_date ? formatDate(qualification.next_review_date) : <span className="text-charcoal/70">Not recorded</span>}</dd>
+          </div>
+        )}
+        {qualification.qualification_status === "studying" && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-sm">
+            <dt className="text-charcoal/70">Studying</dt>
+            <dd className="text-right text-charcoal">
+              {qualification.studying_qualification ?? <span className="text-charcoal/70">Not recorded</span>}
+              {qualification.expected_completion_date && <span className="text-charcoal/70"> · due {formatDate(qualification.expected_completion_date)}</span>}
+            </dd>
+          </div>
+        )}
+        {rows.map(({ category, newest, required }) => {
+          const status = newest ? documentStatus(newest.expiry_date) : null;
+          return (
+            <div key={category} className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-sm">
+              <dt className="text-charcoal">
+                {STAFF_DOCUMENT_CATEGORY_LABEL[category]}
+                {!required && <span className="text-charcoal/70"> (optional)</span>}
+              </dt>
+              <dd>
                 {!newest ? (
-                  <StatusBadge tone="action">Not recorded</StatusBadge>
-                ) : alert ? (
-                  <StatusBadge tone={alert.tone}>{alert.label}</StatusBadge>
+                  <StatusPill tone="action">Missing</StatusPill>
                 ) : (
-                  <StatusBadge tone="ready">On file</StatusBadge>
+                  <StatusPill tone={status!.tone}>{status!.label}</StatusPill>
                 )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </Panel>
   );
 }

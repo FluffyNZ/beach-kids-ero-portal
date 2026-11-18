@@ -51,7 +51,7 @@ export function StaffNotesPanel({
     return (
       <div className="card flex flex-col items-center gap-2 p-8 text-center">
         <p className="text-sm font-medium text-charcoal">Restricted — authorised management only</p>
-        <p className="max-w-sm text-sm text-charcoal/50">
+        <p className="max-w-sm text-sm text-charcoal/70">
           Notes on this profile are confidential and only visible to authorised management accounts.
         </p>
       </div>
@@ -112,11 +112,11 @@ export function StaffNotesPanel({
   return (
     <div className="flex flex-col gap-4">
       <form ref={formRef} className="card flex flex-col gap-2 p-4" onSubmit={handleSubmit}>
-        <label className="label">Add a note</label>
+        <label className="mb-1.5 block text-sm font-medium text-charcoal">Add a note</label>
         <textarea className="input min-h-[70px]" value={body} onChange={(e) => setBody(e.target.value)} />
 
         <div>
-          <label className="label" htmlFor="note-attachment">
+          <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="note-attachment">
             Attach a file (optional)
           </label>
           <input
@@ -124,9 +124,9 @@ export function StaffNotesPanel({
             type="file"
             accept={ALLOWED_ATTACHMENT_TYPES}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="input file:mr-3 file:rounded-lg file:border-0 file:bg-burgundy-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-burgundy-600"
+            className="input file:mr-3 file:rounded-lg file:border-0 file:bg-lilac-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-charcoal"
           />
-          <p className="mt-1 text-xs text-charcoal/40">PDF, Word doc or photo. Up to 50MB.</p>
+          <p className="mt-1 text-xs text-charcoal/70">PDF, Word doc or photo. Up to 50MB.</p>
         </div>
 
         {error && <p className="text-xs text-status-action">{error}</p>}
@@ -138,14 +138,14 @@ export function StaffNotesPanel({
       </form>
 
       {notes.length === 0 ? (
-        <p className="text-sm text-charcoal/50">No notes recorded yet.</p>
+        <p className="text-sm text-charcoal/70">No notes recorded yet.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {notes.map((n) => (
             <li key={n.id} className="card flex items-start justify-between gap-3 p-4">
               <div className="min-w-0 flex-1">
                 <p className="whitespace-pre-wrap text-sm text-charcoal">{n.body}</p>
-                <p className="mt-1.5 text-xs text-charcoal/40">
+                <p className="mt-1.5 text-xs text-charcoal/70">
                   {formatDateTime(n.created_at)}
                   {n.created_by_name ? ` · ${n.created_by_name}` : ""}
                 </p>
@@ -155,7 +155,7 @@ export function StaffNotesPanel({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs text-charcoal">{n.original_filename}</p>
                       {n.file_size_bytes != null && (
-                        <p className="text-xs text-charcoal/40">{formatFileSize(n.file_size_bytes)}</p>
+                        <p className="text-xs text-charcoal/70">{formatFileSize(n.file_size_bytes)}</p>
                       )}
                     </div>
                     <StaffDocumentRowActions storagePath={n.storage_path} />

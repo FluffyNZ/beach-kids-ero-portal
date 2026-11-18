@@ -188,7 +188,7 @@ export function AddStaffDocumentModal({
           <input type="hidden" name="category" value={fixedCategory} />
         ) : (
           <div>
-            <label className="label" htmlFor="category">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="category">
               Document type
             </label>
             <select
@@ -208,7 +208,7 @@ export function AddStaffDocumentModal({
         )}
 
         <div>
-          <label className="label" htmlFor="file">
+          <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="file">
             File
           </label>
           <input
@@ -218,9 +218,9 @@ export function AddStaffDocumentModal({
             required
             accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,.pdf,.doc,.docx,.png,.jpg,.jpeg"
             onChange={handleFileChange}
-            className="input file:mr-3 file:rounded-lg file:border-0 file:bg-burgundy-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-burgundy-600"
+            className="input file:mr-3 file:rounded-lg file:border-0 file:bg-lilac-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-charcoal"
           />
-          <p className="mt-1 text-xs text-charcoal/40">PDF, Word or image. Up to 50MB.</p>
+          <p className="mt-1 text-xs text-charcoal/70">PDF, Word or image. Up to 50MB.</p>
 
           {canReadPhoto && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -232,7 +232,7 @@ export function AddStaffDocumentModal({
               >
                 {extracting ? "Reading photo…" : "✨ Read from photo"}
               </button>
-              <span className="text-xs text-charcoal/40">
+              <span className="text-xs text-charcoal/70">
                 Fills in the type and dates below for you to check before uploading.
               </span>
             </div>
@@ -256,7 +256,7 @@ export function AddStaffDocumentModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label" htmlFor="document_date">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="document_date">
               Date completed (optional)
             </label>
             <input
@@ -269,7 +269,7 @@ export function AddStaffDocumentModal({
             />
           </div>
           <div>
-            <label className="label" htmlFor="expiry_date">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="expiry_date">
               Next due / expiry (optional)
             </label>
             <input
@@ -282,13 +282,13 @@ export function AddStaffDocumentModal({
             />
           </div>
         </div>
-        <p className="-mt-2 text-xs text-charcoal/40">
+        <p className="-mt-2 text-xs text-charcoal/70">
           Set a next due date for anything that needs renewing (police vet, first aid, visa, professional growth
           cycle) to get an alert as it approaches.
         </p>
 
         <div>
-          <label className="label" htmlFor="notes">
+          <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="notes">
             Notes
           </label>
           <textarea id="notes" name="notes" className="input min-h-[60px]" placeholder="Optional" />

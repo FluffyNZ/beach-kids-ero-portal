@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState } from "react";
+import { SaveStatus, FormError, useSaveState } from "@/components/ui/save-status";
 import { WEEKDAYS } from "@/lib/constants";
 import type { StaffAvailability } from "@/lib/types";
 
@@ -24,13 +25,16 @@ const DAY_KEYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri"];
 export function StaffAvailabilityForm({
   availability,
   onSave,
+  onDone,
 }: {
   availability: StaffAvailability | null;
   onSave: (fields: Record<string, string | null>) => Promise<void>;
+  /** Called after a successful save (e.g. to close an inline editor). */
+  onDone?: () => void;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const id = useId();
+  const save = useSaveState();
+  const [validation, setValidation] = useState<string | null>(null);
 
   const [times, setTimes] = useState<Record<DayKey, { start: string; end: string }>>(() => {
     const result = {} as Record<DayKey, { start: string; end: string }>;
@@ -68,7 +72,7 @@ export function StaffAvailabilityForm({
 
   function setDay(key: DayKey, field: "start" | "end", value: string) {
     setTimes((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
-    setSaved(false);
+    save.markDirty();
   }
 
   function toggleDay(key: DayKey, checked: boolean) {
@@ -79,7 +83,7 @@ export function StaffAvailabilityForm({
         ? { start: prev[key].start || defaultStart, end: prev[key].end || defaultEnd }
         : { start: "", end: "" },
     }));
-    setSaved(false);
+    save.markDirty();
   }
 
   function applyDefaultToTicked() {
@@ -93,29 +97,32 @@ export function StaffAvailabilityForm({
       });
       return next;
     });
-    setSaved(false);
+    save.markDirty();
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-charcoal/10 bg-cream/30 p-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-charcoal/10 bg-canvas p-3">
         <div>
-          <label className="label">Usual time</label>
+          <p id={`${id}-usual`} className="mb-1.5 block text-sm font-medium text-charcoal">
+            Usual time
+          </p>
           <div className="flex items-center gap-2">
             <input
               type="time"
+              aria-label="Usual start time"
               className="input"
               value={defaultStart}
               onChange={(e) => setDefaultStart(e.target.value)}
             />
-            <span className="text-sm text-charcoal/40">to</span>
-            <input type="time" className="input" value={defaultEnd} onChange={(e) => setDefaultEnd(e.target.value)} />
+            <span className="text-sm text-charcoal/70">to</span>
+            <input type="time" aria-label="Usual finish time" className="input" value={defaultEnd} onChange={(e) => setDefaultEnd(e.target.value)} />
           </div>
         </div>
-        <button type="button" className="btn-secondary text-xs" onClick={applyDefaultToTicked}>
+        <button type="button" className="btn-secondary" onClick={applyDefaultToTicked}>
           Apply to ticked days
         </button>
-        <p className="max-w-xs text-xs text-charcoal/40">
+        <p className="max-w-xs text-xs text-charcoal/70">
           Tick a day below to fill it in from here — then adjust that day&apos;s own times if it&apos;s different.
         </p>
       </div>
@@ -123,7 +130,7 @@ export function StaffAvailabilityForm({
       <div className="overflow-x-auto rounded-xl border border-charcoal/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-charcoal/10 bg-cream/40 text-left text-xs font-semibold uppercase tracking-wide text-charcoal/50">
+            <tr className="border-b border-charcoal/10 bg-canvas text-left text-xs font-semibold uppercase tracking-wide text-charcoal/70">
               <th className="px-3 py-2">Available</th>
               <th className="px-3 py-2">Day</th>
               <th className="px-3 py-2">From</th>
@@ -135,21 +142,25 @@ export function StaffAvailabilityForm({
               const key = d.key as DayKey;
               const isOn = enabled[key];
               return (
-                <tr key={d.key} className={isOn ? "" : "opacity-50"}>
+                <tr key={d.key}>
                   <td className="px-3 py-2">
                     <input
                       type="checkbox"
                       aria-label={`${d.label} available`}
-                      className="h-4 w-4 rounded border-charcoal/30 text-burgundy-500 focus:ring-burgundy-500"
+                      className="h-4 w-4 rounded border-charcoal/40 accent-charcoal"
                       checked={isOn}
                       onChange={(e) => toggleDay(key, e.target.checked)}
                     />
                   </td>
-                  <td className="px-3 py-2 font-medium text-charcoal">{d.label}</td>
+                  <td className="px-3 py-2 font-medium text-charcoal">
+                    {d.label}
+                    {!isOn && <span className="block text-xs font-normal text-charcoal/70">Unavailable</span>}
+                  </td>
                   <td className="px-3 py-2">
                     <input
                       type="time"
-                      className="input"
+                      aria-label={`${d.label} from`}
+                      className="input disabled:bg-canvas disabled:text-charcoal/50"
                       disabled={!isOn}
                       value={times[key].start}
                       onChange={(e) => setDay(key, "start", e.target.value)}
@@ -158,7 +169,8 @@ export function StaffAvailabilityForm({
                   <td className="px-3 py-2">
                     <input
                       type="time"
-                      className="input"
+                      aria-label={`${d.label} to`}
+                      className="input disabled:bg-canvas disabled:text-charcoal/50"
                       disabled={!isOn}
                       value={times[key].end}
                       onChange={(e) => setDay(key, "end", e.target.value)}
@@ -172,47 +184,60 @@ export function StaffAvailabilityForm({
       </div>
 
       <div>
-        <label className="label">Notes</label>
+        <label htmlFor={`${id}-notes`} className="mb-1.5 block text-sm font-medium text-charcoal">
+          Notes
+        </label>
         <textarea
+          id={`${id}-notes`}
           className="input min-h-[60px]"
           placeholder="Anything else about this person's availability — e.g. can do extra Fridays with notice."
           value={notes}
           onChange={(e) => {
             setNotes(e.target.value);
-            setSaved(false);
+            save.markDirty();
           }}
         />
       </div>
 
-      {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+      <p className="text-xs text-charcoal/70">
+        Unticked days are saved as unavailable. This is availability only — it doesn&apos;t change contracted hours or
+        the roster.
+      </p>
 
-      <div className="flex justify-end">
+      <FormError message={validation ?? save.error} />
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <SaveStatus state={save.state} />
         <button
           type="button"
-          disabled={pending}
+          disabled={save.state === "saving"}
           className="btn-primary"
-          onClick={() =>
-            startTransition(async () => {
-              setError(null);
-              try {
-                const fields: Record<string, string | null> = { notes: notes || null };
-                DAY_KEYS.forEach((key) => {
-                  // An unticked day was already cleared to "" by toggleDay,
-                  // so this naturally saves it as not-available — no extra
-                  // branch needed here for the ticked/unticked split.
-                  fields[`${key}_start`] = times[key].start || null;
-                  fields[`${key}_end`] = times[key].end || null;
-                });
-                await onSave(fields);
-                setSaved(true);
-              } catch (err) {
-                setSaved(false);
-                setError(err instanceof Error ? err.message : "Something went wrong saving availability.");
+          onClick={async () => {
+            for (const key of DAY_KEYS) {
+              if (enabled[key] && (!times[key].start || !times[key].end)) {
+                setValidation("Each ticked day needs a start and finish time.");
+                save.setState("error");
+                return;
               }
-            })
-          }
+              if (enabled[key] && times[key].end <= times[key].start) {
+                setValidation("A finish time is before its start time.");
+                save.setState("error");
+                return;
+              }
+            }
+            setValidation(null);
+            const fields: Record<string, string | null> = { notes: notes || null };
+            DAY_KEYS.forEach((key) => {
+              // An unticked day was already cleared to "" by toggleDay, so it
+              // saves as not available.
+              fields[`${key}_start`] = times[key].start || null;
+              fields[`${key}_end`] = times[key].end || null;
+            });
+            const ok = await save.run(() => onSave(fields), "Something went wrong saving availability.");
+            if (ok) onDone?.();
+          }}
         >
-          {pending ? "Saving…" : saved ? "Saved" : "Save changes"}
+          {save.state === "saving" ? "Saving…" : "Save availability"}
         </button>
       </div>
     </div>

@@ -1,71 +1,80 @@
 import { getStaffList } from "@/lib/data/staff";
 import { getRosterRooms } from "@/lib/data/roster";
+import { getStaffDirectoryExtras } from "@/lib/data/staff-directory";
 import { getDeadlineAlert } from "@/lib/evidence-deadline";
-import { StaffSearchBar } from "@/components/staff/staff-search-bar";
-import { StaffTable } from "@/components/staff/staff-table";
+import { PageHeader } from "@/components/ui/page-header";
 import { NewStaffButton } from "@/components/staff/new-staff-button";
-import { StatTile } from "@/components/dashboard/stat-tile";
-import type { StaffContractType } from "@/lib/supabase/database.types";
+import { StaffDirectory, type DirectoryStaff } from "@/components/staff/staff-directory";
+import { STAFF_CONTRACT_TYPE_LABEL } from "@/lib/constants";
+import { alertWords, documentStatus, missingRequiredDocuments, qualificationLabel } from "@/lib/staff-format";
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; room?: string; contractType?: string };
+  searchParams: { q?: string; status?: string; room?: string; contractType?: string; show?: string };
 }) {
-  // Default to active staff only when no filter has been chosen yet —
-  // former staff should still be reachable via the "All staff"/"Former
-  // staff" options, just not shown by default. "all" is its own explicit
-  // value (see StaffSearchBar) so it's distinguishable from "no choice
-  // made yet", which otherwise both look like a missing query param.
-  const statusFilter =
-    searchParams.status === undefined ? "active" : searchParams.status === "all" ? undefined : searchParams.status;
-  const [staff, rooms] = await Promise.all([
-    getStaffList({
-      search: searchParams.q,
-      status: statusFilter,
-      roomId: searchParams.room || undefined,
-      contractType: (searchParams.contractType as StaffContractType) || undefined,
-    }),
-    getRosterRooms(),
-  ]);
+  // Everyone (active and former) is loaded once and filtered in the
+  // browser, so the filters and summary counts always agree. Filters are
+  // mirrored into the URL so a filtered view can be bookmarked.
+  const [staff, rooms] = await Promise.all([getStaffList(), getRosterRooms()]);
+  const extras = await getStaffDirectoryExtras(staff.map((s) => s.id));
 
-  const activeCount = staff.filter((s) => s.status === "active").length;
-  const documentsDue = staff.filter((s) => {
-    const alert = getDeadlineAlert(null, s.nearest_document_expiry);
-    return alert !== null;
-  }).length;
-  const reviewsDue = staff.filter((s) => {
-    const alert = getDeadlineAlert(s.qualification.next_review_date, null);
-    return alert !== null;
-  }).length;
-  const incompleteProfiles = staff.filter(
-    (s) => s.required_docs_total > 0 && s.required_docs_completed < s.required_docs_total
-  ).length;
+  const directory: DirectoryStaff[] = staff.map((s) => {
+    const present = extras.categories.get(s.id) ?? new Set<string>();
+    const expiries = extras.expiries.get(s.id) ?? [];
+    const renewals = expiries.filter((e) => getDeadlineAlert(null, e) !== null);
+    const nearest = s.nearest_document_expiry ? documentStatus(s.nearest_document_expiry) : null;
+    const review = getDeadlineAlert(s.qualification.next_review_date, null);
+    const optionalMissing = [
+      !s.email ? "Email" : null,
+      !s.mobile_phone ? "Mobile number" : null,
+      !s.emergency_contact_name && !s.emergency_contact_phone ? "Emergency contact" : null,
+      !s.date_of_birth ? "Date of birth" : null,
+      !extras.hasAvailability.has(s.id) ? "Weekly availability" : null,
+      (s.contract_type === "permanent" || s.contract_type === "fixed_term") && s.min_hours === null ? "Contracted hours" : null,
+    ].filter((x): x is string => Boolean(x));
+
+    return {
+      id: s.id,
+      fullName: s.full_name,
+      role: s.role,
+      photoUrl: s.photo_url,
+      roomId: s.room_id,
+      roomName: s.room_name,
+      roomColor: s.room_color,
+      contractType: s.contract_type,
+      contractLabel: s.contract_type ? STAFF_CONTRACT_TYPE_LABEL[s.contract_type] : null,
+      isRelief: s.is_relief,
+      status: s.status,
+      documentAlert: nearest && nearest.kind !== "on_file" ? { label: nearest.label, tone: nearest.tone } : null,
+      documentsToRenew: renewals.length,
+      reviewAlert: review ? { label: alertWords(review), tone: review.tone } : null,
+      qualification: qualificationLabel(s.role, s.qualification.qualification_status),
+      missingRequired: missingRequiredDocuments(s.qualification.qualification_status, s.contract_type, present).map((m) => m.label),
+      optionalMissing,
+    };
+  });
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Staff</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Staff directory, their files, and the qualifications &amp; pay parity tracker.
-          </p>
-        </div>
-        <NewStaffButton />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Active staff" value={activeCount} tone="neutral" />
-        <StatTile label="Documents expiring / overdue" value={documentsDue} tone="attention" />
-        <StatTile label="Qualification reviews due" value={reviewsDue} tone="attention" />
-        <StatTile label="Incomplete profiles" value={incompleteProfiles} tone="attention" />
-      </div>
-
-      <StaffSearchBar rooms={rooms} />
-
-      <StaffTable staff={staff} />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader
+        title="Staff"
+        description="The team's profiles, documents, qualifications and availability."
+        actions={<NewStaffButton />}
+      />
+      <StaffDirectory
+        staffList={directory}
+        rooms={rooms.map((r) => ({ id: r.id, name: r.name, color: r.color }))}
+        initial={{
+          q: searchParams.q ?? "",
+          room: searchParams.room ?? "",
+          contractType: searchParams.contractType ?? "",
+          status: searchParams.status === "former" ? "former" : "active",
+          show: (["documents", "reviews", "missing"] as const).find((v) => v === searchParams.show) ?? "",
+        }}
+      />
     </div>
   );
 }

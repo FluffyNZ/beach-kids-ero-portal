@@ -1,52 +1,46 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStaffById } from "@/lib/data/staff";
-import { getRosterRooms } from "@/lib/data/roster";
+import { getRosterRooms, getRosterWeekByStartDate } from "@/lib/data/roster";
 import { getStaffInduction } from "@/lib/data/induction";
 import { getStaffInductionTotalItemCount } from "@/lib/staff-induction-checklist";
 import {
   updateStaffDetails,
-  setStaffStatus,
   recordStaffDocumentUpload,
   deleteStaffDocument,
   updateStaffQualification,
   updateStaffAvailability,
 } from "@/lib/actions/staff";
+import { Panel } from "@/components/ui/panel";
+import { StatusPill } from "@/components/ui/status-pill";
+import { RecordShell, RecordTabs, RecordEditButton } from "@/components/ui/record-shell";
 import { StaffAvatar } from "@/components/staff/staff-avatar";
-import { StaffPhotoUpload } from "@/components/staff/staff-photo-upload";
-import { StaffContactSection } from "@/components/staff/staff-contact-section";
+import { StaffEditDrawer } from "@/components/staff/staff-edit-drawer";
+import { StaffActionsMenu } from "@/components/staff/staff-actions-menu";
+import { StaffEmploymentPanel, StaffContactPanel, StaffRenewalsPanel, type RenewalItem } from "@/components/staff/staff-overview";
 import { StaffAvailabilitySection } from "@/components/staff/staff-availability-section";
 import { StaffDocumentsSummary } from "@/components/staff/staff-documents-summary";
 import { StaffQualificationsSummary } from "@/components/staff/staff-qualifications-summary";
 import { StaffGrowthSummary } from "@/components/staff/staff-growth-summary";
-import { StaffEmploymentForm } from "@/components/staff/staff-employment-form";
 import { StaffQualificationForm } from "@/components/staff/staff-qualification-form";
 import { RequiredDocumentsPanel } from "@/components/staff/required-documents-panel";
 import { StaffGrowthPanel } from "@/components/staff/staff-growth-panel";
 import { StaffNotesPanel } from "@/components/staff/staff-notes-panel";
-import { EmailStaffButton } from "@/components/staff/email-staff-button";
-import { DeleteStaffButton } from "@/components/staff/delete-staff-button";
-import { StatusBadge } from "@/components/status-badge";
-import { Tabs, type TabItem } from "@/components/ui/tabs";
-import { ChevronRightIcon, LinkIcon } from "@/components/icons";
+import { ChevronRightIcon, EditIcon, LinkIcon, MailIcon } from "@/components/icons";
 import {
-  STAFF_STATUS_LABEL,
   STAFF_CONTRACT_TYPE_LABEL,
-  STAFF_CONTRACT_TYPE_BADGE,
-  STAFF_QUALIFICATION_STATUS_LABEL,
   STAFF_DOCUMENT_CATEGORY_LABEL,
   STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES,
-  WEEKDAYS,
-  staffQualificationTone,
 } from "@/lib/constants";
 import { getRequiredDocumentSlots, getOtherDocuments } from "@/lib/staff-required-documents";
 import { getDeadlineAlert } from "@/lib/evidence-deadline";
-import { formatDate, percentage, teachingCouncilSearchUrl } from "@/lib/utils";
-import type { StaffAvailability } from "@/lib/types";
+import { alertWords, documentStatus, hoursBetweenTimes } from "@/lib/staff-format";
+import { formatNzDate } from "@/lib/child-format";
+import { formatDate, mondayOfDateString, nzTodayDateString, teachingCouncilSearchUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const TAB_KEYS = ["overview", "employment", "qualifications", "documents", "growth", "notes"] as const;
+const TAB_KEYS = ["overview", "employment", "qualifications", "documents", "growth", "notes"];
 
 export default async function StaffDetailPage({
   params,
@@ -55,367 +49,317 @@ export default async function StaffDetailPage({
   params: { id: string };
   searchParams: { tab?: string };
 }) {
-  const [staffMember, rooms] = await Promise.all([getStaffById(params.id), getRosterRooms()]);
-  if (!staffMember) notFound();
+  const [staff, rooms] = await Promise.all([getStaffById(params.id), getRosterRooms()]);
+  if (!staff) notFound();
 
-  const checklistPercent = percentage(staffMember.required_docs_completed, staffMember.required_docs_total);
-  const requiredDocumentSlots = getRequiredDocumentSlots(
-    staffMember.qualification.qualification_status,
-    staffMember.documents,
-    staffMember.contract_type
-  );
-  const otherDocuments = getOtherDocuments(
-    staffMember.qualification.qualification_status,
-    staffMember.documents,
-    staffMember.contract_type
-  );
+  const rosterWeekStart = mondayOfDateString(nzTodayDateString());
+  const [induction, rosterWeek] = await Promise.all([getStaffInduction(staff.id), getRosterWeekByStartDate(rosterWeekStart)]);
 
-  // Split the same two lists each tab needs between Qualifications
-  // (teaching qualification/registration, first aid) and Documents
-  // (contracts, certificates, safety checking, police verification and
-  // everything else) — see the constant's own comment for why this is
-  // derived rather than a second fixed list.
-  const isQualTabCategory = (c: string) => (STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES as string[]).includes(c);
-  const qualificationSlots = requiredDocumentSlots.filter((s) => isQualTabCategory(s.category));
-  const qualificationOtherDocs = otherDocuments.filter((d) => isQualTabCategory(d.category));
-  const documentsTabSlots = requiredDocumentSlots.filter((s) => !isQualTabCategory(s.category));
-  const documentsTabOtherDocs = otherDocuments.filter((d) => !isQualTabCategory(d.category));
+  const accessLevel = staff.accessLevel;
+  const firstName = staff.full_name.trim().split(/\s+/)[0];
 
-  const induction = await getStaffInduction(staffMember.id);
+  // Required vs other documents — the existing rules, split between the
+  // Qualifications tab (qualification/registration, first aid) and the
+  // Documents tab (everything else).
+  // Contracts aren't sent to a restricted viewer at all (see getStaffById),
+  // so for them the contract slot is left out rather than shown as
+  // "Missing" when it may well be on file.
+  const requiredSlots = getRequiredDocumentSlots(
+    staff.qualification.qualification_status,
+    staff.documents,
+    staff.contract_type
+  ).filter((s) => accessLevel === "full" || s.category !== "contract");
+  const otherDocuments = getOtherDocuments(staff.qualification.qualification_status, staff.documents, staff.contract_type);
+  const isQualTab = (c: string) => (STAFF_QUALIFICATION_TAB_DOCUMENT_CATEGORIES as string[]).includes(c);
+  const qualificationSlots = requiredSlots.filter((s) => isQualTab(s.category));
+  const qualificationOtherDocs = otherDocuments.filter((d) => isQualTab(d.category));
+  const documentsSlots = requiredSlots.filter((s) => !isQualTab(s.category));
+  const documentsOtherDocs = otherDocuments.filter((d) => !isQualTab(d.category));
+  const missingRequired = requiredSlots.filter((s) => s.documents.length === 0).length;
+
+  // Rostered hours this week (NZ week): start-to-finish of each of this
+  // person's shifts. null = no roster entered for the week.
+  const rosteredHours = rosterWeek
+    ? rosterWeek.shifts.filter((s) => s.staff_id === staff.id).reduce((sum, s) => sum + hoursBetweenTimes(s.start_time, s.end_time), 0)
+    : null;
+
+  // Upcoming renewals — qualification review date and document expiries
+  // inside the existing 90-day window (getDeadlineAlert).
+  const renewals: (RenewalItem & { days: number })[] = [];
+  const reviewAlert = getDeadlineAlert(staff.qualification.next_review_date, null);
+  if (reviewAlert) renewals.push({ label: "Qualification / registration review", when: alertWords(reviewAlert), tone: reviewAlert.tone, days: reviewAlert.days });
+  staff.documents.forEach((d) => {
+    const alert = getDeadlineAlert(null, d.expiry_date);
+    if (alert) {
+      const status = documentStatus(d.expiry_date);
+      renewals.push({ label: STAFF_DOCUMENT_CATEGORY_LABEL[d.category], when: status.label, tone: status.tone, days: alert.days });
+    }
+  });
+  renewals.sort((a, b) => a.days - b.days);
+
   const inductionTotal = getStaffInductionTotalItemCount();
   const inductionChecked = induction.checkedItemKeys.size;
-  const inductionPercent = inductionTotal > 0 ? Math.round((inductionChecked / inductionTotal) * 100) : 0;
 
-  const accessLevel = staffMember.accessLevel;
-  const defaultTab = TAB_KEYS.includes(searchParams.tab as (typeof TAB_KEYS)[number])
-    ? (searchParams.tab as (typeof TAB_KEYS)[number])
-    : "overview";
-
-  // "Upcoming renewals" (Overview tab) — the qualification review date plus
-  // every document that has an expiry date on file, whichever are inside
-  // getDeadlineAlert's window. Only ever built from real saved dates.
-  const renewalItems: Array<{ label: string; alert: NonNullable<ReturnType<typeof getDeadlineAlert>> }> = [];
-  const qualAlert = getDeadlineAlert(staffMember.qualification.next_review_date, null);
-  if (qualAlert) renewalItems.push({ label: "Qualification / registration review", alert: qualAlert });
-  staffMember.documents.forEach((d) => {
-    const alert = getDeadlineAlert(null, d.expiry_date);
-    if (alert) renewalItems.push({ label: STAFF_DOCUMENT_CATEGORY_LABEL[d.category], alert });
-  });
-  renewalItems.sort((a, b) => a.alert.days - b.alert.days);
-
-  const availability = staffMember.availability;
-  const availabilityDaysCount = availability
-    ? WEEKDAYS.filter((d) => {
-        const start = availability[`${d.key}_start` as keyof StaffAvailability];
-        const end = availability[`${d.key}_end` as keyof StaffAvailability];
-        return Boolean(start && end);
-      }).length
-    : 0;
-
-  // Compact summary strip + two-column dashboard layout, per the Overview
-  // redesign brief: Room/Employment/Available days/Contracted hours up top,
-  // then Left = Personal & contact / Weekly availability / Recent
-  // documents, Right = Qualifications & checks / Upcoming renewals /
-  // Professional growth. Every card here either reads real saved data
-  // straight off staffMember (showing "Not recorded" when it's missing) or
-  // links through to the full tab — nothing here is a second source of
-  // truth for anything editable.
-  const overviewContent = (
-    <div className="flex flex-col gap-5">
-      <section className="card grid grid-cols-2 divide-charcoal/5 p-5 sm:grid-cols-4 sm:divide-x">
-        <div className="pr-4 sm:pl-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Room</p>
-          <p className="mt-0.5 text-sm font-medium text-charcoal">{staffMember.room_name ?? "Not recorded"}</p>
-        </div>
-        <div className="pl-4 pr-4 sm:pl-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Employment</p>
-          <p className="mt-0.5 text-sm font-medium text-charcoal">
-            {staffMember.contract_type ? STAFF_CONTRACT_TYPE_LABEL[staffMember.contract_type] : "Not recorded"}
-          </p>
-        </div>
-        <div className="pr-4 pt-4 sm:pl-6 sm:pt-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Available days</p>
-          <p className="mt-0.5 text-sm font-medium text-charcoal">
-            {availabilityDaysCount > 0 ? `${availabilityDaysCount} day${availabilityDaysCount === 1 ? "" : "s"}/week` : "Not recorded"}
-          </p>
-        </div>
-        <div className="pl-4 pt-4 sm:pl-6 sm:pt-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Contracted hours</p>
-          <p className="mt-0.5 text-sm font-medium text-charcoal">
-            {staffMember.min_hours !== null ? `${staffMember.min_hours} hrs/week` : "Not recorded"}
-          </p>
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="flex flex-col gap-5">
-          <StaffContactSection
-            staffId={staffMember.id}
-            email={staffMember.email}
-            mobilePhone={staffMember.mobile_phone}
-            dateOfBirth={staffMember.date_of_birth}
-            emergencyContactName={staffMember.emergency_contact_name}
-            emergencyContactPhone={staffMember.emergency_contact_phone}
-            emergencyContactRelationship={staffMember.emergency_contact_relationship}
-            notes={staffMember.notes}
-            onSave={updateStaffDetails.bind(null, staffMember.id)}
-          />
-          <StaffAvailabilitySection
-            availability={staffMember.availability}
-            onSave={updateStaffAvailability.bind(null, staffMember.id)}
-          />
-          <StaffDocumentsSummary staffId={staffMember.id} documents={staffMember.documents} />
-        </div>
-
-        <div className="flex flex-col gap-5">
-          <StaffQualificationsSummary
-            staffId={staffMember.id}
-            slots={qualificationSlots}
-            otherDocuments={qualificationOtherDocs}
-          />
-
-          <section className="card p-5">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Upcoming renewals</h2>
-            {renewalItems.length === 0 ? (
-              <p className="text-sm text-charcoal/50">Nothing due for renewal right now.</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {renewalItems.map((item, i) => (
-                  <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-charcoal/10 px-3 py-2">
-                    <span className="text-sm text-charcoal">{item.label}</span>
-                    <StatusBadge tone={item.alert.tone}>{item.alert.label}</StatusBadge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <StaffGrowthSummary staffId={staffMember.id} cycles={staffMember.growthCycles} />
-        </div>
+  const overview = (
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+      <div className="flex flex-col gap-5">
+        <StaffEmploymentPanel staff={staff} rosteredHours={rosteredHours} rosterWeekStart={rosterWeekStart} />
+        <StaffContactPanel staff={staff} />
+        <StaffAvailabilitySection availability={staff.availability} onSave={updateStaffAvailability.bind(null, staff.id)} />
+      </div>
+      <div className="flex flex-col gap-5">
+        <StaffQualificationsSummary
+          role={staff.role}
+          qualification={staff.qualification}
+          slots={qualificationSlots}
+          otherDocuments={qualificationOtherDocs}
+        />
+        <StaffRenewalsPanel items={renewals} />
+        <StaffDocumentsSummary documents={staff.documents} missingRequired={missingRequired} />
+        <StaffGrowthSummary cycles={staff.growthCycles} />
       </div>
     </div>
   );
 
-  const employmentContent = (
-    <div className="flex flex-col gap-5">
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Photo</h2>
-        <StaffPhotoUpload staffId={staffMember.id} fullName={staffMember.full_name} photoUrl={staffMember.photo_url} />
-      </section>
-
-      <section className="card p-5">
-        <StaffEmploymentForm
-          fullName={staffMember.full_name}
-          role={staffMember.role}
-          startDate={staffMember.start_date}
-          endDate={staffMember.end_date}
-          contractType={staffMember.contract_type}
-          payRate={staffMember.pay_rate}
-          minHours={staffMember.min_hours}
-          roomId={staffMember.room_id}
-          isRelief={staffMember.is_relief}
-          taxCode={staffMember.tax_code}
-          rooms={rooms}
-          accessLevel={accessLevel}
-          onSave={updateStaffDetails.bind(null, staffMember.id)}
-        />
-      </section>
-
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Pay parity &amp; recognised service <span className="text-charcoal/40">— restricted</span>
-        </h2>
-        {accessLevel === "full" ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Pay parity step</p>
-              <p className="mt-0.5 text-sm text-charcoal">{staffMember.qualification.pay_parity_step ?? "Not recorded"}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Recognised service</p>
-              <p className="mt-0.5 text-sm text-charcoal">{staffMember.qualification.recognised_service ?? "Not recorded"}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-charcoal/40">Restricted — authorised management only.</p>
-        )}
-        <p className="mt-3 text-xs text-charcoal/40">Edited from the Qualifications tab.</p>
-      </section>
-
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Induction</h2>
-        <div className="mb-3 flex items-center gap-2">
-          {induction.completed_at ? (
-            <StatusBadge tone="ready">Complete</StatusBadge>
-          ) : inductionChecked > 0 ? (
-            <StatusBadge tone="attention">In progress</StatusBadge>
+  const employment = (
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+      <StaffEmploymentPanel staff={staff} rosteredHours={rosteredHours} rosterWeekStart={rosterWeekStart} />
+      <div className="flex flex-col gap-5">
+        <Panel
+          id="panel-pay"
+          title="Pay and pay parity"
+          description="Restricted to authorised management"
+          bodyClassName="border-t border-charcoal/10"
+        >
+          {accessLevel === "full" ? (
+            <dl className="divide-y divide-charcoal/10">
+              {[
+                ["Pay rate", staff.pay_rate !== null ? `$${staff.pay_rate.toFixed(2)} an hour` : null, "Edit profile"],
+                ["Tax code", staff.tax_code, "Edit profile"],
+                ["Pay parity step", staff.qualification.pay_parity_step, "Qualifications tab"],
+                ["Recognised service", staff.qualification.recognised_service, "Qualifications tab"],
+              ].map(([label, value, where]) => (
+                <div key={label as string} className="grid grid-cols-[9rem_1fr] gap-3 px-5 py-2.5 text-sm sm:grid-cols-[11rem_1fr]">
+                  <dt className="text-charcoal/70">{label}</dt>
+                  <dd className="text-charcoal">
+                    {value ?? <span className="text-charcoal/70">Not recorded</span>}
+                    <span className="block text-xs text-charcoal/60">Edited in {where}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
           ) : (
-            <StatusBadge tone="action">Not started</StatusBadge>
+            <p className="px-5 py-4 text-sm text-charcoal/70">
+              Pay, pay parity and recognised service are only shown to authorised management.
+            </p>
           )}
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm text-charcoal/60">
-              {inductionChecked} of {inductionTotal} items ticked ({inductionPercent}%)
-              {induction.staff_signed_at && ` · signed ${formatDate(induction.staff_signed_at)}`}
-            </p>
-            <p className="mt-0.5 text-xs text-charcoal/40">
-              The digital Induction Pack for Kaiako — policies, forms and health &amp; safety, with a signature at
-              the end.
-            </p>
-          </div>
-          <Link href={`/staff/${staffMember.id}/induction`} className="btn-secondary">
-            {inductionChecked > 0 ? "Continue induction" : "Start induction"}
-          </Link>
-        </div>
-      </section>
+        </Panel>
 
-      <section className="card border-status-action/20 p-5">
-        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-status-action">Danger zone</h2>
-        <p className="mb-3 text-sm text-charcoal/60">
-          Permanently remove this person&apos;s profile and everything filed against it.
-        </p>
-        <DeleteStaffButton staffId={staffMember.id} fullName={staffMember.full_name} />
-      </section>
+        <Panel id="panel-induction" title="Induction" bodyClassName="border-t border-charcoal/10 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              {induction.completed_at ? (
+                <StatusPill tone="ready">Complete</StatusPill>
+              ) : inductionChecked > 0 ? (
+                <StatusPill tone="attention">In progress</StatusPill>
+              ) : (
+                <StatusPill tone="neutral">Not started</StatusPill>
+              )}
+              <p className="mt-1.5 text-sm text-charcoal">
+                {inductionChecked} of {inductionTotal} items ticked
+                {induction.staff_signed_at && <span className="text-charcoal/70"> · signed {formatNzDate(induction.staff_signed_at)}</span>}
+              </p>
+              <p className="mt-0.5 text-xs text-charcoal/70">The Induction Pack for Kaiako — policies, forms and health and safety, signed at the end.</p>
+            </div>
+            <Link href={`/staff/${staff.id}/induction`} className="btn-secondary">
+              {inductionChecked > 0 ? "Continue induction" : "Start induction"}
+            </Link>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 
-  const qualificationsContent = (
-    <div className="flex flex-col gap-5">
-      <section className="card p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">Qualifications &amp; pay parity</h2>
-          <StatusBadge tone={staffQualificationTone(staffMember.qualification.qualification_status)}>
-            {STAFF_QUALIFICATION_STATUS_LABEL[staffMember.qualification.qualification_status]}
-          </StatusBadge>
-        </div>
-        <StaffQualificationForm
-          qualification={staffMember.qualification}
-          accessLevel={accessLevel}
-          onSave={updateStaffQualification.bind(null, staffMember.id)}
-        />
+  const qualifications = (
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <div className="flex flex-col gap-5">
+        <Panel id="panel-qualification" title="Qualification and pay parity" bodyClassName="border-t border-charcoal/10 px-5 py-5">
+          <StaffQualificationForm
+            qualification={staff.qualification}
+            accessLevel={accessLevel}
+            onSave={updateStaffQualification.bind(null, staff.id)}
+          />
+        </Panel>
         <a
-          href={teachingCouncilSearchUrl(staffMember.full_name)}
+          href={teachingCouncilSearchUrl(staff.full_name)}
           target="_blank"
           rel="noreferrer"
-          className="mt-4 flex items-center gap-2 rounded-xl border border-charcoal/10 bg-sand-50 px-4 py-3 text-sm font-medium text-burgundy-600 hover:bg-sand-100"
+          className="flex items-start gap-3 rounded-2xl border border-charcoal/10 bg-white px-5 py-4 text-sm transition-colors hover:bg-lilac-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charcoal"
         >
-          <LinkIcon className="h-4 w-4 shrink-0" />
-          Check {staffMember.full_name.split(" ")[0]}&apos;s Teaching Council registration &amp; expiry
-          <span className="ml-auto text-xs font-normal text-charcoal/40">teachingcouncil.nz ↗</span>
+          <LinkIcon className="mt-0.5 h-4 w-4 shrink-0 text-charcoal" />
+          <span>
+            <span className="font-medium text-lilac-700">Check {firstName}&apos;s Teaching Council registration ↗</span>
+            <span className="mt-0.5 block text-charcoal/70">
+              Opens the Teaching Council&apos;s own search with this name filled in. Registration status and expiry
+              aren&apos;t stored in Earlydesk.
+            </span>
+          </span>
         </a>
-        <p className="mt-2 text-xs text-charcoal/40">
-          Opens the Teaching Council&apos;s own &quot;Find a registered teacher&quot; search, pre-filled with this
-          person&apos;s name — we don&apos;t store their registration status or expiry date ourselves, so use this to
-          check it directly with the Teaching Council whenever you need to confirm it&apos;s current.
-        </p>
-      </section>
-
-      <section className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Teaching qualification, practising certificate &amp; first aid records
-        </h2>
+      </div>
+      <Panel id="panel-qual-docs" title="Qualification and first aid records" bodyClassName="border-t border-charcoal/10 px-5 py-5">
         <RequiredDocumentsPanel
           slots={qualificationSlots}
           otherDocuments={qualificationOtherDocs}
-          onUpload={recordStaffDocumentUpload.bind(null, staffMember.id)}
-          onDelete={deleteStaffDocument.bind(null, staffMember.id)}
+          onUpload={recordStaffDocumentUpload.bind(null, staff.id)}
+          onDelete={deleteStaffDocument.bind(null, staff.id)}
+          otherLabel="First aid and other records"
         />
+      </Panel>
+    </div>
+  );
+
+  const documents = (
+    <div className="flex flex-col gap-4">
+      {accessLevel !== "full" && (
+        <p className="rounded-xl border border-charcoal/10 bg-white px-4 py-3 text-sm text-charcoal/80">
+          Contracts are restricted to authorised management, so any on file aren&apos;t listed for your account.
+        </p>
+      )}
+      <Panel
+        id="panel-documents"
+        title="Documents"
+        description="Required documents follow this person's employment type and qualification status."
+        bodyClassName="border-t border-charcoal/10 px-5 py-5"
+      >
+        <RequiredDocumentsPanel
+          slots={documentsSlots}
+          otherDocuments={documentsOtherDocs}
+          onUpload={recordStaffDocumentUpload.bind(null, staff.id)}
+          onDelete={deleteStaffDocument.bind(null, staff.id)}
+        />
+      </Panel>
+    </div>
+  );
+
+  const notes = (
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <Panel
+        id="panel-general-notes"
+        title="General notes"
+        description="Visible to anyone with access"
+        headerAction={<RecordEditButton variant="link">Edit</RecordEditButton>}
+        bodyClassName="border-t border-charcoal/10 px-5 py-4"
+      >
+        {staff.notes ? (
+          <p className="whitespace-pre-line break-words text-sm text-charcoal">{staff.notes}</p>
+        ) : (
+          <p className="text-sm text-charcoal/70">No general notes recorded.</p>
+        )}
+      </Panel>
+      <section aria-labelledby="confidential-notes-heading" className="flex flex-col gap-3">
+        <div>
+          <h2 id="confidential-notes-heading" className="text-base font-semibold text-charcoal">
+            Confidential notes
+          </h2>
+          <p className="text-sm text-charcoal/70">Restricted to authorised management.</p>
+        </div>
+        <StaffNotesPanel staffId={staff.id} notes={staff.notes_log} accessLevel={accessLevel} />
       </section>
     </div>
   );
 
-  const documentsContent = (
-    <section className="card p-5">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Documents</h2>
-      {accessLevel !== "full" && (
-        <p className="mb-3 rounded-lg bg-charcoal/[0.03] px-3 py-2 text-xs text-charcoal/50">
-          Contracts are restricted to authorised management — any on file for this person aren&apos;t shown here to
-          your account.
-        </p>
-      )}
-      <RequiredDocumentsPanel
-        slots={documentsTabSlots}
-        otherDocuments={documentsTabOtherDocs}
-        onUpload={recordStaffDocumentUpload.bind(null, staffMember.id)}
-        onDelete={deleteStaffDocument.bind(null, staffMember.id)}
-      />
-    </section>
-  );
-
-  const growthContent = <StaffGrowthPanel staffId={staffMember.id} cycles={staffMember.growthCycles} />;
-
-  const notesContent = <StaffNotesPanel staffId={staffMember.id} notes={staffMember.notes_log} accessLevel={accessLevel} />;
-
-  const tabs: TabItem[] = [
-    { key: "overview", label: "Overview", content: overviewContent },
-    { key: "employment", label: "Employment", content: employmentContent },
-    { key: "qualifications", label: "Qualifications", content: qualificationsContent },
-    { key: "documents", label: "Documents", content: documentsContent, count: documentsTabSlots.length + documentsTabOtherDocs.length },
-    { key: "growth", label: "Professional growth", content: growthContent, count: staffMember.growthCycles.length || undefined },
-    { key: "notes", label: "Notes", content: notesContent, count: accessLevel === "full" ? staffMember.notes_log.length || undefined : undefined },
+  const tabs = [
+    { key: "overview", label: "Overview", content: overview },
+    { key: "employment", label: "Employment", content: employment },
+    { key: "qualifications", label: "Qualifications", content: qualifications },
+    { key: "documents", label: "Documents", count: staff.documents.length || undefined, content: documents },
+    { key: "growth", label: "Professional growth", count: staff.growthCycles.length || undefined, content: <StaffGrowthPanel staffId={staff.id} cycles={staff.growthCycles} /> },
+    { key: "notes", label: "Notes", count: accessLevel === "full" ? staff.notes_log.length || undefined : undefined, content: notes },
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/50">
-        <Link href="/staff" className="hover:text-charcoal">
-          Staff
-        </Link>
-        <ChevronRightIcon className="h-3.5 w-3.5" />
-        <span className="font-medium text-charcoal">{staffMember.full_name}</span>
-      </nav>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <StaffAvatar fullName={staffMember.full_name} photoUrl={staffMember.photo_url} size="lg" />
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">{staffMember.full_name}</h1>
-              <StatusBadge tone={staffMember.status === "active" ? "ready" : "neutral"}>
-                {STAFF_STATUS_LABEL[staffMember.status]}
-              </StatusBadge>
-              {staffMember.contract_type && (
-                <span className={`badge ${STAFF_CONTRACT_TYPE_BADGE[staffMember.contract_type]}`}>
-                  {STAFF_CONTRACT_TYPE_LABEL[staffMember.contract_type]}
-                </span>
-              )}
-              <StatusBadge tone={checklistPercent === 100 ? "ready" : checklistPercent === 0 ? "action" : "attention"}>
-                Profile {checklistPercent}% complete
-              </StatusBadge>
-            </div>
-            <p className="mt-1 text-sm text-charcoal/60">
-              {staffMember.role ?? "Role not set"}
-              {staffMember.room_name ? ` · ${staffMember.room_name}` : ""}
-              {staffMember.start_date ? ` · started ${formatDate(staffMember.start_date)}` : ""}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <EmailStaffButton staffId={staffMember.id} />
-          <Link href={`/staff/${staffMember.id}?tab=employment`} className="btn-secondary">
-            Edit profile
+    <RecordShell initialTab={searchParams.tab ?? "overview"} tabKeys={TAB_KEYS}>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-sm text-charcoal/70">
+          <Link href="/staff" className="rounded hover:text-charcoal hover:underline">
+            Staff
           </Link>
-          <form
-            action={setStaffStatus.bind(null, staffMember.id, staffMember.status === "active" ? "former" : "active")}
-          >
-            <button type="submit" className="btn-ghost">
-              {staffMember.status === "active" ? "Mark as former staff" : "Mark as active"}
-            </button>
-          </form>
-        </div>
+          <ChevronRightIcon className="h-3.5 w-3.5" />
+          <span aria-current="page" className="font-medium text-charcoal">
+            {staff.full_name}
+          </span>
+        </nav>
+
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <StaffAvatar fullName={staff.full_name} photoUrl={staff.photo_url} size="xl" decorative />
+            <div className="min-w-0">
+              <h1 className="break-words text-2xl font-semibold tracking-tight text-charcoal md:text-[1.75rem]">{staff.full_name}</h1>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-charcoal/70">
+                <span>{staff.role ?? "Role not recorded"}</span>
+                <span aria-hidden="true">·</span>
+                <span>{staff.room_name ?? (staff.is_relief ? "Relief" : "No room")}</span>
+                {staff.contract_type && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{STAFF_CONTRACT_TYPE_LABEL[staff.contract_type]}</span>
+                  </>
+                )}
+                <span aria-hidden="true">·</span>
+                <StatusPill tone={staff.status === "active" ? "ready" : "neutral"}>
+                  {staff.status === "active" ? "Active" : "Former staff"}
+                </StatusPill>
+              </p>
+              {staff.start_date && <p className="mt-1 text-xs text-charcoal/70">Started {formatDate(staff.start_date)}</p>}
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <RecordEditButton>
+              <EditIcon className="h-4 w-4" />
+              Edit profile
+            </RecordEditButton>
+            <Link href={`/email/compose?staffId=${staff.id}`} className="btn-secondary">
+              <MailIcon className="h-4 w-4" />
+              Email staff
+            </Link>
+            <StaffActionsMenu staffId={staff.id} fullName={staff.full_name} status={staff.status} />
+          </div>
+        </header>
+
+        <RecordTabs tabs={tabs} label="Staff profile sections" />
+
+        <p className="pb-2 text-center text-xs text-charcoal/70">
+          Pay, contracts and confidential notes are only shown to authorised management.
+        </p>
       </div>
 
-      {/* key={defaultTab} forces a remount when the ?tab= query param changes
-          (e.g. clicking "Edit profile", which links to ?tab=employment) —
-          Tabs only reads its defaultTab prop once via useState on mount, so
-          without this, navigating to a new ?tab= while already on this page
-          would silently leave the previously-active tab showing. */}
-      <Tabs key={defaultTab} tabs={tabs} defaultTab={defaultTab} />
-
-      <p className="pb-2 text-center text-xs text-charcoal/35">
-        Pay, contracts and confidential notes are restricted to authorised management.
-      </p>
-    </div>
+      <StaffEditDrawer
+        staffId={staff.id}
+        staffName={staff.full_name}
+        photoUrl={staff.photo_url}
+        rooms={rooms}
+        accessLevel={accessLevel}
+        onSave={updateStaffDetails.bind(null, staff.id)}
+        values={{
+          fullName: staff.full_name,
+          role: staff.role,
+          roomId: staff.room_id,
+          isRelief: staff.is_relief,
+          contractType: staff.contract_type,
+          startDate: staff.start_date,
+          endDate: staff.end_date,
+          minHours: staff.min_hours,
+          payRate: staff.pay_rate,
+          taxCode: staff.tax_code,
+          email: staff.email,
+          mobilePhone: staff.mobile_phone,
+          dateOfBirth: staff.date_of_birth,
+          emergencyName: staff.emergency_contact_name,
+          emergencyPhone: staff.emergency_contact_phone,
+          emergencyRelationship: staff.emergency_contact_relationship,
+          notes: staff.notes,
+        }}
+      />
+    </RecordShell>
   );
 }

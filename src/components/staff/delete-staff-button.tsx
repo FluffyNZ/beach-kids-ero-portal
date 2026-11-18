@@ -10,9 +10,24 @@ import { TrashIcon } from "@/components/icons";
  * record and safety-check status all go with them. There's no undo, so
  * this asks the manager to type the person's exact name before it does
  * anything, rather than a single click or a plain browser confirm(). */
-export function DeleteStaffButton({ staffId, fullName }: { staffId: string; fullName: string }) {
+export function DeleteStaffButton({
+  staffId,
+  fullName,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  staffId: string;
+  fullName: string;
+  /** Pass `open`/`onOpenChange` to open the dialog from elsewhere (the
+   * profile's More menu) — the built-in trigger button is then not shown. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (value: boolean) => (controlled ? onOpenChange?.(value) : setUncontrolledOpen(value));
   const [confirmText, setConfirmText] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +62,12 @@ export function DeleteStaffButton({ staffId, fullName }: { staffId: string; full
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="btn-ghost text-status-action hover:bg-status-actionBg"
-      >
-        <TrashIcon className="h-4 w-4" />
-        Delete staff profile
-      </button>
+      {!controlled && (
+        <button type="button" onClick={() => setOpen(true)} className="btn-ghost text-charcoal hover:bg-status-actionBg">
+          <TrashIcon className="h-4 w-4" />
+          Delete staff profile
+        </button>
+      )}
 
       <Modal open={open} onClose={handleClose} title="Delete staff profile">
         <div className="flex flex-col gap-4">
@@ -65,14 +78,15 @@ export function DeleteStaffButton({ staffId, fullName }: { staffId: string; full
           </p>
           <p className="text-sm text-charcoal/70">
             If you just want to record that they no longer work here, close this and use{" "}
-            <span className="font-medium text-charcoal">Mark as former staff</span> on their profile instead — it
-            keeps their history.
+            <span className="font-medium text-charcoal">Mark as former staff</span> from the profile&apos;s More menu
+            instead — it keeps their history.
           </p>
           <div>
-            <label className="label">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="confirm-delete-staff">
               Type <span className="font-semibold text-charcoal">{fullName}</span> to confirm (not case sensitive)
             </label>
             <input
+              id="confirm-delete-staff"
               className="input"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
@@ -80,16 +94,20 @@ export function DeleteStaffButton({ staffId, fullName }: { staffId: string; full
               autoComplete="off"
             />
             {confirmText.trim().length > 0 && (
-              <p className={`mt-1 text-xs ${canDelete ? "text-status-ready" : "text-charcoal/40"}`}>
+              <p className="mt-1 text-xs text-charcoal/70">
                 {canDelete ? "✓ Name matches" : "Doesn't match yet"}
               </p>
             )}
           </div>
 
-          {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+          {error && (
+            <p role="alert" className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-charcoal">
+              {error}
+            </p>
+          )}
 
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={handleClose} className="btn-ghost">
+            <button type="button" onClick={handleClose} className="btn-secondary">
               Cancel
             </button>
             <button type="button" disabled={!canDelete || pending} className="btn-danger" onClick={handleDelete}>

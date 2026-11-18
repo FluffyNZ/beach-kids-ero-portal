@@ -865,6 +865,19 @@ export async function removeStaffPhoto(staffId: string): Promise<UploadStaffPhot
   return { success: true };
 }
 
+/** A short-lived link to open or download one stored staff file. Contracts
+ * and confidential-note attachments are restricted to authorised
+ * management, so for anyone else this checks what the file is first and
+ * refuses those — and refuses any path that isn't a known staff document —
+ * rather than relying on the page not showing them. */
 export async function getSignedUrlForStaffDocument(storagePath: string, download?: boolean): Promise<string | null> {
+  if (!(await isAuthorisedManagement())) {
+    const supabase = createClient();
+    const [{ data: doc }, { data: note }] = await Promise.all([
+      supabase.from("staff_documents").select("category").eq("storage_path", storagePath).maybeSingle(),
+      supabase.from("staff_notes").select("id").eq("storage_path", storagePath).maybeSingle(),
+    ]);
+    if (note || !doc || doc.category === "contract") return null;
+  }
   return getSignedStaffDocumentUrl(storagePath, download ? { download: true } : undefined);
 }

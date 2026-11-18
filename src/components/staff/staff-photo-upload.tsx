@@ -46,17 +46,17 @@ export function StaffPhotoUpload({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <StaffAvatar fullName={fullName} photoUrl={photoUrl} size="lg" />
+      <StaffAvatar fullName={fullName} photoUrl={photoUrl} size="xl" />
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-ghost" disabled={pending} onClick={() => inputRef.current?.click()}>
+          <button type="button" className="btn-secondary" disabled={pending} onClick={() => inputRef.current?.click()}>
             {pending ? "Saving…" : photoUrl ? "Change photo" : "Upload photo"}
           </button>
           {photoUrl && (
             <button
               type="button"
-              className="btn-ghost text-status-action hover:bg-status-actionBg"
+              className="btn-ghost text-charcoal hover:bg-status-actionBg"
               disabled={pending}
               onClick={handleRemove}
             >
@@ -67,15 +67,20 @@ export function StaffPhotoUpload({
 
         <input
           ref={inputRef}
+          aria-label={`Choose a photo of ${fullName}`}
           type="file"
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={handleFileChange}
         />
 
-        {error && <p className="text-xs text-status-action">{error}</p>}
+        {error && (
+          <p role="alert" className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-charcoal">
+            {error}
+          </p>
+        )}
 
-        <p className="text-xs text-charcoal/40">
+        <p className="text-xs text-charcoal/70">
           JPG, PNG or WEBP. Only upload a real photo of this person — it also appears on the Centre Calendar on
           their birthday.
         </p>

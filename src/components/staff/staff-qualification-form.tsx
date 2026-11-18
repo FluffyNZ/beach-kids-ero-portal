@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState } from "react";
+import { SaveStatus, FormError, useSaveState } from "@/components/ui/save-status";
+import { cn } from "@/lib/utils";
 import { STAFF_QUALIFICATION_STATUSES, STAFF_QUALIFICATION_STATUS_LABEL } from "@/lib/constants";
 import type { StaffQualification, StaffAccessLevel } from "@/lib/types";
 import type { StaffQualificationStatus } from "@/lib/supabase/database.types";
@@ -24,8 +26,8 @@ export function StaffQualificationForm({
     notes?: string | null;
   }) => Promise<void>;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
+  const id = useId();
+  const save = useSaveState();
 
   const [status, setStatus] = useState<StaffQualificationStatus>(qualification.qualification_status);
   const [qualificationLevel, setQualificationLevel] = useState(qualification.qualification_level ?? "");
@@ -40,27 +42,26 @@ export function StaffQualificationForm({
   const [notes, setNotes] = useState(qualification.notes ?? "");
 
   function markDirty() {
-    setSaved(false);
+    save.markDirty();
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <label className="label">Qualification status</label>
+      <fieldset>
+        <legend className="mb-1.5 block text-sm font-medium text-charcoal">Qualification status</legend>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {STAFF_QUALIFICATION_STATUSES.map((value) => (
             <label
               key={value}
-              className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
-                status === value
-                  ? "border-burgundy-400 bg-burgundy-50 text-burgundy-700"
-                  : "border-charcoal/15 text-charcoal hover:bg-sand-100"
-              }`}
+              className={cn(
+                "flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium text-charcoal transition-colors focus-within:ring-2 focus-within:ring-charcoal",
+                status === value ? "border-charcoal bg-lilac-100" : "border-charcoal/15 hover:bg-charcoal/5"
+              )}
             >
               <input
                 type="radio"
                 name="qualification_status"
-                className="h-4 w-4 border-charcoal/30 text-burgundy-500 focus:ring-burgundy-500"
+                className="h-4 w-4 border-charcoal/40 accent-charcoal"
                 checked={status === value}
                 onChange={() => {
                   setStatus(value);
@@ -71,14 +72,14 @@ export function StaffQualificationForm({
             </label>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       {status === "qualified" && (
         <div className="rounded-xl border border-charcoal/10 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="label">Qualification level</label>
-              <input
+              <label htmlFor={`${id}-f1`} className="mb-1.5 block text-sm font-medium text-charcoal">Qualification level</label>
+              <input id={`${id}-f1`}
                 className="input"
                 placeholder="e.g. ECE Level 7 (Bachelor)"
                 value={qualificationLevel}
@@ -89,8 +90,8 @@ export function StaffQualificationForm({
               />
             </div>
             <div>
-              <label className="label">Registration status</label>
-              <input
+              <label htmlFor={`${id}-f2`} className="mb-1.5 block text-sm font-medium text-charcoal">Registration status</label>
+              <input id={`${id}-f2`}
                 className="input"
                 placeholder="e.g. Fully registered"
                 value={registrationStatus}
@@ -104,11 +105,11 @@ export function StaffQualificationForm({
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="label">
-                Pay parity step <span className="text-charcoal/40">— restricted</span>
+              <label htmlFor={`${id}-f3`} className="mb-1.5 block text-sm font-medium text-charcoal">
+                Pay parity step <span className="font-normal text-charcoal/70">· restricted</span>
               </label>
               {accessLevel === "full" ? (
-                <input
+                <input id={`${id}-f3`}
                   className="input"
                   placeholder="e.g. Step 8"
                   value={payParityStep}
@@ -118,17 +119,17 @@ export function StaffQualificationForm({
                   }}
                 />
               ) : (
-                <p className="input flex items-center bg-charcoal/[0.03] text-charcoal/40">
-                  Restricted — authorised management only
+                <p className="flex items-center rounded-xl border border-charcoal/10 bg-canvas px-3 py-2 text-sm text-charcoal/70">
+                  Only authorised management can see this
                 </p>
               )}
             </div>
             <div>
-              <label className="label">
-                Recognised service <span className="text-charcoal/40">— restricted</span>
+              <label htmlFor={`${id}-f4`} className="mb-1.5 block text-sm font-medium text-charcoal">
+                Recognised service <span className="font-normal text-charcoal/70">· restricted</span>
               </label>
               {accessLevel === "full" ? (
-                <input
+                <input id={`${id}-f4`}
                   className="input"
                   placeholder="e.g. 4 years recognised"
                   value={recognisedService}
@@ -138,15 +139,15 @@ export function StaffQualificationForm({
                   }}
                 />
               ) : (
-                <p className="input flex items-center bg-charcoal/[0.03] text-charcoal/40">
-                  Restricted — authorised management only
+                <p className="flex items-center rounded-xl border border-charcoal/10 bg-canvas px-3 py-2 text-sm text-charcoal/70">
+                  Only authorised management can see this
                 </p>
               )}
             </div>
           </div>
           <div className="mt-3">
-            <label className="label">Next review date</label>
-            <input
+            <label htmlFor={`${id}-f5`} className="mb-1.5 block text-sm font-medium text-charcoal">Next review date</label>
+            <input id={`${id}-f5`}
               type="date"
               className="input max-w-xs"
               value={nextReviewDate}
@@ -163,8 +164,8 @@ export function StaffQualificationForm({
         <div className="rounded-xl border border-charcoal/10 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="label">Qualification being studied</label>
-              <input
+              <label htmlFor={`${id}-f6`} className="mb-1.5 block text-sm font-medium text-charcoal">Qualification being studied</label>
+              <input id={`${id}-f6`}
                 className="input"
                 placeholder="e.g. Postgraduate Diploma in ECE"
                 value={studyingQualification}
@@ -175,8 +176,8 @@ export function StaffQualificationForm({
               />
             </div>
             <div>
-              <label className="label">Expected completion date</label>
-              <input
+              <label htmlFor={`${id}-f7`} className="mb-1.5 block text-sm font-medium text-charcoal">Expected completion date</label>
+              <input id={`${id}-f7`}
                 type="date"
                 className="input"
                 value={expectedCompletionDate}
@@ -191,8 +192,8 @@ export function StaffQualificationForm({
       )}
 
       <div>
-        <label className="label">Notes</label>
-        <textarea
+        <label htmlFor={`${id}-f8`} className="mb-1.5 block text-sm font-medium text-charcoal">Notes</label>
+        <textarea id={`${id}-f8`}
           className="input min-h-[60px]"
           value={notes}
           onChange={(e) => {
@@ -202,33 +203,37 @@ export function StaffQualificationForm({
         />
       </div>
 
-      <div className="flex justify-end">
+      <FormError message={save.error} />
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <SaveStatus state={save.state} />
         <button
           type="button"
-          disabled={pending}
+          disabled={save.state === "saving"}
           className="btn-primary"
           onClick={() =>
-            startTransition(async () => {
-              await onSave({
-                qualification_status: status,
-                qualification_level: status === "qualified" ? qualificationLevel || null : null,
-                registration_status: status === "qualified" ? registrationStatus || null : null,
-                next_review_date: status === "qualified" ? nextReviewDate || null : null,
-                studying_qualification: status === "studying" ? studyingQualification || null : null,
-                expected_completion_date: status === "studying" ? expectedCompletionDate || null : null,
-                notes: notes || null,
-                ...(accessLevel === "full"
-                  ? {
-                      pay_parity_step: status === "qualified" ? payParityStep || null : null,
-                      recognised_service: status === "qualified" ? recognisedService || null : null,
-                    }
-                  : {}),
-              });
-              setSaved(true);
-            })
+            save.run(
+              () =>
+                onSave({
+                  qualification_status: status,
+                  qualification_level: status === "qualified" ? qualificationLevel || null : null,
+                  registration_status: status === "qualified" ? registrationStatus || null : null,
+                  next_review_date: status === "qualified" ? nextReviewDate || null : null,
+                  studying_qualification: status === "studying" ? studyingQualification || null : null,
+                  expected_completion_date: status === "studying" ? expectedCompletionDate || null : null,
+                  notes: notes || null,
+                  ...(accessLevel === "full"
+                    ? {
+                        pay_parity_step: status === "qualified" ? payParityStep || null : null,
+                        recognised_service: status === "qualified" ? recognisedService || null : null,
+                      }
+                    : {}),
+                }),
+              "Something went wrong saving the qualification."
+            )
           }
         >
-          {pending ? "Saving…" : saved ? "Saved" : "Save changes"}
+          {save.state === "saving" ? "Saving…" : "Save changes"}
         </button>
       </div>
     </div>

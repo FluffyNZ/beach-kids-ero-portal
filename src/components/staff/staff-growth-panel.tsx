@@ -24,7 +24,7 @@ function GoalRow({ staffId, goal }: { staffId: string; goal: StaffGrowthCycle["g
       <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
         <input
           type="checkbox"
-          className="mt-0.5 h-4 w-4 rounded border-charcoal/30 text-burgundy-500 focus:ring-burgundy-500"
+          className="mt-0.5 h-4 w-4 rounded border-charcoal/30 accent-charcoal"
           checked={goal.is_complete}
           disabled={pending}
           onChange={(e) =>
@@ -34,7 +34,7 @@ function GoalRow({ staffId, goal }: { staffId: string; goal: StaffGrowthCycle["g
             })
           }
         />
-        <span className={`text-sm ${goal.is_complete ? "text-charcoal/40 line-through" : "text-charcoal"}`}>
+        <span className={`text-sm ${goal.is_complete ? "text-charcoal/70 line-through" : "text-charcoal"}`}>
           {goal.description}
         </span>
       </label>
@@ -86,7 +86,7 @@ function CycleCard({ staffId, cycle }: { staffId: string; cycle: StaffGrowthCycl
             <h3 className="font-medium text-charcoal">{cycle.title}</h3>
             <StatusBadge tone={staffGrowthCycleTone(cycle.status)}>{STAFF_GROWTH_CYCLE_STATUS_LABEL[cycle.status]}</StatusBadge>
           </div>
-          <p className="mt-0.5 text-xs text-charcoal/50">
+          <p className="mt-0.5 text-xs text-charcoal/70">
             {cycle.start_date ? `Started ${formatDate(cycle.start_date)}` : "Start date not recorded"}
           </p>
         </div>
@@ -155,7 +155,7 @@ function CycleCard({ staffId, cycle }: { staffId: string; cycle: StaffGrowthCycl
       </div>
 
       <div>
-        <label className="label">Review date</label>
+        <label className="mb-1.5 block text-sm font-medium text-charcoal">Review date</label>
         <input
           type="date"
           className="input max-w-xs"
@@ -168,8 +168,8 @@ function CycleCard({ staffId, cycle }: { staffId: string; cycle: StaffGrowthCycl
       </div>
 
       <div>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Goals</h4>
-        {cycle.goals.length === 0 && <p className="mb-2 text-sm text-charcoal/40">No goals recorded yet.</p>}
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-charcoal/70">Goals</h4>
+        {cycle.goals.length === 0 && <p className="mb-2 text-sm text-charcoal/70">No goals recorded yet.</p>}
         <ul className="divide-y divide-charcoal/5">
           {cycle.goals.map((g) => (
             <GoalRow key={g.id} staffId={staffId} goal={g} />
@@ -201,7 +201,7 @@ function CycleCard({ staffId, cycle }: { staffId: string; cycle: StaffGrowthCycl
       </div>
 
       <div>
-        <label className="label">Goals &amp; reflections</label>
+        <label className="mb-1.5 block text-sm font-medium text-charcoal">Goals &amp; reflections</label>
         <textarea
           className="input min-h-[90px]"
           placeholder="How this cycle is going, what's been reflected on, evidence to follow up on…"
