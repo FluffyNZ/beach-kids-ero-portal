@@ -74,24 +74,24 @@ export function XeroSyncPanel() {
         </button>
       </div>
 
-      {syncError && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{syncError}</p>}
+      {syncError && <p className="rounded-xl border border-status-action/40 bg-status-actionBg px-3 py-2 text-sm text-charcoal">{syncError}</p>}
       {confirmError && (
-        <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{confirmError}</p>
+        <p className="rounded-xl border border-status-action/40 bg-status-actionBg px-3 py-2 text-sm text-charcoal">{confirmError}</p>
       )}
 
       {result && (
         <div className="flex flex-col gap-5">
-          <p className="text-xs text-charcoal/40">
+          <p className="text-xs text-charcoal/70">
             Synced {formatShortDate(result.syncedAt.slice(0, 10))} at{" "}
             {new Date(result.syncedAt).toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit" })}.
           </p>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">
+            <h3 className="text-sm font-semibold text-charcoal">
               Ready to confirm ({result.confidentMatches.length})
             </h3>
             {result.confidentMatches.length === 0 ? (
-              <p className="text-sm text-charcoal/50">No one-to-one matches right now.</p>
+              <p className="text-sm text-charcoal/70">No one-to-one matches right now.</p>
             ) : (
               result.confidentMatches.map(({ invoice, payment }) => {
                 const key = `confident-${invoice.id}`;
@@ -101,14 +101,14 @@ export function XeroSyncPanel() {
                       <p className="text-sm font-medium text-charcoal">
                         {invoice.bill_payer_name} — {invoice.invoice_number}
                       </p>
-                      <p className="text-xs text-charcoal/50">
+                      <p className="text-xs text-charcoal/70">
                         Xero: {formatShortDate(payment.date)}
                         {payment.contactName ? ` · ${payment.contactName}` : ""}
                         {payment.reference ? ` · "${payment.reference}"` : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <p className="font-display text-lg font-bold text-charcoal">{formatCurrency(payment.amount)}</p>
+                      <p className="text-lg font-semibold text-charcoal">{formatCurrency(payment.amount)}</p>
                       <button
                         type="button"
                         disabled={syncPending}
@@ -125,11 +125,11 @@ export function XeroSyncPanel() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">
+            <h3 className="text-sm font-semibold text-charcoal">
               Needs you to pick ({result.ambiguousMatches.length})
             </h3>
             {result.ambiguousMatches.length === 0 ? (
-              <p className="text-sm text-charcoal/50">Nothing ambiguous right now.</p>
+              <p className="text-sm text-charcoal/70">Nothing ambiguous right now.</p>
             ) : (
               result.ambiguousMatches.map((am) => (
                 <div key={am.payment.bankTransactionId} className="card flex flex-col gap-3 p-4">
@@ -162,7 +162,7 @@ export function XeroSyncPanel() {
                     })}
                   </div>
                   {am.likelyInvoiceIds.length > 0 && (
-                    <p className="text-xs text-charcoal/40">
+                    <p className="text-xs text-charcoal/70">
                       ✓ = the payment&apos;s bank reference or name looks like that family — still your call to
                       confirm.
                     </p>
@@ -173,11 +173,11 @@ export function XeroSyncPanel() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">
+            <h3 className="text-sm font-semibold text-charcoal">
               Unmatched Xero payments ({result.unmatchedPayments.length})
             </h3>
             {result.unmatchedPayments.length === 0 ? (
-              <p className="text-sm text-charcoal/50">None.</p>
+              <p className="text-sm text-charcoal/70">None.</p>
             ) : (
               <div className="card divide-y divide-sand-100 p-0">
                 {result.unmatchedPayments.map((p) => (
@@ -192,18 +192,18 @@ export function XeroSyncPanel() {
                 ))}
               </div>
             )}
-            <p className="text-xs text-charcoal/40">
+            <p className="text-xs text-charcoal/70">
               No outstanding invoice currently shares this amount — could be an overpayment, a deposit from before
               this feature existed, or something unrelated to fees. Nothing happens to these automatically.
             </p>
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-charcoal/50">
+            <h3 className="text-sm font-semibold text-charcoal">
               Outstanding invoices with no payment found ({result.unmatchedInvoices.length})
             </h3>
             {result.unmatchedInvoices.length === 0 ? (
-              <p className="text-sm text-charcoal/50">None.</p>
+              <p className="text-sm text-charcoal/70">None.</p>
             ) : (
               <div className="card divide-y divide-sand-100 p-0">
                 {result.unmatchedInvoices.map((inv) => (

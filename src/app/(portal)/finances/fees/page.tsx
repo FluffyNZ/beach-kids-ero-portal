@@ -1,63 +1,76 @@
 import Link from "next/link";
-import { getWeeklyFeesByFamily, getWeeklyFeesSummary } from "@/lib/data/fees";
-import { mondayOf, formatCurrency } from "@/lib/utils";
-import { FeesWeekNav } from "@/components/children/fees-week-nav";
-import { FamilyFeesTable } from "@/components/children/family-fees-table";
-import { StatTile } from "@/components/dashboard/stat-tile";
-import { FinanceNav } from "@/components/finances/finance-nav";
+import { FinancePage, FigureStrip } from "@/components/finances/finance-page";
+import { FinanceWeekPicker } from "@/components/finances/finance-week-picker";
+import { FeeReviewTable } from "@/components/finances/fee-review-table";
+import { getFeeReview } from "@/lib/data/finance-hub";
+import { fmtWeek, plural } from "@/lib/finance-format";
+import { formatCurrency, mondayOfDateString, nzTodayDateString } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function FeesByFamilyPage({
-  searchParams,
-}: {
-  searchParams: { week?: string };
-}) {
-  const requested = searchParams.week ? new Date(`${searchParams.week}T00:00:00Z`) : new Date();
-  const weekStartDate = Number.isNaN(requested.getTime()) ? mondayOf(new Date()) : mondayOf(requested);
+const FILTERS = ["estimated", "ready", "invoiced", "changed", "unlinked"] as const;
 
-  const [data, summary] = await Promise.all([
-    getWeeklyFeesByFamily(weekStartDate),
-    getWeeklyFeesSummary(weekStartDate),
-  ]);
+export default async function FeesPage({ searchParams }: { searchParams: { week?: string; status?: string } }) {
+  const thisWeek = mondayOfDateString(nzTodayDateString());
+  const weekStart = searchParams.week && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.week) ? mondayOfDateString(searchParams.week) : thisWeek;
+  const data = await getFeeReview(weekStart);
+  const initialFilter = FILTERS.find((f) => f === searchParams.status);
+  const estimatedFamilies = data.rows.filter((r) => r.billPayerId && r.isEstimated).length;
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <FinanceNav />
+    <FinancePage title="Fees" description="Review each family account's fees for a billing week before invoicing.">
+      <FinanceWeekPicker weekStart={weekStart} thisWeek={thisWeek} basePath="/finances/fees" />
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Fees</h1>
-        <p className="mt-1 text-sm text-charcoal/60">
-          Each active child&apos;s fee from Children, rolled up to one total per bill payer — what would actually
-          go on an invoice this week.
-        </p>
-      </div>
-
-      <FeesWeekNav weekStartDate={weekStartDate} basePath="/finances/fees" />
-
-      {!data.hasAnyHoursEntered && (
-        <div className="card border-l-4 border-l-status-attention p-4 text-sm text-charcoal/70">
-          Nobody&apos;s actual hours have been confirmed for this week yet — these totals are estimated from each
-          child&apos;s enrolled schedule. Confirm this week&apos;s hours on{" "}
-          <Link href="/children/hours" className="font-medium underline">
-            Attendance
-          </Link>{" "}
-          for exact figures.
+      {!data.hoursConfirmed && (
+        <div role="note" className="rounded-xl border border-status-attention/40 bg-status-attentionBg px-4 py-3 text-sm text-charcoal">
+          <p className="font-medium">No hours have been confirmed for {fmtWeek(weekStart)}.</p>
+          <p className="mt-0.5">
+            These fees are estimated from each child&apos;s booked hours.{" "}
+            <Link href={`/children/hours?week=${weekStart}`} className="font-medium text-lilac-700 underline-offset-4 hover:underline">
+              Confirm hours in Attendance
+            </Link>
+            .
+          </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <StatTile
-          label={
-            summary.hasAnyHoursEntered ? "Earned this week (total fees)" : "Earned this week (estimated from enrolled schedules)"
-          }
-          value={formatCurrency(summary.totalFees)}
-          tone="ready"
-        />
-        <StatTile label="Owing across all families this week" value={formatCurrency(data.totalParentPays)} tone="ready" />
-      </div>
+      <FigureStrip
+        figures={[
+          {
+            label: "Family accounts",
+            value: data.totals.families,
+            scope: `With enrolled children, week of ${fmtWeek(weekStart)}`,
+            detail: estimatedFamilies > 0 ? `${plural(estimatedFamilies, "family", "families")} on estimated hours` : "All on confirmed hours",
+          },
+          {
+            label: "Families pay",
+            value: formatCurrency(data.totals.parentPays),
+            scope: "Total across family accounts this week",
+            detail: data.totals.unlinkedParentPays > 0 ? `Plus ${formatCurrency(data.totals.unlinkedParentPays)} for children with no family account` : undefined,
+          },
+          {
+            label: "WINZ subsidies",
+            value: formatCurrency(data.totals.winz),
+            scope: "Deducted from family fees this week",
+          },
+          {
+            label: "Total fees",
+            value: formatCurrency(data.totals.feeTotal),
+            scope: "Before WINZ is deducted; 20 Hours ECE hours aren't charged",
+            detail: data.hoursConfirmed ? undefined : "Estimate",
+          },
+        ]}
+      />
 
-      <FamilyFeesTable data={data} />
-    </div>
+      <FeeReviewTable rows={data.rows} weekStart={weekStart} initialFilter={initialFilter} />
+
+      <p className="text-xs text-charcoal/70">
+        Fees use the rates, 20 Hours ECE caps and sibling discount in{" "}
+        <Link href="/settings" className="font-medium text-lilac-700 underline-offset-4 hover:underline">
+          Settings
+        </Link>
+        . Invoices keep the amount they were drafted with, even if hours change later.
+      </p>
+    </FinancePage>
   );
 }

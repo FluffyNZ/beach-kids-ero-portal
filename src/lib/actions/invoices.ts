@@ -89,7 +89,7 @@ export async function sendInvoice(invoiceId: string) {
   if (!invoice) throw new Error("Invoice not found.");
   if (invoice.status === "void") throw new Error("This invoice has been voided.");
   if (!invoice.bill_payer_email) {
-    throw new Error("This family has no email address on file — add one to their bill payer details first.");
+    throw new Error("This family has no email address on file — add one to their family account first.");
   }
 
   const isFirstInvoice = !(await hasPriorInvoiceForBillPayer(invoice.bill_payer_id, invoice.id));
@@ -171,7 +171,7 @@ export async function markInvoicePaid(invoiceId: string, paid: boolean) {
       paid_at: paid ? new Date().toISOString() : null,
       // Undoing a paid mark also clears any Xero match, so the invoice is
       // genuinely outstanding again rather than stuck "already matched"
-      // the next time a Xero sync runs against it (see migration 0043).
+      // the next time a Xero sync runs against it.
       ...(paid ? {} : { xero_transaction_id: null, xero_matched_at: null }),
     })
     .eq("id", invoiceId);
@@ -202,7 +202,7 @@ export async function sendStatement(billPayerId: string) {
   const statement = statements.find((s) => s.bill_payer_id === billPayerId);
   if (!statement) throw new Error("This family has nothing currently outstanding to send a statement for.");
   if (!statement.bill_payer_email) {
-    throw new Error("This family has no email address on file — add one to their bill payer details first.");
+    throw new Error("This family has no email address on file — add one to their family account first.");
   }
 
   const resend = getResendClient();

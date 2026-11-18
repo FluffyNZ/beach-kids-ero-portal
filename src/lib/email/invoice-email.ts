@@ -1,5 +1,7 @@
 import "server-only";
-import type { FamilyStatement, Invoice } from "@/lib/types";
+import type { BillPayer, FamilyStatement, Invoice } from "@/lib/types";
+import type { StatementSummary } from "@/lib/finance-ledger";
+import { fmtDate, fmtRange } from "@/lib/finance-format";
 import { formatCurrency, formatShortDate } from "@/lib/utils";
 
 // Plain, email-client-safe inline styles — no external stylesheet, since
@@ -20,9 +22,9 @@ function escapeHtml(value: string): string {
 
 // Beach Kids Waihi's real payment details, exactly as Ethan gave them —
 // never invent or alter these, they're real bank account information.
-const BANK_ACCOUNT_NAME = "Beach Kids Waihi";
-const BANK_ACCOUNT_NUMBER = "BNZ 02 0466 0345377 000";
-const ADMIN_PHONE = "027 600 0705";
+export const BANK_ACCOUNT_NAME = "Beach Kids Waihi";
+export const BANK_ACCOUNT_NUMBER = "BNZ 02 0466 0345377 000";
+export const ADMIN_PHONE = "027 600 0705";
 
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || fullName;
@@ -197,6 +199,65 @@ export function renderStatementEmail(statement: FamilyStatement): string {
       <p>If you've already paid any of the above, it may not have been reconciled yet — let us know and we'll check.</p>
 
       <p>Thanks,<br/>Beach Kids</p>
+    </div>
+  `;
+}
+
+/** A statement for a chosen period: opening balance, the charges and
+ * payments dated in the period, and the closing balance. */
+export function renderPeriodStatementEmail(account: Pick<BillPayer, "full_name">, statement: StatementSummary): string {
+  const rows = statement.entries
+    .map(
+      (e) => `
+      <tr>
+        <td style="${TD}">${fmtDate(e.date)}</td>
+        <td style="${TD}">${escapeHtml(e.description)}</td>
+        <td style="${TD} text-align: right;">${e.kind === "charge" ? formatCurrency(e.amount) : ""}</td>
+        <td style="${TD} text-align: right;">${e.kind === "payment" ? formatCurrency(e.amount) : ""}</td>
+      </tr>`
+    )
+    .join("");
+
+  return `
+    <div style="${WRAP}">
+      <p style="${HEADING}">Beach Kids Waihi</p>
+      <p style="${MUTED}">Statement of account · ${fmtRange(statement.from, statement.to)}</p>
+
+      <p>Kia ora ${escapeHtml(firstName(account.full_name))},</p>
+      <p>Here's your statement for ${fmtRange(statement.from, statement.to)}.</p>
+
+      <table style="${TABLE}">
+        <tbody>
+          <tr><td style="${TD}">Opening balance at ${fmtDate(statement.from)}</td><td style="${TD} text-align: right;">${formatCurrency(statement.openingBalance)}</td></tr>
+          <tr><td style="${TD}">Charges</td><td style="${TD} text-align: right;">${formatCurrency(statement.totalCharges)}</td></tr>
+          <tr><td style="${TD}">Payments</td><td style="${TD} text-align: right;">−${formatCurrency(statement.totalPayments)}</td></tr>
+          <tr><td style="${TD} ${TOTAL_ROW}">Closing balance at ${fmtDate(statement.to)}</td><td style="${TD} ${TOTAL_ROW} text-align: right;">${formatCurrency(statement.closingBalance)}</td></tr>
+        </tbody>
+      </table>
+
+      ${
+        statement.entries.length
+          ? `<table style="${TABLE}">
+        <thead>
+          <tr>
+            <th style="${TH}">Date</th>
+            <th style="${TH}">Details</th>
+            <th style="${TH} text-align: right;">Charge</th>
+            <th style="${TH} text-align: right;">Payment</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`
+          : `<p style="${SECTION}">No charges or payments in this period.</p>`
+      }
+
+      <p style="${SECTION}">
+        Pay to ${escapeHtml(BANK_ACCOUNT_NAME)}, ${escapeHtml(BANK_ACCOUNT_NUMBER)}, using your child's first name as the reference.
+        If you've paid recently it may not show yet — let us know and we'll check.
+      </p>
+      <p style="${SECTION}">Questions? Call/text Administration ${escapeHtml(ADMIN_PHONE)}, or reply to this email.</p>
+
+      <p>Ngā mihi nui,<br/>${escapeHtml(BANK_ACCOUNT_NAME)}</p>
     </div>
   `;
 }

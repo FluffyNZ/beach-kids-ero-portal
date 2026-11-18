@@ -1,132 +1,98 @@
 import Link from "next/link";
-import { getFinanceDashboard, getRecentPayments, type FinancePeriod } from "@/lib/data/finances";
-import { getOutstandingFamilyAccounts } from "@/lib/data/invoices";
-import { FinanceNav } from "@/components/finances/finance-nav";
-import { FinanceStatCard } from "@/components/finances/finance-stat-card";
-import { MoneyReceivedChart } from "@/components/finances/money-received-chart";
-import { FinanceQuickActions } from "@/components/finances/finance-quick-actions";
-import { OutstandingAccountsTable } from "@/components/finances/outstanding-accounts-table";
-import { RecentPaymentsTable } from "@/components/finances/recent-payments-table";
-import { FinanceStatementsPanel } from "@/components/finances/finance-statements-panel";
-import { HowTotalsCalculated } from "@/components/finances/how-totals-calculated";
-import { CreditCardIcon, ReportsIcon, DocumentIcon, AlertIcon, PlusIcon } from "@/components/icons";
-import { formatCurrency, cn } from "@/lib/utils";
+import { FinancePage, FigureStrip } from "@/components/finances/finance-page";
+import { FinanceShortcuts, IncomeChart, NeedsAttention, PeriodSelector, RecentPayments } from "@/components/finances/finance-overview";
+import { FINANCE_PERIOD_OPTIONS, getFinanceOverviewData, parsePeriodKey } from "@/lib/data/finance-hub";
+import { fmtDate, plural } from "@/lib/finance-format";
+import { formatCurrency, mondayOfDateString } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const PERIOD_LABEL: Record<FinancePeriod, string> = {
-  month: "This month",
-  funding_round: "This funding round",
-  financial_year: "This financial year",
-};
-
-export default async function FinancesPage({ searchParams }: { searchParams: { period?: string } }) {
-  const period: FinancePeriod =
-    searchParams.period === "financial_year" || searchParams.period === "funding_round" ? searchParams.period : "month";
-
-  const [dashboard, accounts, recentPayments] = await Promise.all([
-    getFinanceDashboard(period),
-    getOutstandingFamilyAccounts(),
-    getRecentPayments(6),
-  ]);
+export default async function FinanceOverviewPage({ searchParams }: { searchParams: { period?: string } }) {
+  const key = parsePeriodKey(searchParams.period);
+  const data = await getFinanceOverviewData(key);
+  const { period, received, expected, balances } = data;
+  const toDate = period.current ? ` (to ${fmtDate(data.today)})` : "";
+  // The fee estimate covers whole Mon–Fri weeks, from the week containing
+  // the first day of the period to the week containing its last day.
+  const firstWeek = mondayOfDateString(period.start);
+  const lastWeek = mondayOfDateString(period.end);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <FinanceNav />
+    <FinancePage title="Finance" description="Money received, fees, invoices and family balances for Beach Kids.">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PeriodSelector options={FINANCE_PERIOD_OPTIONS} value={key} />
+        <p className="text-sm text-charcoal/70">
+          Reporting period: <span className="font-medium text-charcoal">{period.dates}</span>
+        </p>
+      </div>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Finances</h1>
-          <p className="mt-1 text-sm text-charcoal/60">Showing {dashboard.periodLabel}.</p>
+      <FigureStrip
+        figures={[
+          {
+            label: "Money received",
+            value: formatCurrency(received.total),
+            scope: `Payments dated ${period.dates}${toDate}`,
+            detail:
+              received.count === 0
+                ? "No payments recorded in this period"
+                : `Invoices ${formatCurrency(received.fromInvoices)} · other income ${formatCurrency(received.fromOtherIncome)}`,
+          },
+          {
+            label: "Expected fees (estimate)",
+            value: formatCurrency(expected.total),
+            scope: `Weeks beginning ${fmtDate(firstWeek)} to ${fmtDate(lastWeek)}`,
+            detail:
+              expected.totalWeeks === 0
+                ? "No weeks in this period"
+                : expected.confirmedWeeks === 0
+                  ? `Based on current bookings — no weeks have confirmed hours`
+                  : `${expected.confirmedWeeks} of ${plural(expected.totalWeeks, "week")} have confirmed hours`,
+          },
+          {
+            label: "Outstanding balance",
+            value: formatCurrency(balances.outstanding),
+            scope: `Unpaid sent invoices as of ${fmtDate(data.today)}`,
+            detail: balances.unpaidCount === 0 ? "No unpaid invoices" : plural(balances.unpaidCount, "unpaid invoice"),
+          },
+          {
+            label: "Overdue balance",
+            value: formatCurrency(balances.overdue),
+            scope: `Part of the outstanding balance, past due as of ${fmtDate(data.today)}`,
+            detail: balances.overdueCount === 0 ? "Nothing overdue" : plural(balances.overdueCount, "overdue invoice"),
+            emphasis: balances.overdue > 0 ? "action" : undefined,
+          },
+        ]}
+      />
+      <p className="-mt-3 text-xs text-charcoal/70">
+        Expected fees are parent fees plus WINZ subsidies, estimated from current enrolments and booked hours unless hours have been
+        confirmed — they aren&apos;t money received. Overdue is included in outstanding, so the two aren&apos;t added together.
+      </p>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="min-w-0 lg:col-span-3">
+          <IncomeChart buckets={data.chart} total={received.total} periodDates={period.dates} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="card flex gap-1 p-1">
-            {(["month", "funding_round", "financial_year"] as FinancePeriod[]).map((p) => (
-              <Link
-                key={p}
-                href={`/finances?period=${p}`}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  period === p ? "bg-charcoal text-white" : "text-charcoal/60 hover:bg-charcoal/5"
-                )}
-              >
-                {PERIOD_LABEL[p]}
-              </Link>
-            ))}
-          </div>
-          <Link
-            href="/finances/fees"
-            title="Draft a new invoice from Fees — invoices are always created from one week's real fee numbers, never typed in freehand."
-            className="btn-primary"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Create invoice
-          </Link>
+        <div className="min-w-0 lg:col-span-2">
+          <NeedsAttention items={data.attention} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <FinanceStatCard
-          label="Money received"
-          value={formatCurrency(dashboard.moneyReceived)}
-          note={`${dashboard.periodLabel}`}
-          icon={<CreditCardIcon />}
-        />
-        <FinanceStatCard
-          label="Expected fee income"
-          value={formatCurrency(dashboard.expectedFeeIncome)}
-          note={
-            dashboard.feeRevenue.estimatedWeeks > 0
-              ? `${dashboard.feeRevenue.confirmedWeeks} of ${dashboard.feeRevenue.totalWeeks} weeks confirmed`
-              : "All weeks confirmed"
-          }
-          icon={<ReportsIcon />}
-        />
-        <FinanceStatCard
-          label="Outstanding fees"
-          value={formatCurrency(dashboard.outstandingFeesAmount)}
-          note={
-            dashboard.overdueFeesAmount > 0
-              ? `Includes ${formatCurrency(dashboard.overdueFeesAmount)} overdue`
-              : "None of this is overdue"
-          }
-          icon={<DocumentIcon />}
-        />
-        <FinanceStatCard
-          label="Overdue fees"
-          value={formatCurrency(dashboard.overdueFeesAmount)}
-          note={`${dashboard.overdueFeesCount} invoice${dashboard.overdueFeesCount === 1 ? "" : "s"} — part of outstanding fees`}
-          icon={<AlertIcon />}
-          tone="attention"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card p-5 lg:col-span-2">
-          <MoneyReceivedChart buckets={dashboard.moneyReceivedBuckets} total={dashboard.moneyReceived} />
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="min-w-0 lg:col-span-3">
+          <RecentPayments payments={data.recentPayments} />
         </div>
-        <FinanceQuickActions />
+        <div className="min-w-0 lg:col-span-2">
+          <FinanceShortcuts />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <OutstandingAccountsTable accounts={accounts} />
-        <RecentPaymentsTable payments={recentPayments} />
-      </div>
-
-      <FinanceStatementsPanel outstandingCount={accounts.length} />
-
-      <HowTotalsCalculated dashboard={dashboard} />
-
-      <p className="text-xs text-charcoal/40">
-        Figures above aren&apos;t a tax calculation and don&apos;t account for GST, depreciation, or anything else
-        your accountant would factor in — treat them as working totals, not a substitute for their numbers.
-        Outgoings (overheads/bills) is unchanged and still has all its records — it&apos;s just left out of this
-        redesign&apos;s navigation per the brief, so it&apos;s linked here instead:{" "}
-        <Link href="/finances/outgoings" className="underline">
+      <p className="text-xs text-charcoal/70">
+        These are working totals, not tax or GST figures. Bills and overheads are in{" "}
+        <Link href="/finances/outgoings" className="font-medium text-lilac-700 underline-offset-4 hover:underline">
           Outgoings
         </Link>
         .
       </p>
-    </div>
+    </FinancePage>
   );
 }

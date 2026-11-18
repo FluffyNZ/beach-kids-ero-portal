@@ -67,13 +67,13 @@ export function AddIncomeModal() {
         <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="income_date">
+              <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="income_date">
                 Date
               </label>
               <input id="income_date" name="income_date" type="date" required className="input" />
             </div>
             <div>
-              <label className="label" htmlFor="source">
+              <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="source">
                 Source
               </label>
               <select id="source" name="source" className="input" defaultValue="other">
@@ -88,13 +88,13 @@ export function AddIncomeModal() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="payer_name">
+              <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="payer_name">
                 From
               </label>
               <input id="payer_name" name="payer_name" type="text" className="input" placeholder="e.g. Ministry of Education" />
             </div>
             <div>
-              <label className="label" htmlFor="amount">
+              <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="amount">
                 Amount ($)
               </label>
               <input id="amount" name="amount" type="number" min={0.01} step="0.01" required className="input" />
@@ -102,7 +102,7 @@ export function AddIncomeModal() {
           </div>
 
           <div>
-            <label className="label" htmlFor="description">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="description">
               Description
             </label>
             <input id="description" name="description" type="text" className="input" placeholder="Optional" />
@@ -110,13 +110,13 @@ export function AddIncomeModal() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label" htmlFor="invoice_number">
+              <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="invoice_number">
                 Invoice number — optional
               </label>
               <input id="invoice_number" name="invoice_number" type="text" className="input" />
             </div>
             <div>
-              <label className="label" htmlFor="gst_amount">
+              <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="gst_amount">
                 GST amount ($) — optional
               </label>
               <input id="gst_amount" name="gst_amount" type="number" min={0} step="0.01" className="input" />
@@ -124,7 +124,7 @@ export function AddIncomeModal() {
           </div>
 
           <div>
-            <label className="label" htmlFor="due_date">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="due_date">
               Due date — optional
             </label>
             <input id="due_date" name="due_date" type="date" className="input" />
@@ -142,23 +142,23 @@ export function AddIncomeModal() {
             </label>
             {alreadyReceived && (
               <div>
-                <label className="label" htmlFor="received_date">
+                <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="received_date">
                   Date received
                 </label>
                 <input id="received_date" name="received_date" type="date" className="input" />
-                <p className="mt-1 text-xs text-charcoal/50">Leave blank to use the date above.</p>
+                <p className="mt-1 text-xs text-charcoal/70">Leave blank to use the date above.</p>
               </div>
             )}
           </div>
 
           <div>
-            <label className="label" htmlFor="notes">
+            <label className="mb-1.5 block text-sm font-medium text-charcoal" htmlFor="notes">
               Notes
             </label>
             <textarea id="notes" name="notes" rows={2} className="input" placeholder="Optional" />
           </div>
 
-          {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+          {error && <p role="alert" className="rounded-xl border border-status-action/40 bg-status-actionBg px-3 py-2 text-sm text-charcoal">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={handleClose} className="btn-ghost">

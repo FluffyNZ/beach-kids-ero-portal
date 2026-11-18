@@ -30,7 +30,7 @@ export type CreateBillPayerResult = { success: true; id: string } | { success: f
  * rather than silently creating a second record for the same family. */
 export async function createBillPayer(formData: FormData): Promise<CreateBillPayerResult> {
   const { fullName, email, phone, address, notes } = readContactFields(formData);
-  if (!fullName) return { success: false, error: "Enter the client's name." };
+  if (!fullName) return { success: false, error: "Enter the family account name." };
 
   const supabase = createClient();
 
@@ -38,7 +38,7 @@ export async function createBillPayer(formData: FormData): Promise<CreateBillPay
   if (existing) {
     return {
       success: false,
-      error: "A client with this exact name already exists — edit them instead of creating a duplicate.",
+      error: "A family account with this exact name already exists — edit it instead of creating a duplicate.",
     };
   }
 
@@ -50,7 +50,7 @@ export async function createBillPayer(formData: FormData): Promise<CreateBillPay
     .single<{ id: string }>();
 
   if (error || !created) {
-    return { success: false, error: `Could not save this client: ${error?.message ?? "unknown error"}` };
+    return { success: false, error: `Could not save this family account: ${error?.message ?? "unknown error"}` };
   }
 
   revalidatePath("/finances/clients");
@@ -75,6 +75,7 @@ export async function updateBillPayer(id: string, formData: FormData): Promise<U
   if (error) return { success: false, error: `Could not save changes: ${error.message}` };
 
   revalidatePath("/finances/clients");
+  revalidatePath(`/finances/clients/${id}`);
   revalidatePath("/finances/invoices");
   revalidatePath("/finances/statements");
   revalidatePath("/children");

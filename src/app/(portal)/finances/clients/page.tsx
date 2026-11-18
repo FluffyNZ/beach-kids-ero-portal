@@ -1,65 +1,37 @@
-import { getBillPayersList } from "@/lib/data/bill-payers";
-import { StatTile } from "@/components/dashboard/stat-tile";
+import { FinancePage, FigureStrip } from "@/components/finances/finance-page";
+import { FamilyAccountsList, type FamilyFilter } from "@/components/finances/family-accounts-list";
+import { AddFamilyAccountButton } from "@/components/finances/family-account-forms";
+import { getFamilyAccounts } from "@/lib/data/finance-hub";
+import { fmtDate } from "@/lib/finance-format";
 import { formatCurrency } from "@/lib/utils";
-import { AddClientButton } from "@/components/finances/add-client-button";
-import { ClientRow } from "@/components/finances/client-row";
-import { FinanceNav } from "@/components/finances/finance-nav";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientsPage() {
-  const allBillPayers = await getBillPayersList();
-  // Only families with at least one currently-active child billed to them —
-  // a bill payer whose kids have all left (or who was created ahead of an
-  // enrolment and never linked to one) doesn't show up here, even though
-  // their record still exists for invoice history.
-  const clients = allBillPayers.filter((c) => c.activeChildrenCount > 0);
+const FILTERS: FamilyFilter[] = ["enrolled", "balance", "overdue", "no_email", "all"];
 
-  const totalOwing = clients.reduce((sum, c) => sum + c.totalOwing, 0);
-  const missingEmail = clients.filter((c) => !c.email).length;
+export default async function FamilyAccountsPage({ searchParams }: { searchParams: { filter?: string } }) {
+  const { today, rows } = await getFamilyAccounts();
+  const enrolled = rows.filter((r) => r.children.length > 0);
+  const outstanding = rows.reduce((s, r) => s + r.outstanding, 0);
+  const overdue = rows.reduce((s, r) => s + r.overdue, 0);
+  const noEmail = enrolled.filter((r) => !r.email).length;
+  const initialFilter = FILTERS.includes(searchParams.filter as FamilyFilter) ? (searchParams.filter as FamilyFilter) : "enrolled";
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <FinanceNav />
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Family accounts</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Every family currently billed through Beach Kids — contact details, who they&apos;re billed for, and
-            what they currently owe.
-          </p>
-        </div>
-        <AddClientButton />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile label="Families currently billed" value={clients.length} tone="neutral" />
-        <StatTile
-          label="Total currently owing"
-          value={formatCurrency(totalOwing)}
-          tone={totalOwing > 0 ? "attention" : "ready"}
-        />
-        <StatTile
-          label="Missing an email on file"
-          value={missingEmail}
-          tone={missingEmail > 0 ? "action" : "ready"}
-        />
-      </div>
-
-      {clients.length === 0 ? (
-        <div className="card p-6 text-center text-sm text-charcoal/50">
-          No families currently billed — a client only shows up here once they have at least one active child
-          linked to them. Add one above, then set them as that child&apos;s bill payer from the child&apos;s
-          profile under Children (typing their exact name there links the two).
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {clients.map((client) => (
-            <ClientRow key={client.id} client={client} />
-          ))}
-        </div>
-      )}
-    </div>
+    <FinancePage
+      title="Family accounts"
+      description="Who pays for each child, their contact details and what they owe."
+      actions={<AddFamilyAccountButton />}
+    >
+      <FigureStrip
+        figures={[
+          { label: "With enrolled children", value: enrolled.length, scope: `${rows.length} family accounts on file` },
+          { label: "Outstanding", value: formatCurrency(outstanding), scope: `All family accounts, as of ${fmtDate(today)}` },
+          { label: "Overdue", value: formatCurrency(overdue), scope: "Part of outstanding", emphasis: overdue > 0 ? "action" : undefined },
+          { label: "No email on file", value: noEmail, scope: "Family accounts with enrolled children", emphasis: noEmail > 0 ? "attention" : undefined },
+        ]}
+      />
+      <FamilyAccountsList rows={rows} initialFilter={initialFilter} />
+    </FinancePage>
   );
 }

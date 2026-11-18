@@ -1,90 +1,65 @@
 import Link from "next/link";
-import { getInvoicesList } from "@/lib/data/invoices";
-import { InvoicesExplorer, type TabValue } from "@/components/finances/invoices-explorer";
+import { FinancePage, FigureStrip } from "@/components/finances/finance-page";
+import { InvoiceList, type InvoiceFilter } from "@/components/finances/invoice-list";
 import { ExportInvoicesButton } from "@/components/finances/export-invoices-button";
-import { FinanceNav } from "@/components/finances/finance-nav";
-import { formatCurrency, isOverdue, mondayOf, addDays } from "@/lib/utils";
-import { PlusIcon } from "@/components/icons";
+import { getInvoicesList } from "@/lib/data/invoices";
+import { accountBalances } from "@/lib/finance-ledger";
+import { fmtDate, plural } from "@/lib/finance-format";
+import { formatCurrency, nzTodayDateString } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-// A tab can be bookmarked/linked to (e.g. ?status=unpaid) for the initial
-// view — live tab switching after that happens client-side in
-// InvoicesExplorer so the table and the selected invoice's details panel
-// never lose state on a filter change.
-const INITIAL_TAB_VALUES: TabValue[] = ["all", "draft", "unpaid", "overdue", "paid", "void"];
+const FILTERS: InvoiceFilter[] = ["all", "draft", "unpaid", "overdue", "paid", "void"];
 
-export default async function InvoicesPage({ searchParams }: { searchParams: { status?: string } }) {
-  // One fetch, every status — the explorer below derives each tab's rows
-  // and counts from this same list, rather than re-querying per tab the
-  // way the previous version did.
+export default async function InvoicesPage({ searchParams }: { searchParams: { status?: string; invoice?: string } }) {
+  const today = nzTodayDateString();
   const invoices = await getInvoicesList();
-
-  const initialStatus: TabValue = INITIAL_TAB_VALUES.includes(searchParams.status as TabValue)
-    ? (searchParams.status as TabValue)
-    : "all";
-
-  const outstanding = invoices.filter((i) => i.status === "sent");
-  const totalOutstanding = outstanding.reduce((sum, i) => sum + i.total_due, 0);
-  const totalOverdue = outstanding.filter((i) => isOverdue(i.due_date)).reduce((sum, i) => sum + i.total_due, 0);
-
-  const weekStart = mondayOf(new Date());
-  const weekAfter = addDays(weekStart, 7);
-  const receivedThisWeek = invoices
-    .filter((i) => i.status === "paid" && i.paid_at && i.paid_at.slice(0, 10) >= weekStart && i.paid_at.slice(0, 10) < weekAfter)
-    .reduce((sum, i) => sum + i.total_due, 0);
+  const balances = accountBalances(invoices, today);
+  const drafts = invoices.filter((i) => i.status === "draft");
+  const initialFilter = FILTERS.includes(searchParams.status as InvoiceFilter) ? (searchParams.status as InvoiceFilter) : "all";
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-      <FinanceNav />
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Invoices</h1>
-          <p className="mt-1 text-sm text-charcoal/60">
-            Invoices drafted from Fees — each one is a frozen snapshot, so editing a week&apos;s hours later never
-            changes what was already sent.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/finances/statements"
-            className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-slate-50"
-          >
-            Statements
+    <FinancePage
+      title="Invoices"
+      description="Every invoice drafted from Fees, with balances and payments."
+      actions={
+        <>
+          <ExportInvoicesButton invoices={invoices} today={today} />
+          <Link href="/finances/fees" className="btn-primary">
+            Draft from Fees
           </Link>
-          <ExportInvoicesButton invoices={invoices} />
-          <Link
-            href="/finances/fees"
-            title="Draft a new invoice from Fees — invoices are always created from one week's real fee numbers, never typed in freehand."
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-charcoal px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-charcoal/90"
-          >
-            <PlusIcon />
-            Create invoice
-          </Link>
-        </div>
-      </div>
+        </>
+      }
+    >
+      <FigureStrip
+        figures={[
+          {
+            label: "Outstanding",
+            value: formatCurrency(balances.outstanding),
+            scope: `Unpaid sent invoices as of ${fmtDate(today)}`,
+            detail: plural(balances.unpaidCount, "invoice"),
+          },
+          {
+            label: "Overdue",
+            value: formatCurrency(balances.overdue),
+            scope: "Part of outstanding, past the due date",
+            detail: plural(balances.overdueCount, "invoice"),
+            emphasis: balances.overdue > 0 ? "action" : undefined,
+          },
+          {
+            label: "Drafts not sent",
+            value: drafts.length,
+            scope: "Not owed until sent",
+            detail: drafts.length ? formatCurrency(drafts.reduce((s, i) => s + i.total_due, 0)) : undefined,
+          },
+        ]}
+      />
 
-      {/* Compact financial summary — fine vertical dividers rather than
-          separate stat cards. */}
-      <div className="flex flex-wrap divide-x divide-slate-200 rounded-xl border border-slate-200 bg-white">
-        <div className="min-w-[10rem] flex-1 px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Outstanding</p>
-          <p className="mt-1 text-2xl font-bold tracking-tight text-charcoal">{formatCurrency(totalOutstanding)}</p>
-        </div>
-        <div className="min-w-[10rem] flex-1 px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Overdue</p>
-          <p className={`mt-1 text-2xl font-bold tracking-tight ${totalOverdue > 0 ? "text-red-700" : "text-charcoal"}`}>
-            {formatCurrency(totalOverdue)}
-          </p>
-        </div>
-        <div className="min-w-[10rem] flex-1 px-5 py-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-charcoal/40">Received this week</p>
-          <p className="mt-1 text-2xl font-bold tracking-tight text-charcoal">{formatCurrency(receivedThisWeek)}</p>
-        </div>
-      </div>
+      <InvoiceList invoices={invoices} today={today} initialFilter={initialFilter} initialInvoiceId={searchParams.invoice ?? null} />
 
-      <InvoicesExplorer invoices={invoices} initialStatus={initialStatus} />
-    </div>
+      <p className="text-xs text-charcoal/70">
+        Each invoice keeps the amounts it was drafted with. Payments settle the whole invoice; part payments aren&apos;t recorded.
+      </p>
+    </FinancePage>
   );
 }
