@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState } from "react";
 import { isEceEligible } from "@/lib/constants";
+import { SaveStatus, FormError, useSaveState } from "@/components/ui/save-status";
 
+/** Per-child fee settings that feed Finance → Fees. Nothing is calculated
+ * here: 20 Hours ECE and the sibling discount are worked out automatically
+ * (shown for reference), and the two overrides are stored for the fees
+ * calculation to use. */
 export function ChildFeeSettingsForm({
   hourlyRate: initialHourlyRate,
   ageYears,
@@ -16,88 +21,94 @@ export function ChildFeeSettingsForm({
   siblingDiscountEligible: boolean;
   onSave: (fields: { hourly_rate?: number | null; special_weekly_override?: number | null }) => Promise<void>;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const id = useId();
+  const save = useSaveState();
   const [hourlyRate, setHourlyRate] = useState(initialHourlyRate !== null ? String(initialHourlyRate) : "");
   const [specialOverride, setSpecialOverride] = useState(
     initialSpecialWeeklyOverride !== null ? String(initialSpecialWeeklyOverride) : ""
   );
+  const [validation, setValidation] = useState<string | null>(null);
 
   const eceEligible = isEceEligible(ageYears);
+  const fieldLabel = "mb-1.5 block text-sm font-medium text-charcoal";
 
-  function markDirty() {
-    setSaved(false);
+  async function handleSave() {
+    const rate = hourlyRate !== "" ? Number(hourlyRate) : null;
+    const special = specialOverride !== "" ? Number(specialOverride) : null;
+    if ((rate !== null && (Number.isNaN(rate) || rate < 0)) || (special !== null && (Number.isNaN(special) || special < 0))) {
+      setValidation("Amounts must be 0 or more.");
+      save.setState("error");
+      return;
+    }
+    setValidation(null);
+    await save.run(
+      () => onSave({ hourly_rate: rate, special_weekly_override: special }),
+      "Something went wrong saving these fee settings."
+    );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="label">Hourly rate override ($) — leave blank to use the centre&apos;s standard rate</label>
+        <label htmlFor={`${id}-rate`} className={fieldLabel}>
+          Hourly rate override ($)
+        </label>
         <input
+          id={`${id}-rate`}
           type="number"
+          inputMode="decimal"
           min={0}
           step="0.01"
           className="input"
+          placeholder="Centre's standard rate"
           value={hourlyRate}
           onChange={(e) => {
             setHourlyRate(e.target.value);
-            markDirty();
+            save.markDirty();
           }}
         />
-      </div>
-
-      <div className="rounded-lg bg-sand-50 px-3 py-2 text-xs text-charcoal/60">
-        20 Hours ECE: {eceEligible ? "eligible (aged 3 or over)" : "not yet eligible (under 3)"}, capped at 6 hours a
-        day. This is calculated automatically from the child&apos;s age, not set here.
-      </div>
-
-      <div className="rounded-lg bg-sand-50 px-3 py-2 text-xs text-charcoal/60">
-        Sibling discount: {siblingDiscountEligible ? "applies (10%) — this bill payer has more than one active child" : "does not currently apply"}.
-        This is calculated automatically, not set here.
+        <p className="mt-1 text-xs text-charcoal/70">Leave blank to use the centre&apos;s standard rate.</p>
       </div>
 
       <div>
-        <label className="label">Special weekly rate override ($) — overrides the calculated fee entirely</label>
+        <label htmlFor={`${id}-special`} className={fieldLabel}>
+          Special weekly rate ($)
+        </label>
         <input
+          id={`${id}-special`}
           type="number"
+          inputMode="decimal"
           min={0}
           step="0.01"
           className="input"
-          placeholder="Leave blank unless there's an agreed special rate"
+          placeholder="Only for an agreed special rate"
           value={specialOverride}
           onChange={(e) => {
             setSpecialOverride(e.target.value);
-            markDirty();
+            save.markDirty();
           }}
         />
+        <p className="mt-1 text-xs text-charcoal/70">Replaces the calculated weekly fee entirely.</p>
       </div>
 
-      {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+      <dl className="flex flex-col gap-2 rounded-xl border border-charcoal/10 bg-canvas px-4 py-3 text-sm">
+        <div className="flex flex-wrap justify-between gap-x-3">
+          <dt className="text-charcoal/70">20 Hours ECE</dt>
+          <dd className="text-charcoal">{eceEligible ? "Eligible (aged 3 or over)" : "Not yet eligible (under 3)"}</dd>
+        </div>
+        <div className="flex flex-wrap justify-between gap-x-3">
+          <dt className="text-charcoal/70">Sibling discount</dt>
+          <dd className="text-charcoal">{siblingDiscountEligible ? "Applies (10%)" : "Doesn't apply"}</dd>
+        </div>
+        <p className="text-xs text-charcoal/70">Both are worked out automatically — 20 Hours ECE is capped at 6 hours a day.</p>
+      </dl>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={pending}
-          className="btn-primary"
-          onClick={() =>
-            startTransition(async () => {
-              setError(null);
-              try {
-                await onSave({
-                  hourly_rate: hourlyRate !== "" ? Number(hourlyRate) : null,
-                  special_weekly_override: specialOverride !== "" ? Number(specialOverride) : null,
-                });
-                setSaved(true);
-              } catch (err) {
-                setSaved(false);
-                setError(err instanceof Error ? err.message : "Something went wrong saving these fee settings.");
-              }
-            })
-          }
-        >
-          {pending ? "Saving…" : saved ? "Saved" : "Save changes"}
+      <FormError message={validation ?? save.error} />
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <SaveStatus state={save.state} />
+        <button type="button" disabled={save.state === "saving"} className="btn-primary" onClick={handleSave}>
+          {save.state === "saving" ? "Saving…" : "Save changes"}
         </button>
       </div>
     </div>

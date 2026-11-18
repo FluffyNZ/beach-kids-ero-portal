@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState } from "react";
 import type { ChildWinzSubsidy } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import { formatNzDate } from "@/lib/child-format";
+import { SaveStatus, FormError, useSaveState } from "@/components/ui/save-status";
 
 export function ChildWinzForm({
   subsidy,
@@ -17,127 +18,132 @@ export function ChildWinzForm({
     notes?: string | null;
   }) => Promise<void>;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+  const id = useId();
+  const save = useSaveState();
   const [caregiverName, setCaregiverName] = useState(subsidy?.caregiver_name ?? "");
-  const [ccaHours, setCcaHours] = useState(subsidy?.weekly_cca_hours !== null && subsidy?.weekly_cca_hours !== undefined ? String(subsidy.weekly_cca_hours) : "");
-  const [payment, setPayment] = useState(subsidy?.weekly_payment !== null && subsidy?.weekly_payment !== undefined ? String(subsidy.weekly_payment) : "");
+  const [ccaHours, setCcaHours] = useState(
+    subsidy?.weekly_cca_hours !== null && subsidy?.weekly_cca_hours !== undefined ? String(subsidy.weekly_cca_hours) : ""
+  );
+  const [payment, setPayment] = useState(
+    subsidy?.weekly_payment !== null && subsidy?.weekly_payment !== undefined ? String(subsidy.weekly_payment) : ""
+  );
   const [renewalDate, setRenewalDate] = useState(subsidy?.renewal_date ?? "");
   const [notes, setNotes] = useState(subsidy?.notes ?? "");
+  const [validation, setValidation] = useState<string | null>(null);
 
-  function markDirty() {
-    setSaved(false);
+  const fieldLabel = "mb-1.5 block text-sm font-medium text-charcoal";
+
+  function change<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setter(v);
+      save.markDirty();
+    };
+  }
+
+  async function handleSave() {
+    const hours = ccaHours !== "" ? Number(ccaHours) : null;
+    const pay = payment !== "" ? Number(payment) : null;
+    if ((hours !== null && (Number.isNaN(hours) || hours < 0)) || (pay !== null && (Number.isNaN(pay) || pay < 0))) {
+      setValidation("Hours and payment must be 0 or more.");
+      save.setState("error");
+      return;
+    }
+    setValidation(null);
+    await save.run(
+      () =>
+        onSave({
+          caregiver_name: caregiverName || null,
+          weekly_cca_hours: hours,
+          weekly_payment: pay,
+          renewal_date: renewalDate || null,
+          notes: notes || null,
+        }),
+      "Something went wrong saving the WINZ subsidy."
+    );
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {subsidy?.updated_at && (
-        <p className="text-xs text-charcoal/40">Last updated {formatDate(subsidy.updated_at)}.</p>
+      {subsidy?.updated_at ? (
+        <p className="text-xs text-charcoal/70">Last updated {formatNzDate(subsidy.updated_at)}</p>
+      ) : (
+        <p className="text-sm text-charcoal/70">No WINZ subsidy recorded for this child.</p>
       )}
 
       <div>
-        <label className="label">Caregiver name on the WINZ statement</label>
+        <label htmlFor={`${id}-caregiver`} className={fieldLabel}>
+          Caregiver name on the WINZ statement
+        </label>
         <input
+          id={`${id}-caregiver`}
           className="input"
-          placeholder="May differ slightly from the bill payer's name — kept as WINZ has it"
           value={caregiverName}
-          onChange={(e) => {
-            setCaregiverName(e.target.value);
-            markDirty();
-          }}
+          onChange={(e) => change(setCaregiverName)(e.target.value)}
         />
+        <p className="mt-1 text-xs text-charcoal/70">Kept as WINZ has it — may differ slightly from the bill payer.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label">Weekly CCA hours</label>
+          <label htmlFor={`${id}-hours`} className={fieldLabel}>
+            Weekly CCA hours
+          </label>
           <input
+            id={`${id}-hours`}
             type="number"
+            inputMode="decimal"
             min={0}
             step="0.5"
             className="input"
             value={ccaHours}
-            onChange={(e) => {
-              setCcaHours(e.target.value);
-              markDirty();
-            }}
+            onChange={(e) => change(setCcaHours)(e.target.value)}
           />
         </div>
         <div>
-          <label className="label">Weekly payment ($)</label>
+          <label htmlFor={`${id}-payment`} className={fieldLabel}>
+            Weekly payment ($)
+          </label>
           <input
+            id={`${id}-payment`}
             type="number"
+            inputMode="decimal"
             min={0}
             step="0.01"
             className="input"
             value={payment}
-            onChange={(e) => {
-              setPayment(e.target.value);
-              markDirty();
-            }}
+            onChange={(e) => change(setPayment)(e.target.value)}
           />
         </div>
       </div>
 
       <div>
-        <label className="label">Renewal date</label>
+        <label htmlFor={`${id}-renewal`} className={fieldLabel}>
+          Renewal date
+        </label>
         <input
+          id={`${id}-renewal`}
           type="date"
           className="input"
           value={renewalDate}
-          onChange={(e) => {
-            setRenewalDate(e.target.value);
-            markDirty();
-          }}
+          onChange={(e) => change(setRenewalDate)(e.target.value)}
         />
       </div>
 
       <div>
-        <label className="label">Notes</label>
-        <input
-          className="input"
-          placeholder="Optional"
-          value={notes}
-          onChange={(e) => {
-            setNotes(e.target.value);
-            markDirty();
-          }}
-        />
+        <label htmlFor={`${id}-notes`} className={fieldLabel}>
+          Notes <span className="font-normal text-charcoal/70">(optional)</span>
+        </label>
+        <input id={`${id}-notes`} className="input" value={notes} onChange={(e) => change(setNotes)(e.target.value)} />
       </div>
 
-      {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+      <p className="text-xs text-charcoal/70">Clearing every field and saving removes this child&apos;s WINZ subsidy record.</p>
 
-      <p className="text-xs text-charcoal/40">
-        Clearing every field and saving removes this child&apos;s WINZ subsidy record.
-      </p>
+      <FormError message={validation ?? save.error} />
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={pending}
-          className="btn-primary"
-          onClick={() =>
-            startTransition(async () => {
-              setError(null);
-              try {
-                await onSave({
-                  caregiver_name: caregiverName || null,
-                  weekly_cca_hours: ccaHours !== "" ? Number(ccaHours) : null,
-                  weekly_payment: payment !== "" ? Number(payment) : null,
-                  renewal_date: renewalDate || null,
-                  notes: notes || null,
-                });
-                setSaved(true);
-              } catch (err) {
-                setSaved(false);
-                setError(err instanceof Error ? err.message : "Something went wrong saving the WINZ subsidy.");
-              }
-            })
-          }
-        >
-          {pending ? "Saving…" : saved ? "Saved" : "Save changes"}
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <SaveStatus state={save.state} />
+        <button type="button" disabled={save.state === "saving"} className="btn-primary" onClick={handleSave}>
+          {save.state === "saving" ? "Saving…" : "Save changes"}
         </button>
       </div>
     </div>

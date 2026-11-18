@@ -1,19 +1,16 @@
 import type { Invoice } from "@/lib/types";
 import { InvoiceCard } from "@/components/finances/invoice-card";
 
-/** The Invoices tab's real invoice history for this child, reusing the
- * exact same InvoiceCard (and its send/void/mark-paid actions) already
- * used on the Finances invoices list — nothing new to maintain, no risk of
- * drifting out of sync with how invoicing actually works. An invoice
- * covers the whole bill payer, not just one child, so a card here can show
- * a sibling's line item too when invoices are shared — same as everywhere
- * else invoices are shown. */
+/** The real invoice history for this child, reusing the exact same
+ * InvoiceCard (and its send/void/mark-paid actions) used on Finance →
+ * Invoices — nothing is recalculated here. An invoice covers the whole bill
+ * payer, so a card can include a sibling's line too. */
 export function ChildInvoicesPanel({ invoices }: { invoices: Invoice[] }) {
   if (invoices.length === 0) {
     return (
-      <div className="card p-5">
-        <p className="text-sm text-charcoal/50">No invoices on file for this child yet.</p>
-      </div>
+      <p className="rounded-2xl border border-charcoal/10 bg-white px-5 py-4 text-sm text-charcoal/70">
+        No invoices include this child yet.
+      </p>
     );
   }
 

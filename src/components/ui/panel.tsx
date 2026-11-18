@@ -11,6 +11,7 @@ export function Panel({
   title,
   description,
   action,
+  headerAction,
   count,
   className,
   bodyClassName,
@@ -20,6 +21,9 @@ export function Panel({
   title: string;
   description?: React.ReactNode;
   action?: { label: string; href: string };
+  /** A custom control in place of `action` — e.g. a button that opens a
+   * drawer or switches tab rather than navigating. */
+  headerAction?: React.ReactNode;
   /** Small number shown beside the title, e.g. how many items there are. */
   count?: number;
   className?: string;
@@ -43,7 +47,8 @@ export function Panel({
           </h2>
           {description && <p className="mt-0.5 text-sm text-charcoal/70">{description}</p>}
         </div>
-        {action && (
+        {headerAction}
+        {!headerAction && action && (
           <Link
             href={action.href}
             className="shrink-0 rounded text-sm font-medium text-lilac-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-700"

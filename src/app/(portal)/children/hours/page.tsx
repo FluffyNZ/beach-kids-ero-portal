@@ -20,7 +20,7 @@ export default async function WeeklyHoursPage({
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Weekly Hours</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Weekly Hours</h1>
           <p className="mt-1 text-sm text-charcoal/60">
             Each child&apos;s usual booked days/times fill this in automatically — adjust for holidays, absences or
             extra days, then save to confirm what actually happened this week.

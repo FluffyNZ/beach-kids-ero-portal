@@ -1,16 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import type { ChildEnrolledSchedule } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
-
-const DAYS: Array<{ key: "mon" | "tue" | "wed" | "thu" | "fri"; label: string }> = [
-  { key: "mon", label: "Monday" },
-  { key: "tue", label: "Tuesday" },
-  { key: "wed", label: "Wednesday" },
-  { key: "thu", label: "Thursday" },
-  { key: "fri", label: "Friday" },
-];
+import { formatHours, formatNzDate, hoursBetween, WEEKDAYS } from "@/lib/child-format";
+import { SaveStatus, FormError, useSaveState } from "@/components/ui/save-status";
 
 type ScheduleFields = {
   mon_start?: string | null;
@@ -30,25 +23,14 @@ function toInputTime(value: string | null | undefined): string {
   return value ? value.slice(0, 5) : "";
 }
 
-function hoursBetween(start: string, end: string): number {
-  if (!start || !end) return 0;
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  const minutes = eh * 60 + em - (sh * 60 + sm);
-  return minutes > 0 ? minutes / 60 : 0;
-}
-
 /** A child's regular booked days/times — a template of a normal week,
- * used to estimate fees for weeks nobody has entered actual attendance
- * for yet (see the Weekly Hours page). Editing this doesn't change any
- * week's confirmed hours, only the estimate future weeks start from.
+ * used by the booked sessions roll, ratios and as the starting estimate on
+ * the Weekly Hours page. Editing this doesn't change any week's confirmed
+ * hours.
  *
- * `onToggleTbc` flags the whole week "to be confirmed" — the Weekly Booked
- * Sessions roll shows "TBC" instead of these times and leaves this child
- * out of the daily booked totals while it's on. It's a separate action
- * from Save changes so it can be flipped in one click without touching the
- * times below (which stay as they are, ready to show again once
- * confirmed). */
+ * "To be confirmed" is a separate one-click switch (its own action): the
+ * roll shows "TBC" and leaves this child out of booked totals while it's
+ * on, without touching the times saved below. */
 export function ChildEnrolledScheduleForm({
   schedule,
   onSave,
@@ -58,9 +40,9 @@ export function ChildEnrolledScheduleForm({
   onSave: (fields: ScheduleFields) => Promise<void>;
   onToggleTbc: (tbc: boolean) => Promise<void>;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const id = useId();
+  const save = useSaveState();
+  const [validation, setValidation] = useState<string | null>(null);
 
   const [tbc, setTbc] = useState(schedule?.tbc ?? false);
   const [tbcPending, startTbcTransition] = useTransition();
@@ -68,7 +50,7 @@ export function ChildEnrolledScheduleForm({
 
   const [times, setTimes] = useState<Record<string, { start: string; end: string }>>(() =>
     Object.fromEntries(
-      DAYS.map((d) => [
+      WEEKDAYS.map((d) => [
         d.key,
         {
           start: toInputTime(schedule?.[`${d.key}_start` as keyof ChildEnrolledSchedule] as string | null),
@@ -79,45 +61,61 @@ export function ChildEnrolledScheduleForm({
   );
 
   const weeklyTotal = useMemo(
-    () => DAYS.reduce((sum, d) => sum + hoursBetween(times[d.key].start, times[d.key].end), 0),
+    () => WEEKDAYS.reduce((sum, d) => sum + hoursBetween(times[d.key].start, times[d.key].end), 0),
     [times]
   );
 
-  function markDirty() {
-    setSaved(false);
-  }
-
   function setDay(day: string, field: "start" | "end", value: string) {
-    markDirty();
+    save.markDirty();
     setTimes((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {schedule?.updated_at && (
-        <p className="text-xs text-charcoal/40">Last updated {formatDate(schedule.updated_at)}.</p>
-      )}
-      <p className="text-sm text-charcoal/60">
-        This child&apos;s usual booked days and times. Leave a day blank if they&apos;re not normally enrolled
-        then — it feeds the Weekly Hours page as a starting estimate, which can still be adjusted for any
-        specific week (holidays, absences, extra days).
-      </p>
+  function clearDay(day: string) {
+    save.markDirty();
+    setTimes((prev) => ({ ...prev, [day]: { start: "", end: "" } }));
+  }
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-charcoal/10 bg-sand-50 px-3 py-2.5">
+  async function handleSave() {
+    for (const d of WEEKDAYS) {
+      const { start, end } = times[d.key];
+      if ((start && !end) || (!start && end)) {
+        setValidation(`${d.long} needs both a start and a finish time (or neither).`);
+        save.setState("error");
+        return;
+      }
+      if (start && end && end <= start) {
+        setValidation(`${d.long}'s finish time is before its start time.`);
+        save.setState("error");
+        return;
+      }
+    }
+    setValidation(null);
+    const fields: ScheduleFields = {};
+    for (const d of WEEKDAYS) {
+      fields[`${d.key}_start` as keyof ScheduleFields] = times[d.key].start || null;
+      fields[`${d.key}_end` as keyof ScheduleFields] = times[d.key].end || null;
+    }
+    await save.run(() => onSave(fields), "Something went wrong saving this schedule.");
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 rounded-xl border border-charcoal/10 bg-canvas px-4 py-3 sm:flex-row sm:items-center">
         <div className="flex-1">
           <p className="text-sm font-medium text-charcoal">
-            {tbc ? "Marked as to be confirmed (TBC)" : "Days/times below are confirmed"}
+            {tbc ? "Times are to be confirmed (TBC)" : "Times are confirmed"}
           </p>
-          <p className="text-xs text-charcoal/50">
+          <p className="text-sm text-charcoal/70">
             {tbc
-              ? "The Weekly Booked Sessions roll shows “TBC” for this child and leaves them out of the booked totals. The times below are kept, not cleared."
-              : "Turn this on if the family hasn’t confirmed their days/times yet — the roll will show “TBC” instead of guessing."}
+              ? "The booked sessions roll shows “TBC” and leaves this child out of totals. Saved times are kept."
+              : "Switch to TBC if the family hasn’t confirmed their days yet."}
           </p>
         </div>
         <button
           type="button"
           disabled={tbcPending}
-          className={tbc ? "btn-primary px-3.5 py-2 text-sm" : "btn-ghost px-3.5 py-2 text-sm"}
+          className="btn-secondary shrink-0"
+          aria-pressed={tbc}
           onClick={() =>
             startTbcTransition(async () => {
               setTbcError(null);
@@ -134,63 +132,85 @@ export function ChildEnrolledScheduleForm({
           {tbcPending ? "Saving…" : tbc ? "Mark as confirmed" : "Mark as TBC"}
         </button>
       </div>
-      {tbcError && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{tbcError}</p>}
+      <FormError message={tbcError} />
 
-      <div className="flex flex-col gap-2">
-        {DAYS.map((d) => {
-          const dayHours = hoursBetween(times[d.key].start, times[d.key].end);
-          return (
-            <div key={d.key} className="flex items-center gap-3">
-              <span className="w-24 shrink-0 text-sm font-medium text-charcoal">{d.label}</span>
-              <input
-                type="time"
-                className="input"
-                value={times[d.key].start}
-                onChange={(e) => setDay(d.key, "start", e.target.value)}
-              />
-              <span className="text-charcoal/40">to</span>
-              <input
-                type="time"
-                className="input"
-                value={times[d.key].end}
-                onChange={(e) => setDay(d.key, "end", e.target.value)}
-              />
-              <span className="w-16 shrink-0 text-right text-xs text-charcoal/50">
-                {dayHours > 0 ? `${dayHours.toFixed(1)} hrs` : "—"}
-              </span>
-            </div>
-          );
-        })}
+      <fieldset>
+        <legend className="sr-only">Usual booked times</legend>
+        <div className="hidden grid-cols-[7rem_1fr_1fr_4.5rem_2.5rem] gap-3 px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-charcoal/70 sm:grid">
+          <span>Day</span>
+          <span>Start</span>
+          <span>Finish</span>
+          <span className="text-right">Hours</span>
+          <span />
+        </div>
+        <ul className="flex flex-col divide-y divide-charcoal/10 rounded-xl border border-charcoal/10">
+          {WEEKDAYS.map((d) => {
+            const dayHours = hoursBetween(times[d.key].start, times[d.key].end);
+            const booked = Boolean(times[d.key].start || times[d.key].end);
+            return (
+              <li
+                key={d.key}
+                className="grid grid-cols-2 items-center gap-x-3 gap-y-2 px-3 py-3 sm:grid-cols-[7rem_1fr_1fr_4.5rem_2.5rem] sm:py-2"
+              >
+                <span className="col-span-2 flex items-center justify-between text-sm font-medium text-charcoal sm:col-span-1">
+                  {d.long}
+                  <span className="text-xs font-normal text-charcoal/70 sm:hidden">{dayHours > 0 ? formatHours(dayHours) : "Not booked"}</span>
+                </span>
+                <div>
+                  <label htmlFor={`${id}-${d.key}-start`} className="mb-1 block text-xs text-charcoal/70 sm:sr-only">
+                    {d.long} start
+                  </label>
+                  <input
+                    id={`${id}-${d.key}-start`}
+                    type="time"
+                    className="input"
+                    value={times[d.key].start}
+                    onChange={(e) => setDay(d.key, "start", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor={`${id}-${d.key}-end`} className="mb-1 block text-xs text-charcoal/70 sm:sr-only">
+                    {d.long} finish
+                  </label>
+                  <input
+                    id={`${id}-${d.key}-end`}
+                    type="time"
+                    className="input"
+                    value={times[d.key].end}
+                    onChange={(e) => setDay(d.key, "end", e.target.value)}
+                  />
+                </div>
+                <span className="hidden text-right text-sm tabular-nums text-charcoal sm:block">
+                  {dayHours > 0 ? formatHours(dayHours) : "—"}
+                </span>
+                <span className="col-span-2 sm:col-span-1">
+                  {booked && (
+                    <button
+                      type="button"
+                      onClick={() => clearDay(d.key)}
+                      className="rounded text-sm font-medium text-lilac-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-700"
+                    >
+                      Clear<span className="sr-only"> {d.long}</span>
+                    </button>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
+
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-medium text-charcoal">Weekly total: {formatHours(weeklyTotal)}</p>
+        {schedule?.updated_at && <p className="text-xs text-charcoal/70">Last updated {formatNzDate(schedule.updated_at)}</p>}
       </div>
 
-      <p className="text-sm font-medium text-charcoal">Weekly total: {weeklyTotal.toFixed(1)} hrs</p>
+      <FormError message={validation ?? save.error} />
 
-      {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={pending}
-          className="btn-primary"
-          onClick={() =>
-            startTransition(async () => {
-              setError(null);
-              try {
-                const fields: ScheduleFields = {};
-                for (const d of DAYS) {
-                  fields[`${d.key}_start` as keyof ScheduleFields] = times[d.key].start || null;
-                  fields[`${d.key}_end` as keyof ScheduleFields] = times[d.key].end || null;
-                }
-                await onSave(fields);
-                setSaved(true);
-              } catch (err) {
-                setSaved(false);
-                setError(err instanceof Error ? err.message : "Something went wrong saving this schedule.");
-              }
-            })
-          }
-        >
-          {pending ? "Saving…" : saved ? "Saved" : "Save changes"}
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <SaveStatus state={save.state} />
+        <button type="button" disabled={save.state === "saving"} className="btn-primary" onClick={handleSave}>
+          {save.state === "saving" ? "Saving…" : "Save changes"}
         </button>
       </div>
     </div>

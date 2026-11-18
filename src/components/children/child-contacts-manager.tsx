@@ -134,7 +134,7 @@ function ContactForm({
 
   return (
     <form
-      className="flex flex-col gap-3 rounded-xl bg-sand-50 p-4"
+      className="flex flex-col gap-3 rounded-xl border border-charcoal/10 bg-canvas p-4"
       onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         onSubmit(form);
@@ -280,25 +280,25 @@ function ContactLine({
       <div className="min-w-0">
         <p className="text-sm font-medium text-charcoal">
           {contact.full_name}
-          {contact.relationship && <span className="font-normal text-charcoal/50"> · {contact.relationship}</span>}
+          {contact.relationship && <span className="font-normal text-charcoal/70"> · {contact.relationship}</span>}
         </p>
-        <p className="text-sm text-charcoal/70">{numbers || <span className="text-charcoal/40">No number on file</span>}</p>
+        <p className="text-sm text-charcoal/70">{numbers || <span className="text-charcoal/70">No number on file</span>}</p>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {contact.forbidden_access && <span className="badge bg-status-action text-white">Forbidden access</span>}
-          {contact.can_pick_up && <span className="badge bg-status-readyBg text-status-ready">Can pick up</span>}
+          {contact.can_pick_up && <span className="badge bg-status-readyBg text-charcoal">Can pick up</span>}
           {contact.conditional_access && (
-            <span className="badge bg-status-attentionBg text-status-attention">Conditional access</span>
+            <span className="badge bg-status-attentionBg text-charcoal">Conditional access</span>
           )}
           {contact.is_primary_caregiver && <span className="badge bg-charcoal/5 text-charcoal/70">Primary caregiver</span>}
           {contact.is_emergency_contact && (
-            <span className="badge bg-status-attentionBg text-status-attention">Emergency contact</span>
+            <span className="badge bg-lilac-100 text-charcoal">Emergency contact</span>
           )}
         </div>
-        {contact.notes && <p className="mt-1 text-xs text-charcoal/50">{contact.notes}</p>}
+        {contact.notes && <p className="mt-1 text-xs text-charcoal/70">{contact.notes}</p>}
       </div>
       {confirmingRemove ? (
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-charcoal/60">Remove {contact.full_name}?</span>
+          <span className="text-charcoal">Remove {contact.full_name}?</span>
           <button type="button" className="btn-danger px-3 py-1.5 text-xs" disabled={pending} onClick={onRemove}>
             {pending ? "Removing…" : "Yes, remove"}
           </button>
@@ -320,7 +320,16 @@ function ContactLine({
   );
 }
 
-function ChildCard({ child, forceOpen }: { child: ManagedChild; forceOpen: boolean }) {
+function ChildCard({
+  child,
+  forceOpen,
+  embedded = false,
+}: {
+  child: ManagedChild;
+  forceOpen: boolean;
+  /** On the child's own profile: always open, no name header or Profile link. */
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -329,7 +338,7 @@ function ChildCard({ child, forceOpen }: { child: ManagedChild; forceOpen: boole
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const open = forceOpen || opened || adding || editingId !== null;
+  const open = embedded || forceOpen || opened || adding || editingId !== null;
   const forbiddenCount = child.contacts.filter((c: ManagedChildContact) => c.forbidden_access).length;
 
   function run(action: () => Promise<ChildContactResult>, after: () => void) {
@@ -360,7 +369,8 @@ function ChildCard({ child, forceOpen }: { child: ManagedChild; forceOpen: boole
   }
 
   return (
-    <section className="card flex flex-col gap-3 p-5">
+    <section className={embedded ? "flex flex-col gap-3" : "card flex flex-col gap-3 p-5"}>
+      {!embedded && (
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"
@@ -379,9 +389,13 @@ function ChildCard({ child, forceOpen }: { child: ManagedChild; forceOpen: boole
           Profile
         </Link>
       </div>
+      )}
 
       {open && (
         <>
+          {embedded && child.contacts.length === 0 && !adding && (
+            <p className="text-sm text-charcoal/70">No contacts recorded for {child.name} yet.</p>
+          )}
           {child.contacts.map((contact: ManagedChildContact) =>
             editingId === contact.id ? (
               <ContactForm
@@ -424,8 +438,36 @@ function ChildCard({ child, forceOpen }: { child: ManagedChild; forceOpen: boole
         </>
       )}
 
-      {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+      {error && (
+        <p role="alert" className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-charcoal">
+          {error}
+        </p>
+      )}
     </section>
+  );
+}
+
+const RELATIONSHIP_OPTIONS = ["Mum", "Dad", "Grandmother", "Grandfather", "Aunt", "Uncle", "Sister", "Brother", "Whānau", "Friend", "Other"];
+
+function RelationshipOptions() {
+  return (
+    <datalist id="child-contact-relationship-options">
+      {RELATIONSHIP_OPTIONS.map((r) => (
+        <option key={r} value={r} />
+      ))}
+    </datalist>
+  );
+}
+
+/** One child's contacts, editable in place — used on the child's own
+ * profile (Contacts tab). Same records and actions as the Contact numbers
+ * page and the staff-room tablet. */
+export function ChildContactsEditor({ child }: { child: ManagedChild }) {
+  return (
+    <>
+      <RelationshipOptions />
+      <ChildCard child={child} forceOpen embedded />
+    </>
   );
 }
 

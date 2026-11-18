@@ -1,18 +1,17 @@
 import Link from "next/link";
+import { Panel } from "@/components/ui/panel";
+import { StatusPill } from "@/components/ui/status-pill";
 import type { AccidentIllnessRecord } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { SunblockPreferenceForm } from "@/components/children/sunblock-preference-form";
 import { MarketingPhotoConsentForm } from "@/components/children/marketing-photo-consent-form";
 
-/** "Health & permissions" tab content. There's no allergy/medical-condition
- * or consent-form data model anywhere in this app, so this intentionally
- * doesn't invent fields for those. The real, already-functional sources of
- * per-child health/permission data are: this child's Accident & Illness
- * record history, the sunblock preference (migration 0062, also editable
- * from the Sunblock Charts page), and the marketing/social-media photo
- * permission flag (migration 0064, read by the Marketing feature). See
- * the note at the bottom for what's still missing (allergies, medical
- * conditions, a general consent-forms record). */
+/** "Health" tab. Only the per-child health and permission records that
+ * really exist in Earlydesk are shown: marketing photo permission
+ * (migration 0064), sunblock preference (0062, also editable on the
+ * Sunblock charts page) and this child's Accident & illness records.
+ * There's no allergy, medical-condition, medication or consent-form record
+ * yet, and this says so rather than showing empty fields for them. */
 export function ChildHealthPanel({
   records,
   childId,
@@ -29,64 +28,71 @@ export function ChildHealthPanel({
   marketingPhotoConsentNotes: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Marketing / social media photo permission
-        </h2>
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+      <Panel
+        id="health-accidents"
+        title="Accident and illness records"
+        count={records.length}
+        className="lg:col-span-2"
+        headerAction={
+          <Link
+            href="/records/accidents-illness/new"
+            className="shrink-0 rounded text-sm font-medium text-lilac-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lilac-700"
+          >
+            Log a record
+          </Link>
+        }
+      >
+        {records.length === 0 ? (
+          <p className="border-t border-charcoal/10 px-5 py-4 text-sm text-charcoal/70">
+            No accident or illness records for this child.
+          </p>
+        ) : (
+          <ul className="divide-y divide-charcoal/10 border-t border-charcoal/10">
+            {records.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={`/records/accidents-illness/${r.id}`}
+                  className="flex flex-wrap items-start justify-between gap-2 px-5 py-3 transition-colors hover:bg-lilac-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-charcoal"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-charcoal">{formatDate(r.incident_date)}</p>
+                    <p className="mt-0.5 line-clamp-2 text-sm text-charcoal/80">{r.description || "No description recorded"}</p>
+                    <p className="mt-1 text-xs text-charcoal/70">
+                      {r.staff_name ? `Attended by ${r.staff_name}` : "No staff member recorded"}
+                    </p>
+                  </div>
+                  <StatusPill tone={r.parent_signed ? "ready" : "attention"}>
+                    {r.parent_signed ? "Parent signed" : "Not signed by parent"}
+                  </StatusPill>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel
+        id="health-photo"
+        title="Marketing photo permission"
+        description="Whether this child may appear in centre marketing or social media posts."
+        bodyClassName="border-t border-charcoal/10 px-5 py-4"
+      >
         <MarketingPhotoConsentForm
           childId={childId}
           initialConsent={marketingPhotoConsent}
           initialNotes={marketingPhotoConsentNotes}
         />
-      </div>
+      </Panel>
 
-      <div className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">Sunblock</h2>
-        <SunblockPreferenceForm
-          childId={childId}
-          initialUsesOwn={usesOwnSunblock}
-          initialInstructions={sunblockInstructions}
-        />
-      </div>
+      <Panel id="health-sunblock" title="Sunblock" bodyClassName="border-t border-charcoal/10 px-5 py-4">
+        <SunblockPreferenceForm childId={childId} initialUsesOwn={usesOwnSunblock} initialInstructions={sunblockInstructions} />
+      </Panel>
 
-      <div className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal/50">
-          Accident &amp; illness history
-        </h2>
-        {records.length === 0 ? (
-          <p className="text-sm text-charcoal/50">No accident or illness records logged for this child.</p>
-        ) : (
-          <div className="flex flex-col divide-y divide-charcoal/5">
-            {records.map((r) => (
-              <Link
-                key={r.id}
-                href={`/records/accidents-illness/${r.id}`}
-                className="flex flex-wrap items-start justify-between gap-2 py-3 hover:bg-sand-50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-charcoal">{formatDate(r.incident_date)}</p>
-                  <p className="mt-0.5 line-clamp-2 text-sm text-charcoal/60">
-                    {r.description || "No description recorded"}
-                  </p>
-                  <p className="mt-1 text-xs text-charcoal/40">
-                    {r.staff_name ? `Attended by ${r.staff_name}` : "No staff member recorded"}
-                    {r.parent_signed ? " · Parent signed" : " · Not yet signed by parent"}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="card border-charcoal/10 bg-sand-50 p-4">
-        <p className="text-sm text-charcoal/60">
-          This app doesn&apos;t yet have a place to record allergies, medical conditions, medication or consent
-          forms for a child — only the accident &amp; illness history above exists today. Let me know if you&apos;d
-          like that added as a real feature; nothing here is a placeholder standing in for it.
-        </p>
-      </div>
+      <p className="text-sm text-charcoal/70 lg:col-span-2">
+        Allergies, medical conditions, medication and consent forms don&apos;t have a place in Earlydesk yet — keep
+        using the child&apos;s notes and paper records for these.
+      </p>
     </div>
   );
 }

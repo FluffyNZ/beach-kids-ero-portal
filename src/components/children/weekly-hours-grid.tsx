@@ -89,7 +89,7 @@ export function WeeklyHoursGrid({
           <section key={group.key}>
             <div className="mb-3 flex items-center gap-2">
               <span className={cn("h-2.5 w-2.5 rounded-full", colors.chip)} />
-              <h2 className="font-display text-sm font-semibold text-charcoal">{group.name}</h2>
+              <h2 className="text-sm font-semibold text-charcoal">{group.name}</h2>
               <span className="text-xs text-charcoal/40">
                 {group.children.length} {group.children.length === 1 ? "child" : "children"}
               </span>

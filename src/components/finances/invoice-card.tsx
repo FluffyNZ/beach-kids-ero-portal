@@ -53,13 +53,13 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
           <p className="text-xs text-charcoal/50">
             {invoice.invoice_number} · Week of {formatShortDate(invoice.week_start_date)}
           </p>
-          <h3 className="font-display text-lg font-semibold text-charcoal">{invoice.bill_payer_name}</h3>
+          <h3 className="text-lg font-semibold text-charcoal">{invoice.bill_payer_name}</h3>
         </div>
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_TONE[invoice.status]}`}>
             {STATUS_LABEL[invoice.status]}
           </span>
-          <p className="font-display text-lg font-bold text-charcoal">{formatCurrency(invoice.total_due)}</p>
+          <p className="text-lg font-bold text-charcoal">{formatCurrency(invoice.total_due)}</p>
         </div>
       </div>
 

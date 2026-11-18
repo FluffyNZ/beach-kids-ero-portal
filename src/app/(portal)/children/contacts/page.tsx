@@ -17,7 +17,7 @@ export default async function ContactNumbersPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-charcoal md:text-3xl">Contact numbers</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal md:text-3xl">Contact numbers</h1>
           <p className="mt-1 text-sm text-charcoal/60">
             Each child&apos;s contacts as shown on the staff room tablet — who can pick up, who to call in an emergency,
             and who must not be given access. Staff mobiles and emergency contacts are edited on each person&apos;s own

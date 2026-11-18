@@ -100,7 +100,7 @@ export function NewChildModal({
           </p>
         </div>
 
-        <p className="rounded-lg bg-sand-50 px-3 py-2 text-xs text-charcoal/60">
+        <p className="rounded-lg border border-charcoal/10 bg-canvas px-3 py-2 text-xs text-charcoal/70">
           20 Hours ECE eligibility is set automatically once you save — every child aged 3 and over gets it,
           capped at 6 hours a day.
         </p>
