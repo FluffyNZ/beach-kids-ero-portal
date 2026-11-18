@@ -1,83 +1,82 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { addDays, mondayOf } from "@/lib/utils";
+import { addDays, mondayOfDateString } from "@/lib/utils";
 
 export type RollRoomOption = { id: string; name: string };
 
-/** The week/room picker for the booked-sessions roll — Prev/Next buttons
- * for quick week-to-week moves, a real date picker (any date you pick
- * snaps to that week's Monday) for jumping further out, a one-click
- * "Next week" shortcut back to the default view, and a room selector so a
- * single room can be printed on its own. All of it just rewrites the
- * page's own `?week=&room=` query string — the page itself re-fetches and
- * re-renders, same pattern as Fees by family's week nav. */
+const fmt = new Intl.DateTimeFormat("en-NZ", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const label = (date: string) => fmt.format(new Date(`${date}T00:00:00Z`)).replace(",", "");
+
+/** Week and room picker for the booked sessions roll. Every change just
+ * rewrites the page's own ?week=&room= — dates are NZ calendar dates and
+ * any picked date snaps to that week's Monday. */
 export function AttendanceRollControls({
   weekStartDate,
   roomId,
   rooms,
+  today,
 }: {
   weekStartDate: string;
   roomId: string;
   rooms: RollRoomOption[];
+  /** NZ "today" as YYYY-MM-DD. */
+  today: string;
 }) {
   const router = useRouter();
+  const thisWeek = mondayOfDateString(today);
+  const nextWeek = addDays(thisWeek, 7);
 
-  function goTo(nextWeek: string, nextRoom: string) {
+  function goTo(week: string, room: string) {
     const params = new URLSearchParams();
-    params.set("week", nextWeek);
-    if (nextRoom) params.set("room", nextRoom);
+    params.set("week", week);
+    if (room) params.set("room", room);
     router.push(`/roster/attendance-roll?${params.toString()}`);
   }
 
   return (
-    <div className="card flex flex-wrap items-center gap-2 px-4 py-3 print:hidden">
-      <button type="button" onClick={() => goTo(addDays(weekStartDate, -7), roomId)} className="btn-ghost px-2.5">
-        ← Prev week
-      </button>
-
-      <label className="flex items-center gap-1.5 text-sm text-charcoal/70">
-        <span className="sr-only">Choose a week</span>
-        <input
-          type="date"
-          value={weekStartDate}
-          onChange={(e) => {
-            if (!e.target.value) return;
-            goTo(mondayOf(new Date(`${e.target.value}T00:00:00Z`)), roomId);
-          }}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-        />
-      </label>
-
-      <button type="button" onClick={() => goTo(addDays(weekStartDate, 7), roomId)} className="btn-ghost px-2.5">
-        Next week →
-      </button>
-
-      <button
-        type="button"
-        onClick={() => goTo(addDays(mondayOf(new Date()), 7), roomId)}
-        className="btn-ghost px-2.5 text-xs"
-      >
-        Next week&apos;s default
-      </button>
-
-      <div className="ml-auto flex items-center gap-1.5">
-        <label htmlFor="roll-room" className="text-sm text-charcoal/60">
-          Room
+    <div className="flex flex-col gap-3 rounded-2xl border border-charcoal/10 bg-white p-3 sm:p-4 print:hidden">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => goTo(addDays(weekStartDate, -7), roomId)} className="btn-secondary px-3" aria-label="Previous week">
+          ←<span className="hidden sm:inline">Previous</span>
+        </button>
+        <button type="button" onClick={() => goTo(addDays(weekStartDate, 7), roomId)} className="btn-secondary px-3" aria-label="Next week">
+          <span className="hidden sm:inline">Next</span>→
+        </button>
+        <button type="button" disabled={weekStartDate === thisWeek} onClick={() => goTo(thisWeek, roomId)} className="btn-secondary px-3">
+          This week
+        </button>
+        <button type="button" disabled={weekStartDate === nextWeek} onClick={() => goTo(nextWeek, roomId)} className="btn-secondary px-3">
+          Next week
+        </button>
+        <p className="min-w-0 flex-1 text-base font-semibold text-charcoal" aria-live="polite">
+          {label(weekStartDate)} – {label(addDays(weekStartDate, 4))}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-charcoal">
+          Jump to week of
+          <input
+            type="date"
+            value={weekStartDate}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              goTo(mondayOfDateString(e.target.value), roomId);
+            }}
+            className="input w-auto"
+          />
         </label>
-        <select
-          id="roll-room"
-          value={roomId}
-          onChange={(e) => goTo(weekStartDate, e.target.value)}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm text-charcoal focus:border-burgundy-400 focus:outline-none focus:ring-2 focus:ring-burgundy-500/20"
-        >
-          <option value="">All rooms</option>
-          {rooms.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+        <label className="flex items-center gap-2 text-sm text-charcoal">
+          Room
+          <select value={roomId} onChange={(e) => goTo(weekStartDate, e.target.value)} className="input w-auto">
+            <option value="">All rooms</option>
+            {rooms.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
     </div>
   );

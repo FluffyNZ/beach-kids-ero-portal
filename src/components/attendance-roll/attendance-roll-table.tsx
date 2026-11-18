@@ -1,92 +1,106 @@
-import { formatTime, formatShortDate, addDays } from "@/lib/utils";
+import { formatTime, addDays } from "@/lib/utils";
 import { getRoomColorClasses } from "@/lib/constants";
 import { ATTENDANCE_WEEKDAYS, type AttendanceRollRoom } from "@/lib/data/attendance-roll";
 
+const dayFmt = new Intl.DateTimeFormat("en-NZ", { day: "numeric", month: "short", timeZone: "UTC" });
+
 function cellLabel(day: { start: string | null; end: string | null }): string {
-  if (!day.start || !day.end) return "–";
+  if (!day.start || !day.end) return "";
   return `${formatTime(day.start)}–${formatTime(day.end)}`;
 }
 
-/** `weekStartDate` labels this room's page with the Monday it's for, and
- * shows each weekday's actual date alongside "Mon"/"Tue"/etc. `pageBreakAfter`
- * puts a hard page break after this room when printing, so the printed roll
- * comes out one room to an A4 page — the last room in the list should leave
- * this off so printing doesn't end on a trailing blank page. */
+/** One room's booked sessions roll. Each printed page is clearly titled as
+ * a BOOKED roll (not an attendance record), with the room, the week's NZ
+ * dates and the date it was printed. Rows are tall enough to write on, and
+ * the last column is left for notes and changes. `pageBreakAfter` puts each
+ * room on its own A4 page (left off the last room so printing doesn't end
+ * on a blank page). */
 export function AttendanceRollTable({
   room,
   weekStartDate,
+  weekLabel,
+  printedOn,
   pageBreakAfter = false,
 }: {
   room: AttendanceRollRoom;
   weekStartDate: string;
+  weekLabel: string;
+  printedOn: string;
   pageBreakAfter?: boolean;
 }) {
   const colors = getRoomColorClasses(room.color);
 
   return (
-    <section className={`card break-inside-avoid overflow-hidden p-0 ${pageBreakAfter ? "print:break-after-page" : ""}`}>
-      <div className={`flex flex-wrap items-center gap-2 px-4 py-3 ${colors.bg}`}>
-        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colors.chip}`} />
-        <h2 className={`font-display text-lg font-semibold ${colors.text}`}>{room.name}</h2>
-        <span className={`text-xs font-medium ${colors.text} opacity-70`}>
-          Week starting {formatShortDate(weekStartDate)}
-        </span>
-        <span className={`ml-auto text-xs font-medium ${colors.text}`}>
-          {room.children.length} {room.children.length === 1 ? "child" : "children"} enrolled
-        </span>
-      </div>
+    <section
+      className={`break-inside-avoid overflow-hidden rounded-2xl border border-charcoal/10 bg-white print:rounded-none print:border-0 ${
+        pageBreakAfter ? "print:break-after-page" : ""
+      }`}
+    >
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-b border-charcoal/10 bg-lilac-50 px-4 py-3 print:border-b-2 print:border-charcoal print:bg-white print:px-0">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-charcoal">Booked sessions roll · not a record of attendance</p>
+          <h2 className="mt-0.5 flex items-center gap-2 text-lg font-semibold text-charcoal print:text-2xl">
+            <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full print:hidden ${colors.chip}`} />
+            {room.name}
+            <span className="text-base font-normal text-charcoal/80">· {weekLabel}</span>
+          </h2>
+        </div>
+        <p className="text-xs text-charcoal/80">
+          {room.children.length} {room.children.length === 1 ? "child" : "children"} · Beach Kids · printed {printedOn}
+        </p>
+      </header>
 
       {room.children.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-charcoal/50">No children currently enrolled in {room.name}.</p>
+        <p className="px-4 py-6 text-sm text-charcoal/70">No children currently enrolled in {room.name}.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+        <div className="overflow-x-auto print:overflow-visible">
+          <table className="w-full min-w-[720px] border-collapse text-left text-sm print:min-w-0 print:text-[11pt]">
             <thead>
-              <tr className="border-b border-charcoal/10 text-xs uppercase tracking-wide text-charcoal/50">
-                <th className="px-4 py-3 font-medium">Child</th>
+              <tr className="border-b border-charcoal/20 text-xs font-semibold text-charcoal">
+                <th scope="col" className="sticky left-0 bg-white px-4 py-2.5 print:static print:px-1">
+                  Child
+                </th>
                 {ATTENDANCE_WEEKDAYS.map((d, i) => (
-                  <th key={d.key} className="px-3 py-3 font-medium">
-                    {d.label} <span className="font-normal normal-case text-charcoal/40">{formatShortDate(addDays(weekStartDate, i))}</span>
+                  <th key={d.key} scope="col" className="px-3 py-2.5 print:px-1">
+                    {d.label} <span className="font-normal text-charcoal/80">{dayFmt.format(new Date(`${addDays(weekStartDate, i)}T00:00:00Z`))}</span>
                   </th>
                 ))}
-                <th className="px-3 py-3 font-medium print:w-28">Notes</th>
+                <th scope="col" className="w-40 px-3 py-2.5 print:w-[22%] print:px-1">
+                  Notes and changes
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-charcoal/5">
+            <tbody>
               {room.children.map((c) => (
-                <tr key={c.id}>
-                  <td className="px-4 py-2.5 font-medium text-charcoal">
+                <tr key={c.id} className="border-b border-charcoal/10 print:border-charcoal/30">
+                  <th scope="row" className="sticky left-0 bg-white px-4 py-2.5 text-left font-medium text-charcoal print:static print:px-1 print:py-3">
                     {c.full_name}
                     {c.tbc && (
-                      <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-status-attention">
+                      <span className="ml-1.5 rounded-full bg-status-attentionBg px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-charcoal">
                         TBC
                       </span>
                     )}
-                  </td>
-                  {ATTENDANCE_WEEKDAYS.map((d) =>
-                    c.tbc ? (
-                      <td key={d.key} className="px-3 py-2.5 font-medium text-status-attention">
-                        TBC
-                      </td>
-                    ) : (
-                      <td key={d.key} className="px-3 py-2.5 text-charcoal/80">
-                        {cellLabel(c.days[d.key])}
-                      </td>
-                    )
-                  )}
-                  <td className="px-3 py-2.5 text-charcoal/80">{c.notes}</td>
+                  </th>
+                  {ATTENDANCE_WEEKDAYS.map((d) => (
+                    <td key={d.key} className="whitespace-nowrap px-3 py-2.5 tabular-nums text-charcoal print:px-1 print:py-3">
+                      {c.tbc ? <span className="font-medium">TBC</span> : cellLabel(c.days[d.key]) || <span className="text-charcoal/50">—</span>}
+                    </td>
+                  ))}
+                  <td className="px-3 py-2.5 text-charcoal print:px-1 print:py-3">{c.notes}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-charcoal/10 bg-sand-50 font-medium text-charcoal">
-                <td className="px-4 py-2.5">Booked total</td>
+              <tr className="border-t-2 border-charcoal/20 font-semibold text-charcoal">
+                <th scope="row" className="sticky left-0 bg-canvas px-4 py-2.5 text-left print:static print:bg-white print:px-1">
+                  Children booked
+                </th>
                 {ATTENDANCE_WEEKDAYS.map((d) => (
-                  <td key={d.key} className="px-3 py-2.5">
+                  <td key={d.key} className="bg-canvas px-3 py-2.5 tabular-nums print:bg-white print:px-1">
                     {room.bookedTotals[d.key]}
                   </td>
                 ))}
-                <td className="px-3 py-2.5" />
+                <td className="bg-canvas px-3 py-2.5 print:bg-white" />
               </tr>
             </tfoot>
           </table>

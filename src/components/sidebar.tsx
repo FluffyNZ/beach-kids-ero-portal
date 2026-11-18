@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_GROUPS, NAV_BOTTOM_ITEMS, type ShellNavItem } from "@/lib/constants";
+import { NAV_GROUPS, NAV_BOTTOM_ITEMS, activeNavIndex, type ShellNavItem } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import { Avatar } from "@/components/ui/avatar";
@@ -62,17 +62,20 @@ function isActive(pathname: string, href: string) {
 function NavRow({
   item,
   pathname,
+  isCurrent,
   badgeCounts,
 }: {
   item: ShellNavItem;
   pathname: string;
+  /** Whether this item is the one the current route belongs to (see activeNavIndex). */
+  isCurrent: boolean;
   badgeCounts?: Record<string, number>;
 }) {
   const badgeCount = item.badgeKey ? badgeCounts?.[item.badgeKey] ?? 0 : 0;
   const Icon = ICONS[item.icon];
   const hasChildren = Boolean(item.children?.length);
   const childActive = item.children?.some((c) => isActive(pathname, c.href)) ?? false;
-  const active = (item.href ? isActive(pathname, item.href) : false) || childActive;
+  const active = isCurrent;
   const [open, setOpen] = useState(childActive);
 
   if (item.status === "soon") {
@@ -101,7 +104,11 @@ function NavRow({
           active ? "bg-lilac-100 font-semibold text-charcoal" : "font-medium text-charcoal/60 hover:bg-charcoal/5 hover:text-charcoal"
         )}
       >
-        <Link href={item.href!} className="flex flex-1 items-center gap-3 px-3 py-[7px] text-sm">
+        <Link
+          href={item.href!}
+          aria-current={active ? "page" : undefined}
+          className="flex flex-1 items-center gap-3 px-3 py-[7px] text-sm"
+        >
           <Icon className="h-[18px] w-[18px] shrink-0" />
           <span className="truncate">{item.label}</span>
           {badgeCount > 0 && (
@@ -157,6 +164,9 @@ export function Sidebar({
   badgeCounts?: Record<string, number>;
 }) {
   const pathname = usePathname();
+  // Exactly one item is highlighted: the most specific match for this route.
+  const allItems = [...NAV_GROUPS.flatMap((g) => g.items), ...NAV_BOTTOM_ITEMS];
+  const currentItem = allItems[activeNavIndex(pathname, allItems)];
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-charcoal/10 bg-white md:flex print:hidden">
@@ -187,7 +197,7 @@ export function Sidebar({
               {group.label}
             </p>
             {group.items.map((item) => (
-              <NavRow key={item.label} item={item} pathname={pathname} badgeCounts={badgeCounts} />
+              <NavRow key={item.label} item={item} pathname={pathname} isCurrent={item === currentItem} badgeCounts={badgeCounts} />
             ))}
           </div>
         ))}
@@ -195,7 +205,7 @@ export function Sidebar({
 
       <div className="flex flex-col gap-0.5 border-t border-charcoal/10 px-3 py-2.5">
         {NAV_BOTTOM_ITEMS.map((item) => (
-          <NavRow key={item.label} item={item} pathname={pathname} badgeCounts={badgeCounts} />
+          <NavRow key={item.label} item={item} pathname={pathname} isCurrent={item === currentItem} badgeCounts={badgeCounts} />
         ))}
       </div>
 

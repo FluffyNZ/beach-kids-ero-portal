@@ -32,6 +32,7 @@ export const NAV_ITEMS = [
   { href: "/staff", label: "Staff", icon: "staff" },
   { href: "/roster", label: "Roster", icon: "roster" },
   { href: "/children", label: "Children", icon: "children" },
+  { href: "/children/hours", label: "Attendance", icon: "attendance" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/email", label: "Email", icon: "email" },
   { href: "/marketing", label: "Marketing", icon: "marketing" },
@@ -86,7 +87,36 @@ export type ShellNavItem = {
   // `badgeCounts` map passed in from the layout, rather than baking a
   // number into this static list.
   badgeKey?: "emailReminders";
+  // Other routes that belong to this item's area even though they live
+  // under another path — e.g. the printable booked roll (/roster/
+  // attendance-roll) belongs to Attendance, not Roster.
+  alsoActiveFor?: string[];
 };
+
+/** Which nav item a route belongs to: the item whose href (or one of its
+ * `alsoActiveFor` paths or child links) is the longest match for the
+ * current path. Only that one item is highlighted, so /children/hours
+ * highlights Attendance and not Children as well. Returns the item's index
+ * in `items`, or -1 when nothing matches. */
+export function activeNavIndex(
+  pathname: string,
+  items: Array<{ href?: string; alsoActiveFor?: string[]; children?: Array<{ href: string }> }>
+): number {
+  let best = -1;
+  let bestLength = -1;
+  items.forEach((item, i) => {
+    const paths = [item.href, ...(item.alsoActiveFor ?? []), ...(item.children?.map((c) => c.href) ?? [])].filter(
+      (p): p is string => Boolean(p)
+    );
+    paths.forEach((p) => {
+      if ((pathname === p || pathname.startsWith(`${p}/`)) && p.length > bestLength) {
+        best = i;
+        bestLength = p.length;
+      }
+    });
+  });
+  return best;
+}
 
 export type ShellNavGroup = {
   label: string;
@@ -104,7 +134,13 @@ export const NAV_GROUPS: ShellNavGroup[] = [
       { href: "/children", label: "Children", icon: "children", status: "active" },
       { href: "/staff", label: "Staff", icon: "staff", status: "active" },
       { href: "/roster", label: "Roster", icon: "rooms", status: "active" },
-      { href: "/children/hours", label: "Attendance", icon: "attendance", status: "active" },
+      {
+        href: "/children/hours",
+        label: "Attendance",
+        icon: "attendance",
+        status: "active",
+        alsoActiveFor: ["/roster/attendance-roll"],
+      },
     ],
   },
   {

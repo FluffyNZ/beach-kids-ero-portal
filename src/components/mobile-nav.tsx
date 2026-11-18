@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/lib/constants";
+import { NAV_ITEMS, activeNavIndex } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -25,6 +25,7 @@ import {
   CalendarIcon,
   MailIcon,
   MegaphoneIcon,
+  AttendanceIcon,
 } from "@/components/icons";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -37,6 +38,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   staff: StaffIcon,
   roster: RosterIcon,
   children: ChildrenIcon,
+  attendance: AttendanceIcon,
   calendar: CalendarIcon,
   email: MailIcon,
   marketing: MegaphoneIcon,
@@ -53,24 +55,28 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 // day-to-day use; everything else lives one tap away behind "More".
 const PRIMARY_HREFS = ["/dashboard", "/checklist", "/records", "/actions"];
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(href + "/");
-}
+// Attendance also owns the printable booked roll under /roster.
+const ALSO_ACTIVE_FOR: Record<string, string[]> = { "/children/hours": ["/roster/attendance-roll"] };
 
 export function MobileNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  // Only the single most specific match is highlighted (e.g. Attendance,
+  // not Children as well, on /children/hours).
+  const currentHref =
+    NAV_ITEMS[activeNavIndex(pathname, NAV_ITEMS.map((i) => ({ href: i.href, alsoActiveFor: ALSO_ACTIVE_FOR[i.href] })))]?.href;
+  const isActive = (href: string) => href === currentHref;
 
   const primaryItems = NAV_ITEMS.filter((item) => PRIMARY_HREFS.includes(item.href));
   const moreItems = NAV_ITEMS.filter((item) => !PRIMARY_HREFS.includes(item.href));
-  const moreActive = moreItems.some((item) => isActive(pathname, item.href));
+  const moreActive = moreItems.some((item) => isActive(item.href));
 
   return (
     <>
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-charcoal/10 bg-white/95 px-1 py-1.5 backdrop-blur md:hidden print:hidden">
         {primaryItems.map((item) => {
           const Icon = ICONS[item.icon];
-          const active = isActive(pathname, item.href);
+          const active = isActive(item.href);
           return (
             <Link
               key={item.href}
@@ -102,7 +108,7 @@ export function MobileNav() {
         <nav className="grid grid-cols-2 gap-2">
           {moreItems.map((item) => {
             const Icon = ICONS[item.icon];
-            const active = isActive(pathname, item.href);
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
