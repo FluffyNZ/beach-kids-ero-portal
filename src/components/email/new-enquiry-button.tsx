@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
@@ -10,8 +11,7 @@ import { PlusIcon } from "@/components/icons";
 type Duplicates = PotentialDuplicateFamily[];
 
 /** "New enquiry" — the entry point for a prospective family who isn't in
- * the system at all yet (see migration 0050's comment on family_enquiries
- * for why this is its own table rather than a real `children` row). Checks
+ * the system yet. Enquiries are kept apart from enrolled children. Checks
  * for a likely-existing family first (createFamilyEnquiry's built-in
  * findPotentialDuplicateFamilies check) and shows what it found before
  * creating anything — "Create anyway" re-submits with force so a genuinely
@@ -98,7 +98,7 @@ export function NewEnquiryButton({ rooms }: { rooms: RosterRoom[] }) {
         {duplicates && duplicates.length > 0 ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-charcoal/70">
-              This looks like it might already be a family on file — have a look before creating a new one:
+              This might already be on file. Open the existing record to continue with it, or create a new enquiry if it&apos;s a different family:
             </p>
             <div className="flex flex-col gap-2 rounded-lg border border-status-attention/30 bg-status-attentionBg p-3">
               {duplicates.map((d) => (
@@ -106,13 +106,17 @@ export function NewEnquiryButton({ rooms }: { rooms: RosterRoom[] }) {
                   <span className="font-medium">{d.parent_name}</span>
                   {d.email ? ` · ${d.email}` : ""}
                   {d.childNames.length > 0 ? ` · ${d.childNames.join(", ")}` : ""}
-                  <span className="ml-1 text-xs text-charcoal/50">
-                    {d.kind === "bill_payer" ? "(existing family)" : "(existing enquiry)"}
-                  </span>
+                  {" "}
+                  <Link
+                    href={d.kind === "bill_payer" ? `/finances/clients/${d.id}` : `/email/enquiries?open=${d.id}`}
+                    className="font-medium text-lilac-700 underline-offset-4 hover:underline"
+                  >
+                    {d.kind === "bill_payer" ? "Open family account" : "Open existing enquiry"}
+                  </Link>
                 </div>
               ))}
             </div>
-            {error && <p className="text-sm text-status-action">{error}</p>}
+            {error && <p role="alert" className="text-sm text-charcoal"><span className="font-medium text-status-action">Not saved.</span> {error}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" className="btn-ghost" onClick={() => setDuplicates(null)}>
                 Go back
@@ -125,26 +129,26 @@ export function NewEnquiryButton({ rooms }: { rooms: RosterRoom[] }) {
         ) : (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="label">Child&apos;s name</label>
+              <label className="mb-1.5 block text-sm font-medium text-charcoal">Child&apos;s name</label>
               <input className="input" value={childFullName} onChange={(e) => setChildFullName(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Parent/guardian name</label>
+                <label className="mb-1.5 block text-sm font-medium text-charcoal">Parent/guardian name</label>
                 <input className="input" value={parentFullName} onChange={(e) => setParentFullName(e.target.value)} />
               </div>
               <div>
-                <label className="label">Parent/guardian email</label>
+                <label className="mb-1.5 block text-sm font-medium text-charcoal">Parent/guardian email</label>
                 <input type="email" className="input" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Phone (optional)</label>
+                <label className="mb-1.5 block text-sm font-medium text-charcoal">Phone (optional)</label>
                 <input className="input" value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} />
               </div>
               <div>
-                <label className="label">Intended start date (optional)</label>
+                <label className="mb-1.5 block text-sm font-medium text-charcoal">Intended start date (optional)</label>
                 <input
                   type="date"
                   className="input"
@@ -154,7 +158,7 @@ export function NewEnquiryButton({ rooms }: { rooms: RosterRoom[] }) {
               </div>
             </div>
             <div>
-              <label className="label">Intended room (optional)</label>
+              <label className="mb-1.5 block text-sm font-medium text-charcoal">Intended room (optional)</label>
               <select className="input" value={intendedRoomId} onChange={(e) => setIntendedRoomId(e.target.value)}>
                 <option value="">Not set</option>
                 {rooms.map((r) => (
@@ -165,11 +169,11 @@ export function NewEnquiryButton({ rooms }: { rooms: RosterRoom[] }) {
               </select>
             </div>
             <div>
-              <label className="label">Notes (optional)</label>
+              <label className="mb-1.5 block text-sm font-medium text-charcoal">Notes (optional)</label>
               <textarea className="input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
 
-            {error && <p className="rounded-lg bg-status-actionBg px-3 py-2 text-sm text-status-action">{error}</p>}
+            {error && <p role="alert" className="rounded-xl border border-status-action/40 bg-status-actionBg px-3 py-2 text-sm text-charcoal">{error}</p>}
 
             <div className="flex justify-end gap-2">
               <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>

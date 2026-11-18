@@ -402,6 +402,12 @@ export async function sendEmail(emailId: string): Promise<SendEmailResult> {
   if (claimError) return { success: false, error: `Could not start sending this email: ${claimError.message}` };
   if (!claimed) return { success: false, error: "This email has already been sent (or is already being sent)." };
 
+  const rawField = /\{\{\w+\}\}/;
+  if (rawField.test(claimed.subject) || rawField.test(claimed.body)) {
+    await supabase.from("email_messages").update({ status: "draft" } as any).eq("id", emailId);
+    return { success: false, error: "This email still has a personalisation field that hasn't been filled in." };
+  }
+
   if (hasUnresolvedPlaceholders(claimed.subject) || hasUnresolvedPlaceholders(claimed.body)) {
     await supabase.from("email_messages").update({ status: "draft" } as any).eq("id", emailId);
     return { success: false, error: "This email still has a [[...]] placeholder that needs filling in before it can be sent." };
@@ -446,7 +452,7 @@ export type CreateEnquiryResult =
   | { success: false; needsConfirmation: true; duplicates: Awaited<ReturnType<typeof findPotentialDuplicateFamilies>> };
 
 /** Adds a prospective family as an "enquiry" — deliberately not a real
- * `children` row (see migration 0050's comment on family_enquiries), so it
+ * `children` row, so it
  * can never be counted toward active enrolments, attendance or billing.
  * Checks for a likely-existing family first and asks for confirmation
  * rather than silently creating a possible duplicate; pass `force: true`
@@ -496,6 +502,7 @@ export async function createFamilyEnquiry(
   if (error || !created) return { success: false, error: `Could not save this enquiry: ${error?.message ?? "unknown error"}` };
 
   revalidatePath("/email");
+  revalidatePath("/email/enquiries");
   return { success: true, id: created.id };
 }
 
@@ -504,6 +511,7 @@ export async function updateFamilyEnquiryStatus(id: string, status: "enquiry" | 
   const { error } = await supabase.from("family_enquiries").update({ status } as any).eq("id", id);
   if (error) return { success: false, error: `Could not update this enquiry: ${error.message}` };
   revalidatePath("/email");
+  revalidatePath("/email/enquiries");
   return { success: true };
 }
 
@@ -576,5 +584,6 @@ export async function updateEmailTemplate(
   if (error) return { success: false, error: `Could not save this template: ${error.message}` };
 
   revalidatePath("/email");
+  revalidatePath("/email/templates");
   return { success: true };
 }
